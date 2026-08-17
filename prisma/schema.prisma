@@ -51,6 +51,7 @@ model User {
   createdProblems   Problem[]         @relation("CreatedProblems")
   createdSets       GeneratedSet[]    @relation("CreatedSets")
   bonusPointsAdded  BonusPoint[]      @relation("BonusPointsAdded")
+  createdLeads      Lead[]            @relation("CreatedLeads")
 
   @@map("users")
 }
@@ -589,56 +590,83 @@ model Payment {
   @@map("payments")
 }
 
-// ==================== CONTACT MESSAGES ====================
+// ==================== LEADS (PIPELINE VÂNZĂRI) ====================
 
-model ContactMessage {
-  id        String               @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  email     String
-  phone     String?
-  message   String
-  status    ContactMessageStatus @default(LEAD)
-  notes     String?              // Legacy - kept for backwards compatibility
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
-  
+model Lead {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  name         String     // Persoana de contact (părinte sau viitorul elev)
+  phone        String?
+  email        String?
+  source       LeadSource @default(ALTA)
+  sourceDetail String?    // @user Instagram, numărul de WhatsApp, cine a recomandat...
+  message      String?    // Mesajul primit / contextul discuției
+
+  // Cine învață — poate fi altcineva decât persoana de contact
+  studentName  String?
+  studentAge   Int?
+  interestedIn String?    // Nivelul dorit: A1, B2, IELTS, Kids...
+
+  status         LeadStatus @default(LEAD)
+  nextFollowUpAt DateTime?  // Când trebuie recontactat
+  notes          String?    // Legacy — notițele noi stau în LeadNote
+
+  createdById        String?  @db.ObjectId // Cine a introdus lead-ul în CRM
+  convertedStudentId String?  @db.ObjectId // Elevul creat din acest lead
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
   // Relations
-  contactNotes ContactNote[] @relation("ContactNotes")
+  createdBy User?      @relation("CreatedLeads", fields: [createdById], references: [id], onDelete: SetNull)
+  leadNotes LeadNote[] @relation("LeadNotes")
 
-  @@map("contact_messages")
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+  @@index([nextFollowUpAt])
+  @@map("leads")
 }
 
-model ContactNote {
-  id               String   @id @default(auto()) @map("_id") @db.ObjectId
-  contactMessageId String   @db.ObjectId
-  content          String
-  createdAt        DateTime @default(now())
-  
-  // Relations
-  contactMessage   ContactMessage @relation("ContactNotes", fields: [contactMessageId], references: [id], onDelete: Cascade)
-  
-  @@map("contact_notes")
+model LeadNote {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  leadId     String   @db.ObjectId
+  content    String
+  authorName String?  // Cine a scris notița
+  createdAt  DateTime @default(now())
+
+  lead Lead @relation("LeadNotes", fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("lead_notes")
 }
 
-enum ContactMessageStatus {
-  LEAD              // 🔵 Lead
-  FARA_RASPUNS      // 🔘 Fără Răspuns
+enum LeadSource {
+  INSTAGRAM
+  MESSENGER
+  FACEBOOK
+  WHATSAPP
+  TELEGRAM
+  TIKTOK
+  TELEFON
+  RECOMANDARE
+  WALK_IN
+  SITE
+  ALTA
+}
+
+enum LeadStatus {
+  LEAD              // 🔵 Lead nou
+  FARA_RASPUNS      // 🔘 Fără răspuns
   CONTACTAT         // 🟡 Contactat
-  PROGRAMAT         // 🟠 Programat
-  PRIMA_LECTIE      // 🟢 Prima Lecție
-  FINALIZAT_LECTIA  // ⚫ Finalizat Lecția
-  SE_GANDESTE       // 🔘 Se Gândește
-  ASTEPTAM_PLATA    // 💵 Așteptăm Plata
-  PLATIT            // 💰 Plătit
-  STUDIAZA          // 🟣 Studiază
-  PLECAT            // 🔴 Plecat
-  LOST_LEAD         // ❌ Lost Lead
+  PROGRAMAT         // 🟠 Programat la lecție
+  PRIMA_LECTIE      // 🟢 A venit la prima lecție
+  FINALIZAT_LECTIA  // ⚫ A terminat lecția de probă
+  SE_GANDESTE       // 🔘 Se gândește
+  ASTEPTAM_PLATA    // 💵 Așteptăm plata
+  PLATIT            // 💰 A plătit
+  STUDIAZA          // 🟣 Studiază (convertit)
+  PLECAT            // 🔴 A plecat
+  LOST_LEAD         // ❌ Lead pierdut
   TEST              // 🧪 Test
-  // Legacy statuses for backwards compatibility
-  NOU
-  CITIT
-  RASPUNS
-  ARHIVAT
 }
 
 // ==================== MISSED SESSIONS (LECȚII RATATE) ====================

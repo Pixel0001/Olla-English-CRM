@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import AdminLoading from './loading'
+import { getSource } from '@/lib/leads-config'
 import { 
   AcademicCapIcon, 
   UserGroupIcon, 
@@ -31,7 +32,7 @@ async function AdminDashboardContent() {
   const canViewStudents   = { allowed: has('students.view') }
   const canViewGroups     = { allowed: has('groups.view') }
   const canViewTeachers   = { allowed: has('teachers.view') }
-  const canViewContact    = { allowed: has('contact.view') }
+  const canViewLeads      = { allowed: has('leads.view') }
   const canViewMissedSessions = { allowed: has('missed-sessions.view') }
 
   // All data queries in a SINGLE parallel batch — no sequential round-trips
@@ -39,7 +40,7 @@ async function AdminDashboardContent() {
     studentsCount,
     groupsCount,
     teachers,
-    unreadMessages,
+    newLeads,
     unacknowledgedMissedSessions
   ] = await Promise.all([
     canViewStudents.allowed ? prisma.student.count() : 0,
@@ -55,8 +56,8 @@ async function AdminDashboardContent() {
         }
       }
     }) : [],
-    canViewContact.allowed ? prisma.contactMessage.findMany({
-      where: { status: 'NOU' },
+    canViewLeads.allowed ? prisma.lead.findMany({
+      where: { status: { in: ['LEAD', 'FARA_RASPUNS'] } },
       take: 5,
       orderBy: { createdAt: 'desc' }
     }) : [],
@@ -127,7 +128,7 @@ async function AdminDashboardContent() {
 
   // Check if user has any permissions at all
   const hasAnyPermission = canViewStudents.allowed || canViewGroups.allowed ||
-    canViewTeachers.allowed || canViewContact.allowed || canViewMissedSessions.allowed
+    canViewTeachers.allowed || canViewLeads.allowed || canViewMissedSessions.allowed
 
   return (
     <div className="space-y-5 xs:space-y-6 md:space-y-8">
@@ -215,50 +216,52 @@ async function AdminDashboardContent() {
       )}
 
       {/* Contact Messages & Missed Sessions Row - only show if user has permission for either */}
-      {(canViewContact.allowed || canViewMissedSessions.allowed) && (
+      {(canViewLeads.allowed || canViewMissedSessions.allowed) && (
         <div className={`grid gap-4 xs:gap-5 md:gap-6 ${
-          canViewContact.allowed && canViewMissedSessions.allowed 
+          canViewLeads.allowed && canViewMissedSessions.allowed 
             ? 'grid-cols-1 lg:grid-cols-2' 
             : 'grid-cols-1'
         }`}>
           {/* Contact Messages */}
-          {canViewContact.allowed && (
+          {canViewLeads.allowed && (
             <div className="bg-white rounded-xl xs:rounded-2xl shadow-sm border border-gray-100">
               <div className="px-3 xs:px-4 md:px-6 py-3 xs:py-4 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ChatBubbleLeftRightIcon className="w-4 h-4 xs:w-5 xs:h-5 text-indigo-600" />
-                  <h2 className="text-base xs:text-lg font-semibold text-gray-900">Mesaje Contact</h2>
-                  {unreadMessages.length > 0 && (
+                  <h2 className="text-base xs:text-lg font-semibold text-gray-900">Leads de contactat</h2>
+                  {newLeads.length > 0 && (
                     <span className="inline-flex items-center px-1.5 xs:px-2 py-0.5 rounded-full text-[10px] xs:text-xs font-medium bg-red-100 text-red-800">
-                      {unreadMessages.length}
+                      {newLeads.length}
                     </span>
                   )}
                 </div>
-                <Link href="/admin/contact" className="text-xs xs:text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+                <Link href="/admin/leads" className="text-xs xs:text-sm text-indigo-600 hover:text-indigo-700 font-medium">
                   Vezi toate →
                 </Link>
               </div>
               <div className="divide-y divide-gray-100">
-                {unreadMessages.length === 0 ? (
+                {newLeads.length === 0 ? (
                   <div className="px-3 xs:px-4 md:px-6 py-6 xs:py-8 text-center text-gray-500 text-xs xs:text-sm">
-                    Nu există mesaje necitite
+                    Niciun lead care așteaptă contactare
                   </div>
                 ) : (
-                  unreadMessages.map((message) => (
-                    <Link 
-                      key={message.id} 
-                      href={`/admin/contact/${message.id}`}
+                  newLeads.map((lead) => (
+                    <Link
+                      key={lead.id}
+                      href={`/admin/leads/${lead.id}`}
                       className="block px-3 xs:px-4 md:px-6 py-3 xs:py-4 hover:bg-gray-50"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-gray-900 text-sm xs:text-base truncate">{message.name}</p>
-                          <p className="text-xs xs:text-sm text-gray-500 truncate">{message.subject || 'Fără subiect'}</p>
-                          <p className="text-[10px] xs:text-xs text-gray-400 mt-1 line-clamp-1">{message.message}</p>
+                          <p className="font-medium text-gray-900 text-sm xs:text-base truncate">{lead.name}</p>
+                          <p className="text-xs xs:text-sm text-gray-500 truncate">{lead.phone || lead.email || 'Fără contact'}</p>
+                          {lead.message && (
+                            <p className="text-[10px] xs:text-xs text-gray-400 mt-1 line-clamp-1">{lead.message}</p>
+                          )}
                         </div>
                         <div className="flex-shrink-0">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] xs:text-xs font-medium bg-blue-100 text-blue-800">
-                            NOU
+                            {getSource(lead.source).emoji} {getSource(lead.source).label}
                           </span>
                         </div>
                       </div>

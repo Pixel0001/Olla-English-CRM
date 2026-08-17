@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { notifyNewContact } from '@/lib/telegram'
+import { notifyNewLead } from '@/lib/telegram'
 import { checkRateLimit, getClientIP } from '@/lib/rate-limit'
 
 export async function POST(request) {
@@ -35,20 +35,21 @@ export async function POST(request) {
     }
 
     // Salvare în baza de date
-    const contactMessage = await prisma.contactMessage.create({
+    const lead = await prisma.lead.create({
       data: {
         name,
-        email,
+        email: email || null,
         phone: phone || null,
-        message,
-        status: 'NOU'
+        message: message || null,
+        source: 'SITE',
+        status: 'LEAD'
       }
     })
 
     // Trimite notificare pe Telegram cu butoane
-    await notifyNewContact(name, email, phone, contactMessage.id, message)
+    await notifyNewLead(lead)
 
-    return NextResponse.json({ success: true, id: contactMessage.id })
+    return NextResponse.json({ success: true, id: lead.id })
   } catch (error) {
     console.error('Eroare la salvarea mesajului:', error)
     return NextResponse.json(
@@ -58,18 +59,5 @@ export async function POST(request) {
   }
 }
 
-export async function GET(request) {
-  try {
-    const messages = await prisma.contactMessage.findMany({
-      orderBy: { createdAt: 'desc' }
-    })
-
-    return NextResponse.json(messages)
-  } catch (error) {
-    console.error('Eroare la obținerea mesajelor:', error)
-    return NextResponse.json(
-      { error: 'A apărut o eroare' },
-      { status: 500 }
-    )
-  }
-}
+// Fără GET public: lista de lead-uri conține date personale și se citește
+// exclusiv autentificat, prin /api/admin/leads.

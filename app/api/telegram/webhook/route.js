@@ -478,7 +478,7 @@ export async function POST(request) {
       // Actualizare în baza de date
       let contact
       try {
-        contact = await prisma.contactMessage.update({
+        contact = await prisma.lead.update({
           where: { id: contactId },
           data: { status: newStatus },
         })
@@ -499,8 +499,8 @@ export async function POST(request) {
         timeZone: 'Europe/Chisinau',
       })
 
-      const isFromSiteForm = contact.email === 'noreply@ollaenglish.md'
-      const emailLine = isFromSiteForm ? '🌐 Sursă: <b>Formular site</b>' : `📧 Email: ${contact.email}`
+      const isFromSiteForm = contact.source === 'SITE'
+      const emailLine = isFromSiteForm ? '🌐 Sursă: <b>Formular site</b>' : `📧 Email: ${contact.email || 'N/A'}`
 
       // Mesajul actualizat cu noul status
       const updatedText = `📬 <b>CERERE LECȚIE GRATUITĂ</b>

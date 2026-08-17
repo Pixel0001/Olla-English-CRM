@@ -1,0 +1,43 @@
+export const dynamic = 'force-dynamic'
+
+import prisma from '@/lib/prisma'
+import PermissionGuard from '@/components/admin/PermissionGuard'
+import LeadsClient from './LeadsClient'
+
+export default async function LeadsPage() {
+  return (
+    <PermissionGuard permission="leads.view">
+      <LeadsPageContent />
+    </PermissionGuard>
+  )
+}
+
+async function LeadsPageContent() {
+  const leads = await prisma.lead.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      createdBy: { select: { name: true, email: true } },
+      _count: { select: { leadNotes: true } },
+    },
+  })
+
+  const formatted = leads.map((l) => ({
+    id: l.id,
+    name: l.name,
+    phone: l.phone,
+    email: l.email,
+    source: l.source,
+    sourceDetail: l.sourceDetail,
+    message: l.message,
+    studentName: l.studentName,
+    studentAge: l.studentAge,
+    interestedIn: l.interestedIn,
+    status: l.status,
+    nextFollowUpAt: l.nextFollowUpAt ? l.nextFollowUpAt.toISOString() : null,
+    createdAt: l.createdAt.toISOString(),
+    createdByName: l.createdBy?.name || l.createdBy?.email || null,
+    notesCount: l._count.leadNotes,
+  }))
+
+  return <LeadsClient leads={formatted} />
+}

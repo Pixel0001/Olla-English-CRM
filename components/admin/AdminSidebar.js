@@ -37,7 +37,7 @@ const navigation = [
   { name: 'Dashboard', href: '/admin', icon: 'home' },
   { name: 'Notificări', href: '/admin/notifications', icon: 'bell', permission: 'notifications.view' },
   { name: 'Orar', href: '/admin/orar', icon: 'clock', permission: 'schedule.view' },
-  { name: 'Mesaje Contact', href: '/admin/contact', icon: 'chat', permission: 'contact.view' },
+  { name: 'Leads', href: '/admin/leads', icon: 'chat', permission: 'leads.view' },
   { name: 'Elevi', href: '/admin/students', icon: 'academic', permission: 'students.view' },
   { name: 'Personal', href: '/admin/teachers', icon: 'user', permission: 'teachers.view' },
   { name: 'Grupe', href: '/admin/groups', icon: 'collection', permission: 'groups.view' },

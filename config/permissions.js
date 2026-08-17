@@ -3,16 +3,26 @@
 // ADMIN poate avea permisiuni selective setate de SUPERADMIN
 
 export const PERMISSIONS = {
-  // Contact (mesaje / lead-uri)
-  'contact.view': {
-    label: 'Vezi mesajele',
-    description: 'Poate vedea și gestiona mesajele de contact (status, notițe)',
-    category: 'Contact'
+  // Leads (pipeline vânzări)
+  'leads.view': {
+    label: 'Vezi lead-urile',
+    description: 'Poate vedea lista de lead-uri și detaliile lor',
+    category: 'Leads'
   },
-  'contact.delete': {
-    label: 'Șterge mesajele',
-    description: 'Poate șterge mesajele de contact (necesită 2FA)',
-    category: 'Contact'
+  'leads.create': {
+    label: 'Adaugă lead-uri',
+    description: 'Poate introduce lead-uri noi (Instagram, WhatsApp, telefon etc.)',
+    category: 'Leads'
+  },
+  'leads.edit': {
+    label: 'Editează lead-uri',
+    description: 'Poate schimba statusul, datele, follow-up-ul și notițele',
+    category: 'Leads'
+  },
+  'leads.delete': {
+    label: 'Șterge lead-uri',
+    description: 'Poate șterge lead-uri definitiv',
+    category: 'Leads'
   },
 
   // Elevi
@@ -359,7 +369,7 @@ export const hasAllPermissions = (user, permissions) => {
 
 // Export lista de categorii pentru ordine
 export const PERMISSION_CATEGORIES = [
-  'Contact',
+  'Leads',
   'Elevi',
   'Grupe',
   'Elevi în Grupe',
