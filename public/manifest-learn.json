@@ -1,0 +1,52 @@
+{
+  "name": "Olla English — Elevi",
+  "short_name": "Olla Learn",
+  "description": "Portalul elevului Olla English — lecții și exerciții interactive.",
+  "start_url": "/learn/login",
+  "scope": "/learn",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#14276B",
+  "theme_color": "#14276B",
+  "categories": ["education", "productivity"],
+  "lang": "ro",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Modulele mele",
+      "short_name": "Module",
+      "description": "Vezi modulele tale",
+      "url": "/learn"
+    },
+    {
+      "name": "Login",
+      "short_name": "Login",
+      "url": "/learn/login"
+    }
+  ]
+}

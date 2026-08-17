@@ -1,0 +1,227 @@
+import { NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
+import { requireAdmin, getCurrentUser } from '@/lib/session'
+import { require2FAToken } from '@/lib/security/action-tokens'
+import { checkPermission } from '@/lib/permissions'
+import { sendTeacherDirectMessage } from '@/lib/telegram'
+
+const ITEMS_PER_PAGE = 20
+
+export async function GET(request) {
+  try {
+    await requireAdmin()
+    
+    const canView = await checkPermission('groups.view')
+    if (!canView.allowed) {
+      return NextResponse.json({ error: 'Nu ai permisiunea de a vedea grupele' }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const search = searchParams.get('search') || ''
+    const teacherId = searchParams.get('teacherId') || ''
+    const branchId = searchParams.get('branchId') || ''
+    const day = searchParams.get('day') || ''
+    const all = searchParams.get('all') === 'true' // Pentru a obține toate (pentru filtre)
+
+    // Build where clause
+    const where = {}
+    
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { level: { contains: search, mode: 'insensitive' } },
+        { teacher: { name: { contains: search, mode: 'insensitive' } } },
+        { teacher: { email: { contains: search, mode: 'insensitive' } } },
+        { branch: { name: { contains: search, mode: 'insensitive' } } },
+        { groupStudents: { some: { student: { fullName: { contains: search, mode: 'insensitive' } } } } }
+      ]
+    }
+    
+    if (teacherId) {
+      where.teacherId = teacherId
+    }
+    
+    if (branchId) {
+      if (branchId === 'none') {
+        where.branchId = null
+      } else {
+        where.branchId = branchId
+      }
+    }
+    
+    if (day) {
+      where.scheduleDays = { has: day }
+    }
+
+    // Get total count for pagination
+    const totalCount = await prisma.group.count({ where })
+    const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
+
+    // Get paginated groups
+    const groups = await prisma.group.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: all ? 0 : (page - 1) * ITEMS_PER_PAGE,
+      take: all ? undefined : ITEMS_PER_PAGE,
+      include: { 
+        teacher: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true
+          }
+        },
+        branch: true,
+        groupStudents: {
+          include: {
+            student: true
+          }
+        }
+      }
+    })
+
+    // Get teachers and branches for filters (always return all)
+    const [teachers, branches, makeupLessons] = await Promise.all([
+      prisma.user.findMany({
+        where: { role: 'TEACHER' },
+        select: { id: true, name: true, email: true },
+        orderBy: { name: 'asc' }
+      }),
+      prisma.branch.findMany({
+        where: { active: true },
+        orderBy: { name: 'asc' }
+      }),
+      // Fetch scheduled makeup lessons for schedule view
+      prisma.makeupLesson.findMany({
+        where: {
+          status: { in: ['SCHEDULED', 'IN_PROGRESS'] }
+        },
+        include: {
+          group: { select: { id: true, name: true } },
+          branch: { select: { id: true, name: true } },
+          teacher: { select: { id: true, name: true, email: true } },
+          students: {
+            include: {
+              student: { select: { id: true, fullName: true } }
+            }
+          }
+        },
+        orderBy: { scheduledAt: 'asc' }
+      })
+    ])
+    
+    return NextResponse.json({ 
+      groups, 
+      teachers, 
+      branches,
+      makeupLessons,
+      pagination: {
+        page,
+        totalPages,
+        totalCount,
+        hasMore: page < totalPages
+      }
+    })
+  } catch (error) {
+    if (error.message === 'Unauthorized' || error.message === 'Forbidden') {
+      return NextResponse.json({ error: error.message }, { status: 401 })
+    }
+    return NextResponse.json({ error: 'Failed to fetch groups' }, { status: 500 })
+  }
+}
+
+export async function POST(request) {
+  try {
+    await requireAdmin()
+    
+    const canCreate = await checkPermission('groups.create')
+    if (!canCreate.allowed) {
+      return NextResponse.json({ error: 'Nu ai permisiunea de a crea grupe' }, { status: 403 })
+    }
+    
+    const sessionUser = await getCurrentUser()
+    const body = await request.json()
+
+    // Verify 2FA if user has it enabled
+    const currentUser = await prisma.user.findUnique({
+      where: { email: sessionUser.email },
+      select: { twoFactorEnabled: true }
+    })
+    
+    const twoFACheck = require2FAToken(body.actionToken, sessionUser.email, currentUser?.twoFactorEnabled)
+    if (!twoFACheck.valid && !twoFACheck.skip) {
+      return NextResponse.json({ 
+        error: twoFACheck.error, 
+        requires2FA: true 
+      }, { status: 403 })
+    }
+
+    const { name, level, teacherId, branchId, scheduleDays, scheduleTime, 
+            locationType, locationDetails, startDate, active } = body
+
+    const group = await prisma.group.create({
+      data: {
+        name,
+        level: level || null,
+        teacherId,
+        branchId: branchId || null,
+        scheduleDays,
+        scheduleTime,
+        locationType,
+        locationDetails,
+        startDate: startDate ? new Date(startDate) : null,
+        active
+      },
+      include: {
+        branch: { select: { name: true } },
+        teacher: { select: { name: true, telegramChatId: true } }
+      }
+    })
+
+    // Trimite notificare pe Telegram către profesor
+    if (group.teacher?.telegramChatId && teacherId) {
+      // Parse scheduleTime - poate fi JSON sau string simplu
+      let timeDisplay = scheduleTime || 'Neprecizat'
+      if (scheduleTime && scheduleTime.startsWith('{')) {
+        try {
+          const times = JSON.parse(scheduleTime)
+          // Formatează ca: Luni la 12:00, Vineri la 19:00
+          const days = scheduleDays || Object.keys(times)
+          timeDisplay = days
+            .filter(day => times[day])
+            .map(day => `${day} la ${times[day]}`)
+            .join(', ')
+        } catch {
+          // Lasă ca string simplu
+        }
+      }
+      
+      const scheduleInfo = scheduleDays?.length > 0 
+        ? `📅 ${timeDisplay}`
+        : 'Program nestabilit'
+      
+      const message = `🎉 <b>Grupă Nouă Atribuită!</b>
+
+📚 Grupă: <b>${group.name}</b>
+📘 Nivel: ${group.level || 'Nespecificat'}
+${group.branch ? `🏢 Filială: ${group.branch.name}` : ''}
+${scheduleInfo}
+${locationDetails ? `📍 Locație: ${locationDetails}` : ''}
+${locationType === 'online' ? '💻 Online' : '🏫 Fizic'}
+
+✨ Mult succes cu noua grupă!`
+
+      await sendTeacherDirectMessage(group.teacher.telegramChatId, message)
+    }
+
+    return NextResponse.json(group, { status: 201 })
+  } catch (error) {
+    console.error('Error creating group:', error)
+    if (error.message === 'Unauthorized' || error.message === 'Forbidden') {
+      return NextResponse.json({ error: error.message }, { status: 401 })
+    }
+    return NextResponse.json({ error: 'Failed to create group' }, { status: 500 })
+  }
+}
