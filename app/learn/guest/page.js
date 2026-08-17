@@ -2,7 +2,9 @@
 // Listeaza modulele active. Doar lectiile FREE sunt accesibile (link-uri activate).
 // Restul lectiilor se afiseaza blocate cu CTA catre /learn/login.
 
-export const revalidate = 3600 // cache 1 ora - toate guest-urile vad acelasi continut
+// Randare la cerere: build-ul nu trebuie sa depinda de disponibilitatea bazei
+// de date (pe Vercel build-ul ruleaza de pe IP-uri care pot fi blocate de Atlas).
+export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import prisma from '@/lib/prisma'
@@ -89,22 +91,32 @@ export const metadata = {
   robots: { index: false, follow: false },
 }
 
-export default async function GuestDashboard() {
-  const modules = await prisma.learningModule.findMany({
-    where: { active: true },
-    orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
-    select: {
-      id: true, title: true, description: true, language: true, order: true,
-      lessons: {
-        where: { active: true },
-        orderBy: { order: 'asc' },
-        select: {
-          id: true, title: true, slug: true, order: true, isFree: true,
-          _count: { select: { problems: true } },
+async function getModules() {
+  try {
+    return await prisma.learningModule.findMany({
+      where: { active: true },
+      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+      select: {
+        id: true, title: true, description: true, language: true, order: true,
+        lessons: {
+          where: { active: true },
+          orderBy: { order: 'asc' },
+          select: {
+            id: true, title: true, slug: true, order: true, isFree: true,
+            _count: { select: { problems: true } },
+          },
         },
       },
-    },
-  })
+    })
+  } catch (error) {
+    // Baza indisponibila: afisam starea goala in loc sa rupem randarea/build-ul.
+    console.error('Guest dashboard — nu pot citi modulele:', error.message)
+    return []
+  }
+}
+
+export default async function GuestDashboard() {
+  const modules = await getModules()
 
   const totalFreeLessons = modules.reduce((s, m) => s + m.lessons.filter(l => l.isFree).length, 0)
   const totalLessons = modules.reduce((s, m) => s + m.lessons.length, 0)
