@@ -7,12 +7,12 @@ import { canStartSession } from '@/lib/schedule-utils'
 export async function POST(request) {
   const session = await getServerSession(authOptions)
   
-  if (!session || !['TEACHER', 'ADMIN'].includes(session.user.role)) {
+  if (!session || !['TEACHER', 'ADMIN', 'SUPERADMIN'].includes(session.user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const { groupId, customDate } = await request.json()
+    const { groupId, customDate, notes } = await request.json()
 
     // Check if user is a super teacher
     const currentUser = await prisma.user.findUnique({
@@ -107,7 +107,7 @@ export async function POST(request) {
 export async function GET(request) {
   const session = await getServerSession(authOptions)
   
-  if (!session || !['TEACHER', 'ADMIN'].includes(session.user.role)) {
+  if (!session || !['TEACHER', 'ADMIN', 'SUPERADMIN'].includes(session.user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

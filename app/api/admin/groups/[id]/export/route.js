@@ -24,6 +24,20 @@ const fmtDateTime = (d) =>
     day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
   }) : ''
 
+
+// scheduleTime e fie o oră simplă ("16:00"), fie JSON per zi ({"Marți":"16:00"})
+function formatSchedule(days = [], scheduleTime) {
+  if (!days || days.length === 0) return '—'
+  let times = null
+  if (scheduleTime && scheduleTime.trim().startsWith('{')) {
+    try { times = JSON.parse(scheduleTime) } catch { times = null }
+  }
+  if (times) {
+    return days.map((d) => `${d} ${times[d] || ''}`.trim()).join(', ')
+  }
+  return days.map((d) => `${d} ${scheduleTime || ''}`.trim()).join(', ')
+}
+
 const STUDENT_STATUS = {
   ACTIVE: 'Activ', PAUSED: 'Pauză', LEFT: 'A plecat',
   COMPLETED: 'Finalizat', TRANSFERRED: 'Transferat',
@@ -49,7 +63,7 @@ function buildCsv(data) {
   out.push(csvRow(['Nivel', group.level || '—']))
   out.push(csvRow(['Profesor', group.teacher?.name || '—']))
   out.push(csvRow(['Filială', group.branch?.name || '—']))
-  out.push(csvRow(['Program', `${(group.scheduleDays || []).join(', ')} ${group.scheduleTime || ''}`.trim()]))
+  out.push(csvRow(['Program', formatSchedule(group.scheduleDays, group.scheduleTime)]))
   out.push(csvRow(['Început', fmtDate(group.startDate || group.createdAt)]))
   out.push(csvRow(['Lecții pe lună', group.monthlyLessons ?? 8]))
   out.push(csvRow(['Status', group.active ? 'Activă' : 'Inactivă']))
@@ -68,13 +82,15 @@ function buildCsv(data) {
   out.push('')
 
   out.push('SESIUNI ȘI PREZENȚE')
-  out.push(csvRow(['Data', 'Lecții scăzute', 'Prezenți', 'Absenți', ...students.map((s) => s.name)]))
+  out.push(csvRow(['Data', 'Lecții scăzute', 'Prezenți', 'Cine a fost prezent', 'Absenți', 'Cine a lipsit', ...students.map((s) => s.name)]))
   for (const ses of sessions) {
     out.push(csvRow([
       fmtDateTime(ses.date),
       ses.lessonsDeducted ? 'da' : 'nu',
       ses.presentCount,
+      ses.presentNames.join('; '),
       ses.absentCount,
+      ses.absentNames.join('; '),
       ...students.map((s) => {
         const st = ses.byStudent[s.studentId]
         return st === 'PRESENT' ? 'P' : st === 'ABSENT' ? 'A' : '—'
@@ -134,31 +150,50 @@ function buildHtml(data) {
 <title>${esc(group.name)} — istoric</title>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #111827; margin: 24px; font-size: 12px; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  h2 { font-size: 14px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #e5e7eb; }
-  .meta { color: #6b7280; font-size: 11px; margin-bottom: 12px; }
-  .cards { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
-  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px 10px; }
-  .card span { display: block; color: #6b7280; font-size: 10px; text-transform: uppercase; }
-  .card b { font-size: 14px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-  th, td { border: 1px solid #e5e7eb; padding: 4px 6px; text-align: left; }
-  th { background: #f9fafb; font-size: 10px; text-transform: uppercase; color: #6b7280; }
-  tbody tr:nth-child(even) { background: #fafafa; }
-  @media print { body { margin: 10mm; } h2 { page-break-after: avoid; } tr { page-break-inside: avoid; } }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #1f2937; margin: 0; padding: 28px; font-size: 12px; background: #fff; }
+  header { border-bottom: 3px solid #4f46e5; padding-bottom: 12px; margin-bottom: 16px; }
+  h1 { font-size: 22px; margin: 0 0 6px; color: #111827; letter-spacing: -0.2px; }
+  .meta { color: #6b7280; font-size: 11px; line-height: 1.7; }
+  .meta b { color: #374151; font-weight: 600; }
+  h2 { font-size: 13px; margin: 24px 0 8px; color: #4f46e5; text-transform: uppercase; letter-spacing: 0.6px; }
+  .cards { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 4px; }
+  .card { flex: 1 1 120px; border: 1px solid #e5e7eb; border-left: 3px solid #4f46e5; border-radius: 8px; padding: 8px 12px; background: #fafaff; }
+  .card span { display: block; color: #6b7280; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+  .card b { font-size: 17px; color: #111827; }
+  .card.money { border-left-color: #059669; background: #f0fdf4; }
+  .card.money b { color: #047857; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  th { background: #4f46e5; color: #fff; font-size: 9px; text-transform: uppercase; letter-spacing: 0.4px; padding: 6px; text-align: left; font-weight: 600; }
+  td { border-bottom: 1px solid #e5e7eb; padding: 5px 6px; }
+  tbody tr:nth-child(even) { background: #f9fafb; }
+  .p { display: inline-block; min-width: 18px; text-align: center; background: #d1fae5; color: #065f46; border-radius: 4px; font-weight: 700; padding: 1px 4px; }
+  .a { display: inline-block; min-width: 18px; text-align: center; background: #fee2e2; color: #991b1b; border-radius: 4px; font-weight: 700; padding: 1px 4px; }
+  .none { color: #d1d5db; }
+  .names { font-size: 10px; max-width: 220px; }
+  .names.ok { color: #047857; }
+  .names.bad { color: #b91c1c; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  footer { margin-top: 20px; padding-top: 8px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 9px; }
+  @media print {
+    body { padding: 10mm; }
+    h2 { page-break-after: avoid; }
+    tr { page-break-inside: avoid; }
+    thead { display: table-header-group; }
+  }
 </style>
 </head>
 <body onload="window.print()">
-  <h1>${esc(group.name)}</h1>
-  <div class="meta">
-    ${esc(group.level || 'fără nivel')} ·
-    profesor ${esc(group.teacher?.name || '—')} ·
-    ${esc(group.branch?.name || 'fără filială')} ·
-    ${esc((group.scheduleDays || []).join(', '))} ${esc(group.scheduleTime || '')} ·
-    din ${esc(fmtDate(group.startDate || group.createdAt))} ·
-    generat ${esc(fmtDateTime(new Date()))}
-  </div>
+  <header>
+    <h1>${esc(group.name)}</h1>
+    <div class="meta">
+      <b>Nivel:</b> ${esc(group.level || '—')} &nbsp;·&nbsp;
+      <b>Profesor:</b> ${esc(group.teacher?.name || '—')} &nbsp;·&nbsp;
+      <b>Filială:</b> ${esc(group.branch?.name || '—')}<br>
+      <b>Program:</b> ${esc(formatSchedule(group.scheduleDays, group.scheduleTime))} &nbsp;·&nbsp;
+      <b>Din:</b> ${esc(fmtDate(group.startDate || group.createdAt))} &nbsp;·&nbsp;
+      <b>Status:</b> ${group.active ? 'activă' : 'inactivă'}
+    </div>
+  </header>
 
   <div class="cards">
     <div class="card"><span>Elevi</span><b>${students.length}</b></div>
@@ -185,16 +220,27 @@ function buildHtml(data) {
   )}
 
   <h2>Sesiuni și prezențe</h2>
-  ${table(
-    ['Data', 'Prezenți', 'Absenți', ...students.map((s) => s.name)],
-    sessions.map((ses) => [
-      fmtDateTime(ses.date), ses.presentCount, ses.absentCount,
-      ...students.map((s) => {
-        const st = ses.byStudent[s.studentId]
-        return st === 'PRESENT' ? 'P' : st === 'ABSENT' ? 'A' : '—'
-      }),
-    ])
-  )}
+  <table>
+    <thead><tr>
+      <th>Data</th><th>Prezenți</th><th>Cine a fost</th><th>Absenți</th><th>Cine a lipsit</th>
+      ${students.map((s) => `<th>${esc(s.name)}</th>`).join('')}
+    </tr></thead>
+    <tbody>
+      ${sessions.map((ses) => `<tr>
+        <td>${esc(fmtDateTime(ses.date))}</td>
+        <td class="num">${ses.presentCount}</td>
+        <td class="names ok">${esc(ses.presentNames.join(', ')) || '—'}</td>
+        <td class="num">${ses.absentCount}</td>
+        <td class="names bad">${esc(ses.absentNames.join(', ')) || '—'}</td>
+        ${students.map((s) => {
+          const st = ses.byStudent[s.studentId]
+          if (st === 'PRESENT') return '<td><span class="p">P</span></td>'
+          if (st === 'ABSENT') return '<td><span class="a">A</span></td>'
+          return '<td><span class="none">—</span></td>'
+        }).join('')}
+      </tr>`).join('')}
+    </tbody>
+  </table>
 
   <h2>Plăți</h2>
   ${table(
@@ -212,6 +258,10 @@ function buildHtml(data) {
       TRIAL_STATUS[t.status] || t.status, t.notes || '',
     ])
   )}` : ''}
+
+  <footer>
+    Generat din Olla English CRM · ${esc(fmtDateTime(new Date()))}
+  </footer>
 </body>
 </html>`
 }
@@ -278,16 +328,27 @@ export async function GET(request, { params }) {
       paid: gs.payments.reduce((sum, p) => sum + (p.amount || 0), 0),
     }))
 
+    const nameById = Object.fromEntries(students.map((s) => [s.studentId, s.name]))
+
     const sessions = group.lessonSessions.map((s) => {
       const byStudent = {}
-      let presentCount = 0
-      let absentCount = 0
+      const presentNames = []
+      const absentNames = []
       for (const a of s.attendances) {
         byStudent[a.studentId] = a.status
-        if (a.status === 'PRESENT') presentCount++
-        else absentCount++
+        const name = nameById[a.studentId] || 'elev șters'
+        if (a.status === 'PRESENT') presentNames.push(name)
+        else absentNames.push(name)
       }
-      return { date: s.date, lessonsDeducted: s.lessonsDeducted, byStudent, presentCount, absentCount }
+      return {
+        date: s.date,
+        lessonsDeducted: s.lessonsDeducted,
+        byStudent,
+        presentNames,
+        absentNames,
+        presentCount: presentNames.length,
+        absentCount: absentNames.length,
+      }
     })
 
     const payments = group.groupStudents.flatMap((gs) =>

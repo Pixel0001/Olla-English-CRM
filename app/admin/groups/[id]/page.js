@@ -5,12 +5,13 @@ import prisma from '@/lib/prisma'
 import GroupForm from '@/components/admin/GroupForm'
 import LessonPackagePanel from '@/components/groups/LessonPackagePanel'
 import TrialLessonsPanel from '@/components/groups/TrialLessonsPanel'
+import AdminStartSessionButton from '@/components/admin/AdminStartSessionButton'
 
 export default async function EditGroupPage({ params }) {
   const { id } = await params
   
   const [group, teachers, branches, stats] = await Promise.all([
-    prisma.group.findUnique({ where: { id } }),
+    prisma.group.findUnique({ where: { id }, include: { teacher: { select: { name: true } } } }),
     prisma.user.findMany({ where: { role: 'TEACHER', active: true } }),
     prisma.branch.findMany({ where: { active: true }, orderBy: { name: 'asc' } }),
     // Rezumatul grupei: elevi, lecții ținute, încasări
@@ -63,6 +64,15 @@ export default async function EditGroupPage({ params }) {
             PDF
           </a>
         </div>
+      </div>
+
+      {/* Pornirea unei lecții la orice dată, când profesorul nu a apucat */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 xs:p-6">
+        <h2 className="text-base font-semibold text-gray-900 mb-1">Înregistrează o lecție</h2>
+        <p className="text-xs text-gray-600 mb-3">
+          Pentru cazurile în care lecția s-a ținut, dar nu a fost pornită din contul profesorului
+        </p>
+        <AdminStartSessionButton groupId={group.id} teacherName={group.teacher?.name || null} />
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">

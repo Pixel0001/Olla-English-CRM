@@ -360,11 +360,22 @@ export default function LessonPackagePanel({ groupId }) {
                       <td className="px-3 py-2 text-xs font-medium text-gray-500 sticky left-0 bg-gray-50">
                         Prezenți
                       </td>
-                      {sessions.map((s) => (
-                        <td key={s.id} className="px-2 py-2 text-center text-xs font-semibold text-gray-700">
-                          {students.filter((st) => s.attendance[st.studentId] === 'PRESENT').length}
-                        </td>
-                      ))}
+                      {sessions.map((s) => {
+                        const present = students.filter((st) => s.attendance[st.studentId] === 'PRESENT')
+                        const absent = students.filter((st) => s.attendance[st.studentId] === 'ABSENT')
+                        return (
+                          <td
+                            key={s.id}
+                            className="px-2 py-2 text-center text-xs font-semibold text-gray-700"
+                            title={[
+                              present.length ? 'Prezenți: ' + present.map((p) => p.name).join(', ') : null,
+                              absent.length ? 'Absenți: ' + absent.map((a) => a.name).join(', ') : null,
+                            ].filter(Boolean).join(' | ')}
+                          >
+                            {present.length}
+                          </td>
+                        )
+                      })}
                       <td /><td /><td />
                     </tr>
                   </tfoot>
