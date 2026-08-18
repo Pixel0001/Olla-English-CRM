@@ -49,6 +49,18 @@ const startOfToday = () => {
   return d
 }
 
+// Recontactările se verifică din 10 în 10 minute, deci ora se aliniază la
+// sferturi de acest fel: 16:00, 16:10, 16:20…
+const STEP_MINUTES = 10
+
+const roundToStep = (value) => {
+  if (!value) return value
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return value
+  d.setMinutes(Math.round(d.getMinutes() / STEP_MINUTES) * STEP_MINUTES, 0, 0)
+  return d
+}
+
 // Follow-up-ul are și oră; input-ul datetime-local vrea ora locală, nu UTC
 const toDateInput = (iso) => {
   if (!iso) return ''
@@ -623,7 +635,11 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
     }
   }
 
-  const saveFollowUp = async (value) => {
+  const saveFollowUp = async (rawValue) => {
+    // Orice minut ales manual se aliniază la pasul de 10 minute
+    const rounded = rawValue ? roundToStep(rawValue) : null
+    const value = rounded ? toDateInput(rounded.toISOString()) : ''
+
     setSavingFollowUp(true)
     try {
       const res = await fetch(`/api/admin/leads/${lead.id}`, {
@@ -711,6 +727,7 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
         <span className="text-[10px] uppercase tracking-wide text-gray-400">Recontactare</span>
         <input
           type="datetime-local"
+          step={STEP_MINUTES * 60}
           value={followUpDate}
           disabled={savingFollowUp}
           onChange={(e) => saveFollowUp(e.target.value)}

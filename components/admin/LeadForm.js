@@ -10,6 +10,15 @@ const input =
   'w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
 const label = 'block text-xs xs:text-sm font-medium text-gray-700 mb-1'
 
+// Recontactările se verifică din 10 în 10 minute, deci ora se aliniază
+const roundToStep = (value) => {
+  if (!value) return ''
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return value
+  d.setMinutes(Math.round(d.getMinutes() / 10) * 10, 0, 0)
+  return toLocalInput(d.toISOString())
+}
+
 // datetime-local lucrează în ora locală, nu în UTC
 const toLocalInput = (iso) => {
   if (!iso) return ''
@@ -190,8 +199,8 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
           <div>
             <label className={label}>Recontactează pe</label>
             <input
-              className={input} type="datetime-local" value={form.nextFollowUpAt}
-              onChange={(e) => set('nextFollowUpAt', e.target.value)}
+              className={input} type="datetime-local" step={600} value={form.nextFollowUpAt}
+              onChange={(e) => set('nextFollowUpAt', roundToStep(e.target.value))}
             />
           </div>
         </div>
