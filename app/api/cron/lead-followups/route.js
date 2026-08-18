@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { notifyLeadFollowUps, sendTeacherDirectMessage } from '@/lib/telegram'
+import { notifyLeadFollowUps, notifyLeadReminder } from '@/lib/telegram'
 
 /**
  * Cron dedicat recontactărilor de leads, rulat des (la 10 minute).
@@ -77,43 +77,28 @@ export async function GET(request) {
     // 1. Digest în topicul comun de lead-uri
     const digestSent = await notifyLeadFollowUps(items)
 
-    // 2. Mesaj direct fiecărui responsabil conectat la Telegram
-    const byOwner = new Map()
-    for (const lead of pending) {
-      if (!lead.assignedTo?.telegramChatId) continue
-      const key = lead.assignedTo.telegramChatId
-      if (!byOwner.has(key)) byOwner.set(key, { owner: lead.assignedTo, leads: [] })
-      byOwner.get(key).leads.push(lead)
-    }
-
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '')
+    // 2. Reminder complet, cu butoane, către responsabilul fiecărui lead
+    const owners = new Set()
     let directMessages = 0
 
-    for (const { owner, leads } of byOwner.values()) {
-      const lines = [
-        `🔔 <b>Ai ${leads.length} ${leads.length === 1 ? 'lead de recontactat' : 'lead-uri de recontactat'}</b>`,
-        '',
-        ...leads.map((l) => {
-          const time = new Date(l.nextFollowUpAt).toLocaleString('ro-RO', {
-            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-            timeZone: 'Europe/Chisinau',
-          })
-          const name = baseUrl
-            ? `<a href="${baseUrl}/admin/leads/${l.id}">${l.name}</a>`
-            : `<b>${l.name}</b>`
-          return `• ${name}${l.phone ? ` — ${l.phone}` : ''} — ${time}`
-        }),
-      ]
+    for (const { lead, daysOverdue } of items) {
+      if (!lead.assignedTo?.telegramChatId) continue
+      owners.add(lead.assignedTo.id)
 
-      const message = lines.join('\n')
-      const sent = await sendTeacherDirectMessage(owner.telegramChatId, message, owner.name || owner.email)
+      const sent = await notifyLeadReminder(
+        {
+          ...lead,
+          assignedToName: lead.assignedTo.name || lead.assignedTo.email || null,
+        },
+        { chatId: lead.assignedTo.telegramChatId, daysOverdue }
+      )
       if (sent) directMessages++
     }
 
     // 3. Notificare în aplicație (clopoțelul din admin), pentru fiecare lead:
     //    către responsabil dacă există, altfel către toți adminii
     await prisma.notification.createMany({
-      data: pending.map(({ lead, daysOverdue }) => ({
+      data: items.map(({ lead, daysOverdue }) => ({
         type: 'LEAD_FOLLOWUP',
         title: daysOverdue > 0
           ? `🔴 Recontactare restantă: ${lead.name}`
@@ -139,7 +124,7 @@ export async function GET(request) {
       notified: pending.length,
       digestSent: !!digestSent,
       directMessages,
-      owners: byOwner.size,
+      owners: owners.size,
       withoutTelegram: pending.filter((l) => l.assignedTo && !l.assignedTo.telegramChatId).length,
       trigger: fromCron ? 'cron' : 'manual',
       timestamp: now.toISOString(),
