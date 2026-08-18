@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { checkPermission } from '@/lib/permissions'
 import { LEAD_STATUS_VALUES, LEAD_SOURCE_VALUES } from '@/lib/leads-config'
+import { convertLeadToStudent, isWonStatus } from '@/lib/lead-conversion'
 
 async function requireStaff(permission) {
   const session = await getServerSession(authOptions)
@@ -70,7 +71,14 @@ export async function PATCH(request, { params }) {
     }
 
     const lead = await prisma.lead.update({ where: { id }, data: update })
-    return NextResponse.json(lead)
+
+    // Lead câștigat → elevul apare automat în lista de elevi (o singură dată)
+    let conversion = null
+    if (isWonStatus(lead.status) && !lead.convertedStudentId) {
+      conversion = await convertLeadToStudent(lead)
+    }
+
+    return NextResponse.json({ ...lead, conversion })
   } catch (e) {
     console.error('Lead PATCH error:', e)
     return NextResponse.json({ error: 'Eroare server' }, { status: 500 })

@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import { usePermissions } from '@/hooks/usePermissions'
+import { whatsAppLink } from '@/lib/phone'
 import { LEAD_STATUSES, getStatus, getSource } from '@/lib/leads-config'
 import LeadForm from '@/components/admin/LeadForm'
 
@@ -95,7 +96,7 @@ export default function LeadDetailClient({ lead: initial }) {
     }
   }
 
-  const waNumber = (lead.phone || '').replace(/[^\d]/g, '')
+  const waLink = whatsAppLink(lead.phone)
 
   if (editing) {
     return (
@@ -219,7 +220,7 @@ export default function LeadDetailClient({ lead: initial }) {
                   <a href={`tel:${lead.phone}`} className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
                     📞 Sună
                   </a>
-                  <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer"
+                  <a href={waLink} target="_blank" rel="noopener noreferrer"
                      className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
                     🟢 WhatsApp
                   </a>

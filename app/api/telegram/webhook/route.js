@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { convertLeadToStudent, isWonStatus } from '@/lib/lead-conversion'
 
 export const runtime = 'nodejs'
 export const maxDuration = 10
@@ -499,6 +500,11 @@ export async function POST(request) {
           where: { id: contactId },
           data: { status: newStatus },
         })
+
+        // Lead câștigat din Telegram → elevul apare automat în lista de elevi
+        if (isWonStatus(contact.status) && !contact.convertedStudentId) {
+          await convertLeadToStudent(contact)
+        }
       } catch (dbError) {
         console.error('DB update error:', dbError)
         await answerCallback(callbackQueryId, '❌ Eroare la actualizare')

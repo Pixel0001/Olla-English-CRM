@@ -6,12 +6,13 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import {
   PhoneIcon, ChatBubbleLeftIcon, InboxIcon, MagnifyingGlassIcon,
-  PlusIcon, XMarkIcon, BellAlertIcon, ChevronDownIcon,
+  PlusIcon, XMarkIcon, BellAlertIcon, ChevronDownIcon, PencilSquareIcon,
   ArrowTopRightOnSquareIcon, TrashIcon,
 } from '@heroicons/react/24/outline'
 import { LEAD_STATUSES, LEAD_SOURCES, getStatus, getSource } from '@/lib/leads-config'
 import { PermissionGate } from '@/hooks/usePermissions'
 import LeadForm from '@/components/admin/LeadForm'
+import { whatsAppLink } from '@/lib/phone'
 
 const ITEMS_PER_PAGE = 30
 
@@ -61,6 +62,7 @@ export default function LeadsClient({ leads }) {
   const router = useRouter()
   const [items, setItems] = useState(leads)
   const [showNewModal, setShowNewModal] = useState(false)
+  const [editingLead, setEditingLead] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
   const [search, setSearch] = useState('')
   const [preset, setPreset] = useState('all')
@@ -88,6 +90,21 @@ export default function LeadsClient({ leads }) {
   // Actualizează un lead în listă după o modificare din rândul extins
   const patchLead = useCallback((id, patch) => {
     setItems((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)))
+  }, [])
+
+  const deleteLead = useCallback(async (lead) => {
+    if (!confirm(`Ștergi lead-ul „${lead.name}"? Notițele lui se pierd definitiv.`)) return
+    try {
+      const res = await fetch(`/api/admin/leads/${lead.id}`, { method: "DELETE" })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Eroare la ștergere")
+      }
+      setItems((prev) => prev.filter((l) => l.id !== lead.id))
+      toast.success("Lead șters")
+    } catch (err) {
+      toast.error(err.message)
+    }
   }, [])
 
   // ── Statistici (pe toate lead-urile, nu pe cele filtrate) ───────────────
@@ -286,6 +303,8 @@ export default function LeadsClient({ leads }) {
               expanded={expandedId === lead.id}
               onToggle={() => setExpandedId(expandedId === lead.id ? null : lead.id)}
               onPatch={patchLead}
+              onEdit={() => setEditingLead(lead)}
+              onDelete={() => deleteLead(lead)}
             />
           ))}
           {hasMore && (
@@ -302,6 +321,14 @@ export default function LeadsClient({ leads }) {
           onSaved={() => { setShowNewModal(false); router.refresh() }}
         />
       )}
+
+      {editingLead && (
+        <NewLeadModal
+          lead={editingLead}
+          onClose={() => setEditingLead(null)}
+          onSaved={() => { setEditingLead(null); router.refresh() }}
+        />
+      )}
     </div>
   )
 }
@@ -315,7 +342,7 @@ function StatChip({ label, value, color = 'text-gray-900' }) {
   )
 }
 
-function NewLeadModal({ onClose, onSaved }) {
+function NewLeadModal({ onClose, onSaved, lead = null }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
@@ -335,14 +362,14 @@ function NewLeadModal({ onClose, onSaved }) {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Lead nou"
+          aria-label={lead ? "Editează lead" : "Lead nou"}
           className="relative bg-white rounded-2xl shadow-xl w-full max-w-3xl my-2 xs:my-4"
         >
           <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 xs:px-6 py-3 flex items-start justify-between gap-3 rounded-t-2xl">
             <div>
-              <h2 className="text-base xs:text-lg font-semibold text-gray-900">Lead nou</h2>
+              <h2 className="text-base xs:text-lg font-semibold text-gray-900">{lead ? `Editează: ${lead.name}` : "Lead nou"}</h2>
               <p className="text-xs text-gray-500">
-                Instagram, WhatsApp, Messenger, telefon sau recomandare
+                {lead ? "Modifică datele, statusul sau follow-up-ul" : "Instagram, WhatsApp, Messenger, telefon sau recomandare"}
               </p>
             </div>
             <button
@@ -356,7 +383,7 @@ function NewLeadModal({ onClose, onSaved }) {
           </div>
 
           <div className="p-4 xs:p-6">
-            <LeadForm onSaved={onSaved} onCancel={onClose} />
+            <LeadForm lead={lead} onSaved={onSaved} onCancel={onClose} />
           </div>
         </div>
       </div>
@@ -364,7 +391,7 @@ function NewLeadModal({ onClose, onSaved }) {
   )
 }
 
-function LeadRow({ lead, expanded, onToggle, onPatch }) {
+function LeadRow({ lead, expanded, onToggle, onPatch, onEdit, onDelete }) {
   const status = getStatus(lead.status)
   const source = getSource(lead.source)
   const today = startOfToday()
@@ -382,11 +409,12 @@ function LeadRow({ lead, expanded, onToggle, onPatch }) {
       }`}
     >
       {/* Rând compact */}
+      <div className="flex items-stretch">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className="w-full text-left px-2 py-1 flex items-center gap-1.5 min-w-0 text-[13px]"
+        className="flex-1 text-left px-2 py-1 flex items-center gap-1.5 min-w-0 text-[13px]"
       >
         <span title={status.label} className="leading-none shrink-0">{status.emoji}</span>
 
@@ -436,6 +464,33 @@ function LeadRow({ lead, expanded, onToggle, onPatch }) {
         </span>
       </button>
 
+        {/* Acțiuni pe lead */}
+        <div className="flex items-center gap-0.5 pr-1.5 shrink-0">
+          <PermissionGate permission="leads.edit">
+            <button
+              type="button"
+              onClick={onEdit}
+              title="Editează"
+              aria-label="Editează lead-ul"
+              className="p-1 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+            >
+              <PencilSquareIcon className="h-3.5 w-3.5" />
+            </button>
+          </PermissionGate>
+          <PermissionGate permission="leads.delete">
+            <button
+              type="button"
+              onClick={onDelete}
+              title="Șterge"
+              aria-label="Șterge lead-ul"
+              className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <TrashIcon className="h-3.5 w-3.5" />
+            </button>
+          </PermissionGate>
+        </div>
+      </div>
+
       {expanded && <LeadDetails lead={lead} onPatch={onPatch} />}
     </div>
   )
@@ -445,7 +500,7 @@ function LeadDetails({ lead, onPatch }) {
   const status = getStatus(lead.status)
   const source = getSource(lead.source)
   const chatLink = source.link ? source.link(lead) : null
-  const waNumber = (lead.phone || '').replace(/[^\d]/g, '')
+  const waLink = whatsAppLink(lead.phone)
 
   const [notes, setNotes] = useState(null)
   const [noteText, setNoteText] = useState('')
@@ -654,8 +709,8 @@ function LeadDetails({ lead, onPatch }) {
             <PhoneIcon className="h-3 w-3" /> Sună
           </a>
         )}
-        {waNumber && (
-          <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-600 text-white text-[11px] font-medium hover:bg-green-700 transition-colors">
+        {waLink && (
+          <a href={waLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-600 text-white text-[11px] font-medium hover:bg-green-700 transition-colors">
             🟢 WhatsApp
           </a>
         )}

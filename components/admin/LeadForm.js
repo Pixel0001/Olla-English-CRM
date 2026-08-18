@@ -52,6 +52,7 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null 
       if (!res.ok) throw new Error(data.error || 'Eroare la salvare')
 
       toast.success(lead ? 'Lead actualizat' : 'Lead adăugat')
+      if (data.conversion?.created) toast.success('Elevul a fost adăugat în lista de elevi')
       if (onSaved) onSaved(data)
       else router.push(`/admin/leads/${data.id}`)
       router.refresh()
