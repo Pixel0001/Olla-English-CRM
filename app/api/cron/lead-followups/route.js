@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { notifyLeadFollowUps, sendTeacherDirectMessage } from '@/lib/telegram'
 
 /**
@@ -20,8 +22,14 @@ const CLOSED_LEAD_STATUSES = ['PLATIT', 'STUDIAZA', 'PLECAT', 'LOST_LEAD']
 
 export async function GET(request) {
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    if (process.env.NODE_ENV === 'production') {
+  const fromCron = authHeader === `Bearer ${process.env.CRON_SECRET}`
+
+  // Un admin logat poate rula verificarea manual, ca să vadă imediat rezultatul
+  let manualRun = false
+  if (!fromCron) {
+    const session = await getServerSession(authOptions)
+    manualRun = ['SUPERADMIN', 'ADMIN'].includes(session?.user?.role)
+    if (!manualRun && process.env.NODE_ENV === 'production') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
   }
@@ -48,7 +56,13 @@ export async function GET(request) {
     )
 
     if (pending.length === 0) {
-      return NextResponse.json({ success: true, notified: 0, timestamp: now.toISOString() })
+      return NextResponse.json({
+        success: true,
+        notified: 0,
+        checked: due.length,
+        trigger: fromCron ? 'cron' : 'manual',
+        timestamp: now.toISOString(),
+      })
     }
 
     const startOfDay = new Date(now)
@@ -96,7 +110,25 @@ export async function GET(request) {
       if (sent) directMessages++
     }
 
-    // 3. Marcăm ca anunțate, ca să nu se repete la următoarea rulare
+    // 3. Notificare în aplicație (clopoțelul din admin), pentru fiecare lead:
+    //    către responsabil dacă există, altfel către toți adminii
+    await prisma.notification.createMany({
+      data: pending.map(({ lead, daysOverdue }) => ({
+        type: 'LEAD_FOLLOWUP',
+        title: daysOverdue > 0
+          ? `🔴 Recontactare restantă: ${lead.name}`
+          : `🔔 De recontactat azi: ${lead.name}`,
+        message: [
+          lead.phone ? `Telefon: ${lead.phone}` : null,
+          daysOverdue > 0 ? `Restant de ${daysOverdue} ${daysOverdue === 1 ? 'zi' : 'zile'}` : null,
+        ].filter(Boolean).join(' · ') || 'Lead de recontactat',
+        link: `/admin/leads/${lead.id}`,
+        recipientId: lead.assignedToId || null,
+        data: { leadId: lead.id, daysOverdue },
+      })),
+    })
+
+    // 4. Marcăm ca anunțate, ca să nu se repete la următoarea rulare
     await prisma.lead.updateMany({
       where: { id: { in: pending.map((l) => l.id) } },
       data: { followUpNotifiedAt: now },
@@ -106,6 +138,7 @@ export async function GET(request) {
       success: true,
       notified: pending.length,
       directMessages,
+      trigger: fromCron ? 'cron' : 'manual',
       timestamp: now.toISOString(),
     })
   } catch (error) {

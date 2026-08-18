@@ -147,8 +147,21 @@ export async function POST(request) {
       },
     })
 
-    // Notificarea nu trebuie să blocheze răspunsul
-    notifyNewLead(lead).catch((err) => console.error('Telegram lead notify:', err))
+    // Notificarea nu trebuie să blocheze răspunsul; numele se rezolvă separat,
+    // ca mesajul să conțină responsabilul și autorul, nu doar id-uri.
+    ;(async () => {
+      const [assignedTo, createdBy] = await Promise.all([
+        lead.assignedToId
+          ? prisma.user.findUnique({ where: { id: lead.assignedToId }, select: { name: true, email: true } })
+          : null,
+        prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true, email: true } }),
+      ])
+      await notifyNewLead({
+        ...lead,
+        assignedToName: assignedTo?.name || assignedTo?.email || null,
+        createdByName: createdBy?.name || createdBy?.email || null,
+      })
+    })().catch((err) => console.error('Telegram lead notify:', err))
 
     return NextResponse.json(lead, { status: 201 })
   } catch (e) {
