@@ -388,18 +388,25 @@ export async function GET(request) {
       const held = group.lessonSessions.length
       const remaining = total - held
 
-      // Anunțăm doar când se apropie finalul pachetului
-      if (remaining > 1) continue
+      // Anunțăm la 3, 2, 1, 0 și când s-a depășit pachetul (negativ)
+      if (remaining > 3) continue
 
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-      const existingNotification = await prisma.notification.findFirst({
+      const type = remaining < 0
+        ? 'NEGATIVE_LESSONS'
+        : remaining === 0 ? 'ZERO_LESSONS' : 'LOW_LESSONS'
+
+      // O singură notificare per valoare: 3 → 2 → 1 → 0 → -1 anunță de fiecare
+      // dată, dar aceeași valoare nu se repetă zi de zi.
+      const lastForGroup = await prisma.notification.findFirst({
         where: {
-          type: remaining <= 0 ? 'ZERO_LESSONS' : 'LOW_LESSONS',
           groupId: group.id,
-          createdAt: { gte: oneDayAgo },
+          type: { in: ['LOW_LESSONS', 'ZERO_LESSONS', 'NEGATIVE_LESSONS'] },
+          createdAt: { gte: monthStart },
         },
+        orderBy: { createdAt: 'desc' },
+        select: { data: true },
       })
-      if (existingNotification) continue
+      if (lastForGroup?.data?.remaining === remaining) continue
 
       const unpaidStudents = group.groupStudents
         .filter((gs) => gs.payments.length === 0)
@@ -407,10 +414,12 @@ export async function GET(request) {
 
       await prisma.notification.create({
         data: {
-          type: remaining <= 0 ? 'ZERO_LESSONS' : 'LOW_LESSONS',
-          title: remaining <= 0
-            ? `⚠️ ${group.name}: pachetul lunii s-a terminat`
-            : `📉 ${group.name}: a mai rămas ${remaining} lecție`,
+          type,
+          title: remaining < 0
+            ? `🔴 ${group.name}: ${Math.abs(remaining)} lecții peste pachet`
+            : remaining === 0
+              ? `⚠️ ${group.name}: pachetul lunii s-a terminat`
+              : `📉 ${group.name}: ${remaining === 1 ? 'a mai rămas 1 lecție' : `au mai rămas ${remaining} lecții`}`,
           message: `Grupa "${group.name}" a ținut ${held} din ${total} lecții în ${monthLabel}.` +
             (unpaidStudents.length > 0 ? ` Neachitat: ${unpaidStudents.join(', ')}.` : ''),
           link: `/admin/groups/${group.id}`,
