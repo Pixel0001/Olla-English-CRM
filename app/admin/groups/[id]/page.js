@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import GroupForm from '@/components/admin/GroupForm'
 import LessonPackagePanel from '@/components/groups/LessonPackagePanel'
+import TrialLessonsPanel from '@/components/groups/TrialLessonsPanel'
 
 export default async function EditGroupPage({ params }) {
   const { id } = await params
@@ -34,6 +35,8 @@ export default async function EditGroupPage({ params }) {
       </div>
 
       <LessonPackagePanel groupId={group.id} />
+
+      <TrialLessonsPanel groupId={group.id} />
     </div>
   )
 }

@@ -8,6 +8,7 @@ const StartSessionButton = dynamic(() => import('@/components/teacher/StartSessi
 const EditGroupDetailsButton = dynamic(() => import('@/components/teacher/EditGroupDetailsButton'))
 import CopyStudentsButton from '@/components/CopyStudentsButton'
 import LessonPackagePanel from '@/components/groups/LessonPackagePanel'
+import TrialLessonsPanel from '@/components/groups/TrialLessonsPanel'
 import { 
   AcademicCapIcon, 
   CalendarDaysIcon, 
@@ -400,6 +401,9 @@ export default async function TeacherGroupDetailPage({ params }) {
 
       {/* Pachetul lunar de lecții + prezențele lunii */}
       <LessonPackagePanel groupId={group.id} />
+
+      {/* Lecții de probă — evenimente unice, nu în orarul săptămânal */}
+      <TrialLessonsPanel groupId={group.id} />
 
       {/* Recent Sessions */}
       <div className="bg-white rounded-lg xs:rounded-xl shadow-sm p-3 xs:p-4 md:p-6">

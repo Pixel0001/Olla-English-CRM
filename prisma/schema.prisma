@@ -56,6 +56,8 @@ model User {
   bonusPointsAdded  BonusPoint[]      @relation("BonusPointsAdded")
   createdLeads      Lead[]            @relation("CreatedLeads")
   assignedLeads     Lead[]            @relation("AssignedLeads")
+  teacherTrials     TrialLesson[]     @relation("TeacherTrials")
+  createdTrials     TrialLesson[]     @relation("CreatedTrials")
   createdLessonPackages GroupLessonPackage[] @relation("CreatedLessonPackages")
 
   @@map("users")
@@ -261,6 +263,7 @@ model Student {
   // Relations
   createdBy            User?     @relation("CreatedStudents", fields: [createdById], references: [id], onDelete: SetNull)
   groupStudents        GroupStudent[]
+  trialLessons         TrialLesson[]        @relation("StudentTrials")
   attendances          Attendance[]
   lessonTransactions   LessonTransaction[]
   makeupLessonStudents MakeupLessonStudent[]
@@ -386,6 +389,7 @@ model Group {
   makeupLessons       MakeupLesson[]
   missedSessions      MissedSession[]
   lessonPackages      GroupLessonPackage[]
+  trialLessons        TrialLesson[]       @relation("GroupTrials")
 
   @@map("groups")
 }
@@ -653,6 +657,7 @@ model Lead {
   createdBy  User?     @relation("CreatedLeads", fields: [createdById], references: [id], onDelete: SetNull)
   assignedTo User?     @relation("AssignedLeads", fields: [assignedToId], references: [id], onDelete: SetNull)
   leadNotes LeadNote[] @relation("LeadNotes")
+  trials    TrialLesson[] @relation("LeadTrials")
 
   @@index([status])
   @@index([source])
@@ -1411,3 +1416,42 @@ model RewardClaim {
   @@map("reward_claims")
 }
 
+
+// ==================== LECȚII DE PROBĂ ====================
+// O lecție de probă e un eveniment unic, la o dată și oră anume — nu intră în
+// orarul săptămânal al grupei. Poate fi pentru un lead (încă neconvertit) sau
+// pentru un elev existent.
+
+model TrialLesson {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  leadId      String?     @db.ObjectId // cine vine la probă, dacă e încă lead
+  studentId   String?     @db.ObjectId // sau un elev existent
+  groupId     String?     @db.ObjectId // grupa în care asistă (opțional)
+  teacherId   String?     @db.ObjectId
+  scheduledAt DateTime    // data + ora, o singură dată
+  durationMin Int         @default(60)
+  status      TrialStatus @default(PROGRAMAT)
+  notes       String?
+  createdById String?     @db.ObjectId
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  lead      Lead?    @relation("LeadTrials", fields: [leadId], references: [id], onDelete: Cascade)
+  student   Student? @relation("StudentTrials", fields: [studentId], references: [id], onDelete: Cascade)
+  group     Group?   @relation("GroupTrials", fields: [groupId], references: [id], onDelete: SetNull)
+  teacher   User?    @relation("TeacherTrials", fields: [teacherId], references: [id], onDelete: SetNull)
+  createdBy User?    @relation("CreatedTrials", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([scheduledAt])
+  @@index([groupId])
+  @@index([leadId])
+  @@map("trial_lessons")
+}
+
+enum TrialStatus {
+  PROGRAMAT // urmează
+  PREZENT   // a venit
+  ABSENT    // nu a venit
+  ANULAT    // anulată
+}
