@@ -12,6 +12,7 @@ import {
 import { LEAD_STATUSES, LEAD_SOURCES, getStatus, getSource } from '@/lib/leads-config'
 import { PermissionGate } from '@/hooks/usePermissions'
 import LeadForm from '@/components/admin/LeadForm'
+import FollowUpPicker from '@/components/admin/FollowUpPicker'
 import { whatsAppLink } from '@/lib/phone'
 
 const ITEMS_PER_PAGE = 30
@@ -569,7 +570,7 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
   const [notes, setNotes] = useState(null)
   const [noteText, setNoteText] = useState('')
   const [savingNote, setSavingNote] = useState(false)
-  const [followUpDate, setFollowUpDate] = useState(toDateInput(lead.nextFollowUpAt))
+  const [followUpDate, setFollowUpDate] = useState(lead.nextFollowUpAt || null)
   const [savingFollowUp, setSavingFollowUp] = useState(false)
   const [converting, setConverting] = useState(false)
 
@@ -635,11 +636,8 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
     }
   }
 
-  const saveFollowUp = async (rawValue) => {
-    // Orice minut ales manual se aliniază la pasul de 10 minute
-    const rounded = rawValue ? roundToStep(rawValue) : null
-    const value = rounded ? toDateInput(rounded.toISOString()) : ''
-
+  // Valoarea vine gata ca ISO cu fus orar, ca ora să nu se mute pe server
+  const saveFollowUp = async (value) => {
     setSavingFollowUp(true)
     try {
       const res = await fetch(`/api/admin/leads/${lead.id}`, {
@@ -649,8 +647,8 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Eroare la salvare')
-      setFollowUpDate(value || '')
-      onPatch(lead.id, { nextFollowUpAt: value ? new Date(value).toISOString() : null })
+      setFollowUpDate(value || null)
+      onPatch(lead.id, { nextFollowUpAt: value || null })
       toast.success(value ? 'Follow-up salvat' : 'Follow-up eliminat')
     } catch (err) {
       toast.error(err.message)
@@ -725,24 +723,11 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
       {/* Follow-up */}
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-[10px] uppercase tracking-wide text-gray-400">Recontactare</span>
-        <input
-          type="datetime-local"
-          step={STEP_MINUTES * 60}
+        <FollowUpPicker
           value={followUpDate}
           disabled={savingFollowUp}
-          onChange={(e) => saveFollowUp(e.target.value)}
-          className="px-2 py-1 text-xs text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50"
+          onChange={saveFollowUp}
         />
-        {followUpDate && (
-          <button
-            type="button"
-            onClick={() => saveFollowUp('')}
-            disabled={savingFollowUp}
-            className="text-[11px] text-gray-500 hover:text-red-600 disabled:opacity-50"
-          >
-            elimină
-          </button>
-        )}
         {[1, 3, 7].map((d) => (
           <button
             key={d}
@@ -752,7 +737,7 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
               const t = new Date()
               t.setDate(t.getDate() + d)
               t.setHours(10, 0, 0, 0) // ora 10:00, ora locală
-              saveFollowUp(toDateInput(t.toISOString()))
+              saveFollowUp(t.toISOString())
             }}
             className="px-1.5 py-0.5 rounded border border-gray-200 text-[11px] text-gray-600 hover:border-indigo-400 hover:text-indigo-600 disabled:opacity-50"
           >

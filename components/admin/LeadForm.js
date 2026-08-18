@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { LEAD_STATUSES, LEAD_SOURCES, getSource } from '@/lib/leads-config'
 import LevelSelect from '@/components/LevelSelect'
+import FollowUpPicker from '@/components/admin/FollowUpPicker'
 
 const input =
   'w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
@@ -44,7 +45,7 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
     interestedIn: lead?.interestedIn || '',
     status: lead?.status || 'LEAD',
     assignedToId: lead?.assignedToId || '',
-    nextFollowUpAt: toLocalInput(lead?.nextFollowUpAt),
+    nextFollowUpAt: lead?.nextFollowUpAt || null,
     message: lead?.message || '',
   })
 
@@ -198,9 +199,10 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
           </div>
           <div>
             <label className={label}>Recontactează pe</label>
-            <input
-              className={input} type="datetime-local" step={600} value={form.nextFollowUpAt}
-              onChange={(e) => set('nextFollowUpAt', roundToStep(e.target.value))}
+            <FollowUpPicker
+              value={form.nextFollowUpAt}
+              onChange={(iso) => set('nextFollowUpAt', iso)}
+              className="pt-1"
             />
           </div>
         </div>
