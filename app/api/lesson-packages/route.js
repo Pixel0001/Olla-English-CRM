@@ -106,11 +106,32 @@ export async function GET(request) {
       }),
     ])
 
+    // Plățile lunii, per elev — luna nouă începe neachitată
+    const monthPayments = await prisma.payment.findMany({
+      where: {
+        groupStudentId: { in: groupStudents.map((gs) => gs.id) },
+        paymentDate: { gte: start, lt: end },
+      },
+      select: { groupStudentId: true, amount: true, paymentDate: true, lessonsAdded: true },
+      orderBy: { paymentDate: "desc" },
+    })
+
+    const paidByStudent = {}
+    for (const p of monthPayments) {
+      const acc = (paidByStudent[p.groupStudentId] ||= { amount: 0, count: 0, lastDate: null, lessons: 0 })
+      acc.amount += p.amount || 0
+      acc.count += 1
+      acc.lessons += p.lessonsAdded || 0
+      if (!acc.lastDate) acc.lastDate = p.paymentDate.toISOString()
+    }
+
     const students = groupStudents.map((gs) => ({
       groupStudentId: gs.id,
       studentId: gs.studentId,
       name: gs.student.fullName,
       status: gs.status,
+      lessonsRemaining: gs.lessonsRemaining,
+      payment: paidByStudent[gs.id] || null,
     }))
 
     const formattedSessions = sessions.map((s) => {

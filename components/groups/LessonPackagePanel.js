@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
+import { usePermissions } from '@/hooks/usePermissions'
 import {
   ChevronLeftIcon, ChevronRightIcon, CheckIcon, XMarkIcon, LockClosedIcon,
 } from '@heroicons/react/24/outline'
@@ -28,6 +29,9 @@ export default function LessonPackagePanel({ groupId }) {
   const [editing, setEditing] = useState(false)
   const [lessonsInput, setLessonsInput] = useState('8')
   const [showHistory, setShowHistory] = useState(false)
+  const [payingStudent, setPayingStudent] = useState(null)
+  const { hasPermission } = usePermissions()
+  const canPay = hasPermission('groups.students.payments.create')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -294,6 +298,9 @@ export default function LessonPackagePanel({ groupId }) {
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
                         Total grupă
                       </th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
+                        Plată
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -326,6 +333,24 @@ export default function LessonPackagePanel({ groupId }) {
                           <td className="px-3 py-2 text-center whitespace-nowrap text-xs text-gray-500">
                             {all.present} prezent / {all.absent} absent
                           </td>
+                          <td className="px-3 py-2 text-center whitespace-nowrap">
+                            {st.payment ? (
+                              <span className="text-emerald-700 font-semibold">
+                                {st.payment.amount.toLocaleString("ro-RO")} lei
+                              </span>
+                            ) : (
+                              <span className="text-red-500 text-xs">neachitat</span>
+                            )}
+                            {canPay && (
+                              <button
+                                type="button"
+                                onClick={() => setPayingStudent(st)}
+                                className="ml-1.5 px-1.5 py-0.5 rounded border border-gray-200 text-[10px] text-gray-600 hover:border-emerald-400 hover:text-emerald-700"
+                              >
+                                + plată
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       )
                     })}
@@ -340,7 +365,7 @@ export default function LessonPackagePanel({ groupId }) {
                           {students.filter((st) => s.attendance[st.studentId] === 'PRESENT').length}
                         </td>
                       ))}
-                      <td /><td />
+                      <td /><td /><td />
                     </tr>
                   </tfoot>
                 </table>
@@ -407,6 +432,16 @@ export default function LessonPackagePanel({ groupId }) {
           )}
         </>
       )}
+
+      {payingStudent && (
+        <PaymentModal
+          student={payingStudent}
+          monthLabel={`${MONTH_NAMES[month - 1]} ${year}`}
+          defaultLessons={stats?.total ?? 8}
+          onClose={() => setPayingStudent(null)}
+          onSaved={() => { setPayingStudent(null); load() }}
+        />
+      )}
     </div>
   )
 }
@@ -461,5 +496,137 @@ function AttendanceCell({ value, locked, onClick }) {
     >
       –
     </button>
+  )
+}
+
+function PaymentModal({ student, monthLabel, defaultLessons, onClose, onSaved }) {
+  const [amount, setAmount] = useState('')
+  const [method, setMethod] = useState('cash')
+  const [lessons, setLessons] = useState(String(defaultLessons))
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const submit = async (e) => {
+    e.preventDefault()
+    const value = parseFloat(amount)
+    if (!Number.isFinite(value) || value <= 0) return toast.error('Suma trebuie să fie mai mare ca 0')
+
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          groupStudentId: student.groupStudentId,
+          amount: value,
+          paymentDate: new Date(date).toISOString(),
+          paymentMethod: method,
+          lessonsAdded: parseInt(lessons, 10) || 0,
+          notes: `Plată ${monthLabel}`,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Eroare la salvarea plății')
+      toast.success('Plată înregistrată')
+      onSaved()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+
+        <form
+          onSubmit={submit}
+          className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-4"
+        >
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Plată — {student.name}</h2>
+            <p className="text-xs text-gray-500 capitalize">{monthLabel}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Sumă (lei) *</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                autoFocus
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Lecții adăugate</label>
+              <input
+                type="number"
+                min="0"
+                max="60"
+                value={lessons}
+                onChange={(e) => setLessons(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Metodă</label>
+              <select
+                value={method}
+                onChange={(e) => setMethod(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="cash">Cash</option>
+                <option value="card">Card</option>
+                <option value="transfer">Transfer</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Data</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+          </div>
+
+          <p className="text-[11px] text-gray-500">
+            Lecțiile adăugate intră în contorul individual al elevului. Data plății decide în ce
+            lună apare încasarea.
+          </p>
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Se salvează…' : 'Înregistrează plata'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              Anulează
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
