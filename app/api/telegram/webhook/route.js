@@ -37,25 +37,39 @@ function buildKeyboard(contactId) {
   ]
 }
 
+// Apelurile către Telegram nu trebuie să eșueze în tăcere — altfel butonul
+// pare „mort" fără nicio urmă în logs.
+async function callTelegram(method, payload) {
+  if (!BOT_TOKEN) {
+    console.error(`[telegram/${method}] TELEGRAM_LESSONS_BOT_TOKEN lipsește`)
+    return null
+  }
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const data = await res.json()
+    if (!data.ok) console.error(`[telegram/${method}] ${data.error_code}: ${data.description}`)
+    return data
+  } catch (err) {
+    console.error(`[telegram/${method}] fetch failed:`, err.message)
+    return null
+  }
+}
+
 async function answerCallback(callbackQueryId, text) {
-  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ callback_query_id: callbackQueryId, text }),
-  })
+  return callTelegram('answerCallbackQuery', { callback_query_id: callbackQueryId, text })
 }
 
 async function editMessage(chatId, messageId, text, keyboard) {
-  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      message_id: messageId,
-      text,
-      parse_mode: 'HTML',
-      reply_markup: keyboard ? { inline_keyboard: keyboard } : undefined,
-    }),
+  return callTelegram('editMessageText', {
+    chat_id: chatId,
+    message_id: messageId,
+    text,
+    parse_mode: 'HTML',
+    reply_markup: keyboard ? { inline_keyboard: keyboard } : undefined,
   })
 }
 
@@ -144,6 +158,9 @@ export async function POST(request) {
     const secret = searchParams.get('secret')
 
     if (WEBHOOK_SECRET && secret !== WEBHOOK_SECRET) {
+      // Cauza tipică pentru „butoanele nu fac nimic": webhook înregistrat fără
+      // ?secret= sau cu un secret vechi. Fără log, eroarea e invizibilă.
+      console.error('[telegram/webhook] Secret invalid sau lipsă în URL-ul webhook-ului')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -532,5 +549,50 @@ ${emailLine}
   } catch (error) {
     console.error('Telegram webhook error:', error)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+
+/**
+ * Diagnostic: verifică dacă webhook-ul e înregistrat corect la Telegram.
+ * Acces doar cu secretul: /api/telegram/webhook?secret=...
+ * Arată URL-ul înregistrat, câte update-uri stau în coadă și ultima eroare.
+ */
+export async function GET(request) {
+  const { searchParams } = new URL(request.url)
+  const secret = searchParams.get('secret')
+
+  if (!WEBHOOK_SECRET || secret !== WEBHOOK_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!BOT_TOKEN) {
+    return NextResponse.json({ error: 'TELEGRAM_LESSONS_BOT_TOKEN lipsește' }, { status: 500 })
+  }
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getWebhookInfo`)
+    const data = await res.json()
+    if (!data.ok) {
+      return NextResponse.json({ error: data.description }, { status: 502 })
+    }
+
+    const info = data.result
+    const expectedPath = '/api/telegram/webhook'
+    const registeredUrl = info.url || ''
+
+    return NextResponse.json({
+      registeredUrl,
+      hasSecretInUrl: registeredUrl.includes('secret='),
+      secretMatches: registeredUrl.includes(`secret=${WEBHOOK_SECRET}`),
+      pathOk: registeredUrl.includes(expectedPath),
+      pendingUpdates: info.pending_update_count,
+      lastErrorMessage: info.last_error_message || null,
+      lastErrorDate: info.last_error_date
+        ? new Date(info.last_error_date * 1000).toISOString()
+        : null,
+      allowedUpdates: info.allowed_updates || null,
+    })
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

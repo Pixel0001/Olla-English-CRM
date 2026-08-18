@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { notifyMissedGroupSession, notifyMissedMakeup, notifyLowLessons, notifyTeacherDailySchedule } from '@/lib/telegram'
+import { notifyMissedGroupSession, notifyMissedMakeup, notifyLowLessons, notifyTeacherDailySchedule, notifyLeadFollowUps } from '@/lib/telegram'
+
+// Statusuri considerate „închise" — lead-urile din ele nu mai intră la follow-up
+const CLOSED_LEAD_STATUSES = ['PLATIT', 'STUDIAZA', 'PLECAT', 'LOST_LEAD']
 import { cleanupExpiredSessions } from '@/lib/security/session.js'
 import { cleanupExpiredStepUpTokens } from '@/lib/security/step-up.js'
 import { cleanupExpiredBuckets } from '@/lib/security/rate-limit.js'
@@ -426,6 +429,39 @@ export async function GET(request) {
         
         notificationsCreated.push(`${type}: ${gs.student.fullName} (${lessons} lecții)`)
       }
+    }
+
+    // ============================================
+    // 5b. LEAD FOLLOW-UP REMINDERS (Telegram, topicul Lead-uri)
+    // ============================================
+    // Lead-urile cu data de recontactare azi sau în urmă, care nu sunt deja
+    // închise (a plătit / studiază / a plecat / pierdut).
+    try {
+      const endOfToday = new Date()
+      endOfToday.setHours(23, 59, 59, 999)
+      const startOfDay = new Date()
+      startOfDay.setHours(0, 0, 0, 0)
+
+      const leadsToFollowUp = await prisma.lead.findMany({
+        where: {
+          nextFollowUpAt: { not: null, lte: endOfToday },
+          status: { notIn: CLOSED_LEAD_STATUSES },
+        },
+        orderBy: { nextFollowUpAt: 'asc' },
+      })
+
+      if (leadsToFollowUp.length > 0) {
+        const items = leadsToFollowUp.map((lead) => {
+          const due = new Date(lead.nextFollowUpAt)
+          due.setHours(0, 0, 0, 0)
+          return { lead, daysOverdue: Math.round((startOfDay - due) / 86400000) }
+        })
+
+        await notifyLeadFollowUps(items)
+        notificationsCreated.push(`Lead follow-up: ${items.length} lead-uri`)
+      }
+    } catch (e) {
+      console.error('Lead follow-up notification error:', e.message)
     }
 
     // ============================================
