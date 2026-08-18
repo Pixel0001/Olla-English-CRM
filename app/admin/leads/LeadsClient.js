@@ -13,6 +13,7 @@ import { LEAD_STATUSES, LEAD_SOURCES, getStatus, getSource } from '@/lib/leads-c
 import { PermissionGate } from '@/hooks/usePermissions'
 import LeadForm from '@/components/admin/LeadForm'
 import FollowUpPicker from '@/components/admin/FollowUpPicker'
+import { zonedDateInDays } from '@/lib/timezone'
 import { whatsAppLink } from '@/lib/phone'
 
 const ITEMS_PER_PAGE = 30
@@ -733,12 +734,7 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
             key={d}
             type="button"
             disabled={savingFollowUp}
-            onClick={() => {
-              const t = new Date()
-              t.setDate(t.getDate() + d)
-              t.setHours(10, 0, 0, 0) // ora 10:00, ora locală
-              saveFollowUp(t.toISOString())
-            }}
+            onClick={() => saveFollowUp(zonedDateInDays(d, 10, 0))}
             className="px-1.5 py-0.5 rounded border border-gray-200 text-[11px] text-gray-600 hover:border-indigo-400 hover:text-indigo-600 disabled:opacity-50"
           >
             +{d}z

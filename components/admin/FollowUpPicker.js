@@ -8,32 +8,21 @@
  * serverul să nu o interpreteze drept oră UTC și să o mute cu câteva ore.
  */
 
+import { zonedToUtcISO, utcToZonedParts, SCHOOL_TZ } from '@/lib/timezone'
+
 const MINUTES = ['00', '10', '20', '30', '40', '50']
 const HOURS = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'))
 
 const pad = (n) => String(n).padStart(2, '0')
 
-const parts = (iso) => {
-  if (!iso) return { date: '', hour: '10', minute: '00' }
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return { date: '', hour: '10', minute: '00' }
-  return {
-    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-    hour: pad(d.getHours()),
-    // rotunjim la cel mai apropiat pas, pentru valorile vechi (ex. 16:08)
-    minute: pad(Math.round(d.getMinutes() / 10) * 10 % 60),
-  }
-}
+const parts = (iso) => utcToZonedParts(iso)
 
 export default function FollowUpPicker({ value, onChange, disabled = false, className = '' }) {
   const { date, hour, minute } = parts(value)
 
   const emit = (nextDate, nextHour, nextMinute) => {
     if (!nextDate) return onChange(null)
-    // Construim data în ora locală și o trimitem ca ISO cu fus orar
-    const d = new Date(`${nextDate}T${nextHour}:${nextMinute}:00`)
-    if (isNaN(d.getTime())) return
-    onChange(d.toISOString())
+    onChange(zonedToUtcISO(nextDate, nextHour, nextMinute))
   }
 
   const select =
@@ -70,6 +59,10 @@ export default function FollowUpPicker({ value, onChange, disabled = false, clas
       >
         {MINUTES.map((m) => <option key={m} value={m}>{m}</option>)}
       </select>
+
+      <span className="text-[10px] text-gray-400" title={`Toate orele sunt în fusul ${SCHOOL_TZ}`}>
+        ora Chișinăului
+      </span>
 
       {date && (
         <button
