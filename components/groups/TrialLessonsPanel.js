@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { LEAD_STATUSES, getStatus } from '@/lib/leads-config'
 import {
   PlusIcon, CheckIcon, XMarkIcon, TrashIcon, AcademicCapIcon, CalendarDaysIcon,
 } from '@heroicons/react/24/outline'
@@ -44,6 +45,11 @@ export default function TrialLessonsPanel({ groupId }) {
   const [duration, setDuration] = useState('60')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
+
+  // Lead-urile grupate pe status, ca alegerea să fie evidentă din listă
+  const groupedCandidates = LEAD_STATUSES
+    .map((status) => ({ status, items: candidates.filter((c) => c.status === status.value) }))
+    .filter((g) => g.items.length > 0)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -185,10 +191,14 @@ export default function TrialLessonsPanel({ groupId }) {
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
                 <option value="">Alege din leads…</option>
-                {candidates.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}{c.phone ? ` — ${c.phone}` : ''}
-                  </option>
+                {groupedCandidates.map(({ status, items }) => (
+                  <optgroup key={status.value} label={`${status.emoji} ${status.label}`}>
+                    {items.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}{c.phone ? ` · ${c.phone}` : ""}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
@@ -262,9 +272,12 @@ export default function TrialLessonsPanel({ groupId }) {
                 </span>
 
                 <span className="font-medium text-gray-900">{t.participantName}</span>
-                {t.isLead && (
-                  <span className="px-1.5 rounded bg-amber-100 text-amber-800 text-[10px] font-medium">
-                    lead
+                {t.isLead && t.leadStatus && (
+                  <span
+                    title="Statusul lead-ului în pipeline"
+                    className={`px-1.5 rounded text-[10px] font-medium ${getStatus(t.leadStatus).color}`}
+                  >
+                    {getStatus(t.leadStatus).emoji} {getStatus(t.leadStatus).label}
                   </span>
                 )}
                 {t.participantPhone && (

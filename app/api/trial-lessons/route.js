@@ -56,6 +56,7 @@ const format = (t) => ({
   leadId: t.leadId,
   studentId: t.studentId,
   convertedStudentId: t.lead?.convertedStudentId || null,
+  leadStatus: t.lead?.status || null,
   participantName:
     t.lead?.studentName || t.lead?.name || t.student?.fullName || 'Necunoscut',
   participantPhone: t.lead?.phone || t.student?.parentPhone || null,
@@ -83,7 +84,7 @@ export async function GET(request) {
     const trials = await prisma.trialLesson.findMany({
       where,
       include: {
-        lead: { select: { id: true, name: true, studentName: true, phone: true, convertedStudentId: true } },
+        lead: { select: { id: true, name: true, studentName: true, phone: true, convertedStudentId: true, status: true } },
         student: { select: { id: true, fullName: true, parentPhone: true } },
         group: { select: { id: true, name: true } },
         teacher: { select: { name: true } },
@@ -143,7 +144,7 @@ export async function POST(request) {
         createdById: access.user.id,
       },
       include: {
-        lead: { select: { id: true, name: true, studentName: true, phone: true, convertedStudentId: true } },
+        lead: { select: { id: true, name: true, studentName: true, phone: true, convertedStudentId: true, status: true } },
         student: { select: { id: true, fullName: true, parentPhone: true } },
         group: { select: { id: true, name: true } },
         teacher: { select: { name: true } },
@@ -194,7 +195,7 @@ export async function PATCH(request) {
       where: { id },
       data,
       include: {
-        lead: { select: { id: true, name: true, studentName: true, phone: true, convertedStudentId: true } },
+        lead: { select: { id: true, name: true, studentName: true, phone: true, convertedStudentId: true, status: true } },
         student: { select: { id: true, fullName: true, parentPhone: true } },
         group: { select: { id: true, name: true } },
         teacher: { select: { name: true } },
