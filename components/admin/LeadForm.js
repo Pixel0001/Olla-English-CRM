@@ -21,7 +21,7 @@ const toLocalInput = (iso) => {
 /**
  * Formular pentru lead: creare (fără `lead`) sau editare (cu `lead`).
  */
-export default function LeadForm({ lead = null, onSaved = null, onCancel = null }) {
+export default function LeadForm({ lead = null, onSaved = null, onCancel = null, staff = [] }) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
@@ -34,6 +34,7 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null 
     studentAge: lead?.studentAge ?? '',
     interestedIn: lead?.interestedIn || '',
     status: lead?.status || 'LEAD',
+    assignedToId: lead?.assignedToId || '',
     nextFollowUpAt: toLocalInput(lead?.nextFollowUpAt),
     message: lead?.message || '',
   })
@@ -162,7 +163,7 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null 
       {/* Pipeline */}
       <section className="space-y-3 pt-4 border-t border-gray-100">
         <h2 className="text-sm font-semibold text-gray-900">Stadiu</h2>
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid sm:grid-cols-3 gap-3">
           <div>
             <label className={label}>Status</label>
             <select className={input} value={form.status} onChange={(e) => set('status', e.target.value)}>
@@ -170,6 +171,21 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null 
                 <option key={s.value} value={s.value}>{s.emoji} {s.label}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className={label}>Responsabil</label>
+            <select
+              className={input} value={form.assignedToId}
+              onChange={(e) => set('assignedToId', e.target.value)}
+            >
+              <option value="">Nimeni</option>
+              {staff.map((u) => (
+                <option key={u.id} value={u.id}>{u.name || u.email}</option>
+              ))}
+            </select>
+            <p className="text-[11px] text-gray-500 mt-1">
+              Primește pe Telegram notificarea de recontactare
+            </p>
           </div>
           <div>
             <label className={label}>Recontactează pe</label>

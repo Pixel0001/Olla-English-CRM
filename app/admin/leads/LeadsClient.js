@@ -356,6 +356,7 @@ export default function LeadsClient({ leads, staff = [] }) {
 
       {showNewModal && (
         <NewLeadModal
+          staff={staff}
           onClose={() => setShowNewModal(false)}
           onSaved={() => { setShowNewModal(false); router.refresh() }}
         />
@@ -364,6 +365,7 @@ export default function LeadsClient({ leads, staff = [] }) {
       {editingLead && (
         <NewLeadModal
           lead={editingLead}
+          staff={staff}
           onClose={() => setEditingLead(null)}
           onSaved={() => { setEditingLead(null); router.refresh() }}
         />
@@ -381,7 +383,7 @@ function StatChip({ label, value, color = 'text-gray-900' }) {
   )
 }
 
-function NewLeadModal({ onClose, onSaved, lead = null }) {
+function NewLeadModal({ onClose, onSaved, lead = null, staff = [] }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
@@ -422,7 +424,7 @@ function NewLeadModal({ onClose, onSaved, lead = null }) {
           </div>
 
           <div className="p-4 xs:p-6">
-            <LeadForm lead={lead} onSaved={onSaved} onCancel={onClose} />
+            <LeadForm lead={lead} staff={staff} onSaved={onSaved} onCancel={onClose} />
           </div>
         </div>
       </div>
