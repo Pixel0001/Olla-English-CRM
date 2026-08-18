@@ -13,7 +13,7 @@ const label = 'block text-xs xs:text-sm font-medium text-gray-700 mb-1'
 /**
  * Formular pentru lead: creare (fără `lead`) sau editare (cu `lead`).
  */
-export default function LeadForm({ lead = null, onSaved = null }) {
+export default function LeadForm({ lead = null, onSaved = null, onCancel = null }) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
@@ -139,7 +139,7 @@ export default function LeadForm({ lead = null, onSaved = null }) {
             />
           </div>
           <div>
-            <label className={label}>Nivel dorit</label>
+            <label className={label}>Nivel actual</label>
             <select
               className={input} value={form.interestedIn}
               onChange={(e) => set('interestedIn', e.target.value)}
@@ -189,7 +189,7 @@ export default function LeadForm({ lead = null, onSaved = null }) {
           {saving ? 'Se salvează…' : lead ? 'Salvează modificările' : 'Adaugă lead'}
         </button>
         <button
-          type="button" onClick={() => router.back()}
+          type="button" onClick={() => (onCancel ? onCancel() : router.back())}
           className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
         >
           Anulează

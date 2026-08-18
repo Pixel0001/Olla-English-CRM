@@ -2,13 +2,15 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
-  EnvelopeIcon, PhoneIcon, CalendarIcon, ChatBubbleLeftIcon, InboxIcon,
-  MagnifyingGlassIcon, PlusIcon, XMarkIcon, BellAlertIcon, UserIcon,
-  ArrowsUpDownIcon, AdjustmentsHorizontalIcon,
+  PhoneIcon, ChatBubbleLeftIcon, InboxIcon, MagnifyingGlassIcon,
+  PlusIcon, XMarkIcon, BellAlertIcon, AdjustmentsHorizontalIcon,
+  ChevronDownIcon, ArrowTopRightOnSquareIcon,
 } from '@heroicons/react/24/outline'
 import { LEAD_STATUSES, LEAD_SOURCES, getStatus, getSource } from '@/lib/leads-config'
 import { PermissionGate } from '@/hooks/usePermissions'
+import LeadForm from '@/components/admin/LeadForm'
 
 const ITEMS_PER_PAGE = 20
 
@@ -50,6 +52,9 @@ const startOfToday = () => {
 }
 
 export default function LeadsClient({ leads }) {
+  const router = useRouter()
+  const [showNewModal, setShowNewModal] = useState(false)
+  const [expandedId, setExpandedId] = useState(null)
   const [search, setSearch] = useState('')
   const [preset, setPreset] = useState('all')
   const [statuses, setStatuses] = useState([])
@@ -174,13 +179,14 @@ export default function LeadsClient({ leads }) {
           </p>
         </div>
         <PermissionGate permission="leads.create">
-          <Link
-            href="/admin/leads/new"
+          <button
+            type="button"
+            onClick={() => setShowNewModal(true)}
             className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
           >
             <PlusIcon className="h-4 w-4" />
             Lead nou
-          </Link>
+          </button>
         </PermissionGate>
       </div>
 
@@ -328,8 +334,15 @@ export default function LeadsClient({ leads }) {
           </p>
         </div>
       ) : (
-        <div className="space-y-2.5">
-          {displayed.map((lead) => <LeadCard key={lead.id} lead={lead} />)}
+        <div className="space-y-1.5">
+          {displayed.map((lead) => (
+            <LeadRow
+              key={lead.id}
+              lead={lead}
+              expanded={expandedId === lead.id}
+              onToggle={() => setExpandedId(expandedId === lead.id ? null : lead.id)}
+            />
+          ))}
           {hasMore && (
             <div ref={loadMoreRef} className="flex justify-center py-4">
               <div className="animate-pulse text-gray-400 text-sm">Se încarcă mai multe...</div>
@@ -337,6 +350,64 @@ export default function LeadsClient({ leads }) {
           )}
         </div>
       )}
+
+      {/* Modal „Lead nou" */}
+      {showNewModal && (
+        <NewLeadModal
+          onClose={() => setShowNewModal(false)}
+          onSaved={() => { setShowNewModal(false); router.refresh() }}
+        />
+      )}
+    </div>
+  )
+}
+
+function NewLeadModal({ onClose, onSaved }) {
+  // Escape închide modalul; body-ul nu mai derulează în spate
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [onClose])
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex min-h-full items-start justify-center p-3 xs:p-6">
+        <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Lead nou"
+          className="relative bg-white rounded-2xl shadow-xl w-full max-w-3xl my-2 xs:my-4"
+        >
+          <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 xs:px-6 py-3 flex items-start justify-between gap-3 rounded-t-2xl">
+            <div>
+              <h2 className="text-base xs:text-lg font-semibold text-gray-900">Lead nou</h2>
+              <p className="text-xs text-gray-500">
+                Instagram, WhatsApp, Messenger, telefon sau recomandare
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Închide"
+            >
+              <XMarkIcon className="h-5 w-5 text-gray-500" />
+            </button>
+          </div>
+
+          <div className="p-4 xs:p-6">
+            <LeadForm onSaved={onSaved} onCancel={onClose} />
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -373,88 +444,185 @@ function FilterChips({ title, options, selected, onToggle }) {
   )
 }
 
-function LeadCard({ lead }) {
+function LeadRow({ lead, expanded, onToggle }) {
   const status = getStatus(lead.status)
   const source = getSource(lead.source)
   const today = startOfToday()
   const followUp = lead.nextFollowUpAt ? new Date(lead.nextFollowUpAt) : null
   const overdue = followUp && followUp < today
   const isToday = followUp && !overdue && followUp < new Date(today.getTime() + 86400000)
+  const chatLink = source.link ? source.link(lead) : null
+  const waNumber = (lead.phone || '').replace(/[^\d]/g, '')
 
   return (
-    <Link
-      href={`/admin/leads/${lead.id}`}
-      className={`block bg-white rounded-xl p-3 xs:p-4 border hover:border-indigo-400 hover:shadow-md transition-all ${
-        overdue ? 'border-red-300 bg-red-50/30'
-          : status.group === 'nou' ? 'border-blue-300 bg-blue-50/30'
-          : 'border-gray-200'
+    <div
+      className={`bg-white rounded-lg border transition-colors ${
+        expanded ? 'border-indigo-400 shadow-sm'
+          : overdue ? 'border-red-300 hover:border-indigo-300'
+          : status.group === 'nou' ? 'border-blue-300 hover:border-indigo-300'
+          : 'border-gray-200 hover:border-indigo-300'
       }`}
     >
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 xs:gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-            <h3 className="font-semibold text-gray-900 text-sm xs:text-base truncate">{lead.name}</h3>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${status.color}`}>
+      {/* Rând compact — click pentru detalii */}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className="w-full text-left px-2.5 xs:px-3 py-2 flex items-center gap-2 min-w-0"
+      >
+        <span title={status.label} className="text-sm leading-none shrink-0">{status.emoji}</span>
+
+        <span className="font-medium text-gray-900 text-sm truncate min-w-0 max-w-[45%] sm:max-w-none">
+          {lead.name}
+        </span>
+
+        <span className={`hidden sm:inline shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium ${status.color}`}>
+          {status.label}
+        </span>
+        <span className={`hidden md:inline shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium ${source.color}`}>
+          {source.emoji} {source.label}
+        </span>
+
+        {lead.phone && (
+          <span className="hidden lg:flex shrink-0 items-center gap-1 text-xs text-gray-500">
+            <PhoneIcon className="h-3 w-3" />{lead.phone}
+          </span>
+        )}
+        {lead.interestedIn && (
+          <span className="hidden xl:inline shrink-0 px-1.5 rounded bg-gray-100 text-gray-600 text-[10px] font-medium">
+            {lead.interestedIn}
+          </span>
+        )}
+
+        <span className="ml-auto flex items-center gap-2 shrink-0 text-[11px] text-gray-400 whitespace-nowrap">
+          {followUp && (
+            <span
+              title={`Follow-up: ${followUp.toLocaleDateString('ro-RO')}`}
+              className={`flex items-center gap-0.5 ${
+                overdue ? 'text-red-600 font-semibold'
+                  : isToday ? 'text-orange-600 font-semibold'
+                  : 'text-blue-600'
+              }`}
+            >
+              <BellAlertIcon className="h-3.5 w-3.5" />
+              {followUp.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })}
+            </span>
+          )}
+          {lead.notesCount > 0 && <span title={`${lead.notesCount} notițe`}>📝 {lead.notesCount}</span>}
+          <span className="hidden xs:inline">
+            {new Date(lead.createdAt).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })}
+          </span>
+          <ChevronDownIcon
+            className={`h-4 w-4 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+          />
+        </span>
+      </button>
+
+      {/* Detalii extinse */}
+      {expanded && (
+        <div className="px-2.5 xs:px-3 pb-3 pt-1 border-t border-gray-100 space-y-3">
+          <div className="flex flex-wrap gap-1.5 pt-2 sm:hidden">
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${status.color}`}>
               {status.emoji} {status.label}
             </span>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${source.color}`}>
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${source.color}`}>
               {source.emoji} {source.label}
             </span>
           </div>
 
-          <div className="flex flex-col xs:flex-row xs:flex-wrap gap-1 xs:gap-x-4 text-xs xs:text-sm text-gray-600 mb-1.5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 text-xs">
             {lead.phone && (
-              <span className="flex items-center gap-1">
-                <PhoneIcon className="h-3.5 w-3.5 flex-shrink-0" />{lead.phone}
-              </span>
+              <Detail label="Telefon">
+                <a href={`tel:${lead.phone}`} className="text-indigo-600 hover:underline">{lead.phone}</a>
+              </Detail>
             )}
             {lead.email && (
-              <span className="flex items-center gap-1 min-w-0">
-                <EnvelopeIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                <span className="truncate">{lead.email}</span>
-              </span>
+              <Detail label="Email">
+                <a href={`mailto:${lead.email}`} className="text-indigo-600 hover:underline break-all">
+                  {lead.email}
+                </a>
+              </Detail>
             )}
             {lead.studentName && (
-              <span className="flex items-center gap-1">
-                <UserIcon className="h-3.5 w-3.5 flex-shrink-0" />
+              <Detail label="Elev">
                 {lead.studentName}{lead.studentAge ? `, ${lead.studentAge} ani` : ''}
-              </span>
+              </Detail>
             )}
-            {lead.interestedIn && (
-              <span className="inline-flex items-center px-1.5 rounded bg-gray-100 text-gray-700 text-[11px] font-medium">
-                {lead.interestedIn}
-              </span>
+            {lead.interestedIn && <Detail label="Nivel actual">{lead.interestedIn}</Detail>}
+            {lead.sourceDetail && <Detail label={source.detailLabel}>{lead.sourceDetail}</Detail>}
+            {followUp && (
+              <Detail label="Recontactare">
+                <span className={overdue ? 'text-red-600' : isToday ? 'text-orange-600' : 'text-blue-600'}>
+                  {followUp.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {overdue ? ' (restant)' : isToday ? ' (azi)' : ''}
+                </span>
+              </Detail>
             )}
+            <Detail label="Adăugat">
+              {new Date(lead.createdAt).toLocaleDateString('ro-RO', {
+                day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+              })}
+              {lead.createdByName ? ` — ${lead.createdByName}` : ''}
+            </Detail>
           </div>
 
           {lead.message && (
-            <p className="text-xs xs:text-sm text-gray-700 line-clamp-2">
-              <ChatBubbleLeftIcon className="h-3.5 w-3.5 inline mr-1 text-gray-400" />
-              {lead.message}
-            </p>
+            <div className="bg-gray-50 rounded-lg p-2.5">
+              <p className="text-xs text-gray-700 whitespace-pre-wrap">
+                <ChatBubbleLeftIcon className="h-3.5 w-3.5 inline mr-1 text-gray-400" />
+                {lead.message}
+              </p>
+            </div>
           )}
 
-          {followUp && (
-            <p className={`mt-1.5 text-xs font-medium flex items-center gap-1 ${
-              overdue ? 'text-red-600' : isToday ? 'text-orange-600' : 'text-blue-600'
-            }`}>
-              <BellAlertIcon className="h-3.5 w-3.5" />
-              Follow-up: {followUp.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })}
-              {overdue ? ' (restant)' : isToday ? ' (azi)' : ''}
-            </p>
-          )}
-        </div>
-
-        <div className="text-left sm:text-right text-xs text-gray-400 whitespace-nowrap space-y-0.5">
-          <div className="flex sm:justify-end items-center gap-1">
-            <CalendarIcon className="h-3.5 w-3.5" />
-            {new Date(lead.createdAt).toLocaleDateString('ro-RO', {
-              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-            })}
+          <div className="flex flex-wrap gap-1.5">
+            {lead.phone && (
+              <a
+                href={`tel:${lead.phone}`}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-colors"
+              >
+                <PhoneIcon className="h-3.5 w-3.5" /> Sună
+              </a>
+            )}
+            {waNumber && (
+              <a
+                href={`https://wa.me/${waNumber}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition-colors"
+              >
+                🟢 WhatsApp
+              </a>
+            )}
+            {chatLink && !chatLink.startsWith('tel:') && (
+              <a
+                href={chatLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs font-medium hover:bg-gray-50 transition-colors"
+              >
+                {source.emoji} Deschide {source.label}
+              </a>
+            )}
+            <Link
+              href={`/admin/leads/${lead.id}`}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-indigo-300 text-indigo-700 text-xs font-medium hover:bg-indigo-50 transition-colors"
+            >
+              <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+              Fișa completă{lead.notesCount > 0 ? ` (${lead.notesCount} notițe)` : ''}
+            </Link>
           </div>
-          {lead.notesCount > 0 && <div>📝 {lead.notesCount} notițe</div>}
         </div>
-      </div>
-    </Link>
+      )}
+    </div>
+  )
+}
+
+function Detail({ label, children }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[10px] uppercase tracking-wide text-gray-400">{label}</p>
+      <p className="text-gray-800 font-medium break-words">{children}</p>
+    </div>
   )
 }
