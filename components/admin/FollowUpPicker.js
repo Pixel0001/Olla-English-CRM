@@ -29,51 +29,55 @@ export default function FollowUpPicker({ value, onChange, disabled = false, clas
     'px-2 py-1 text-xs text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 font-mono'
 
   return (
-    <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
-      <input
-        type="date"
-        value={date}
-        disabled={disabled}
-        onChange={(e) => emit(e.target.value, hour, minute)}
-        className="px-2 py-1 text-xs text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50"
-      />
-
-      <select
-        value={hour}
-        disabled={disabled || !date}
-        onChange={(e) => emit(date, e.target.value, minute)}
-        className={select}
-        aria-label="Ora"
-      >
-        {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
-      </select>
-
-      <span className="text-gray-400 font-bold">:</span>
-
-      <select
-        value={minute}
-        disabled={disabled || !date}
-        onChange={(e) => emit(date, hour, e.target.value)}
-        className={select}
-        aria-label="Minutul"
-      >
-        {MINUTES.map((m) => <option key={m} value={m}>{m}</option>)}
-      </select>
-
-      <span className="text-[10px] text-gray-400" title={`Toate orele sunt în fusul ${SCHOOL_TZ}`}>
-        ora Chișinăului
-      </span>
-
-      {date && (
-        <button
-          type="button"
+    <div className={className}>
+      {/* Data, ora și minutul stau mereu pe un singur rând, chiar și în coloană îngustă */}
+      <div className="flex items-center gap-1 flex-nowrap">
+        <input
+          type="date"
+          value={date}
           disabled={disabled}
-          onClick={() => onChange(null)}
-          className="text-[11px] text-gray-500 hover:text-red-600 disabled:opacity-50"
+          onChange={(e) => emit(e.target.value, hour, minute)}
+          className="min-w-0 flex-1 px-1.5 py-1 text-xs text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50"
+        />
+
+        <select
+          value={hour}
+          disabled={disabled || !date}
+          onChange={(e) => emit(date, e.target.value, minute)}
+          className={`${select} shrink-0`}
+          aria-label="Ora"
         >
-          elimină
-        </button>
-      )}
+          {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+        </select>
+
+        <span className="text-gray-400 font-bold shrink-0">:</span>
+
+        <select
+          value={minute}
+          disabled={disabled || !date}
+          onChange={(e) => emit(date, hour, e.target.value)}
+          className={`${select} shrink-0`}
+          aria-label="Minutul"
+        >
+          {MINUTES.map((m) => <option key={m} value={m}>{m}</option>)}
+        </select>
+      </div>
+
+      <div className="flex items-center gap-2 mt-1">
+        <span className="text-[10px] text-gray-400" title={`Toate orele sunt în fusul ${SCHOOL_TZ}`}>
+          ora Chișinăului
+        </span>
+        {date && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(null)}
+            className="text-[10px] text-gray-500 hover:text-red-600 disabled:opacity-50"
+          >
+            elimină
+          </button>
+        )}
+      </div>
     </div>
   )
 }
