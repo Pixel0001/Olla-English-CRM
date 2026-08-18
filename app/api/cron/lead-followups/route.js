@@ -91,7 +91,8 @@ export async function GET(request) {
         }),
       ]
 
-      const sent = await sendTeacherDirectMessage(owner.telegramChatId, lines.join('\n'))
+      const message = lines.join('\n')
+      const sent = await sendTeacherDirectMessage(owner.telegramChatId, message, owner.name || owner.email)
       if (sent) directMessages++
     }
 

@@ -214,7 +214,7 @@ ${locationType === 'online' ? '💻 Online' : '🏫 Fizic'}
 
 ✨ Mult succes cu noua grupă!`
 
-      await sendTeacherDirectMessage(group.teacher.telegramChatId, message)
+      await sendTeacherDirectMessage(group.teacher.telegramChatId, message, group.teacher.name)
     }
 
     return NextResponse.json(group, { status: 201 })
