@@ -10,7 +10,7 @@ import {
   UserPlusIcon
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
-import { ENGLISH_LEVELS } from '@/lib/english-levels'
+import LevelSelect from '@/components/LevelSelect'
 import { getDaysFromToday, getTodayName, getTomorrowName, nearestDay } from '@/lib/scheduleDays'
 
 // Helper pentru formatarea programului
@@ -452,16 +452,11 @@ export default function TeacherGroupsClient({ initialGroups, branches, allGroups
                 <label className="block text-sm font-medium text-gray-900 mb-1">
                   Nivel
                 </label>
-                <select
+                <LevelSelect
                   value={formData.level}
                   onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-gray-900"
-                >
-                  <option value="">Fără nivel</option>
-                  {ENGLISH_LEVELS.map(level => (
-                    <option key={level} value={level}>{level}</option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div>

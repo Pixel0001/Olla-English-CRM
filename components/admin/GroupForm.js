@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import TwoFactorModal from './TwoFactorModal'
 import LimitsOverridePanel from './LimitsOverridePanel'
-import { ENGLISH_LEVELS } from '@/lib/english-levels'
+import LevelSelect from '@/components/LevelSelect'
 
 const days = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică']
 
@@ -221,17 +221,12 @@ export default function GroupForm({ group, teachers, branches = [] }) {
 
           <div>
             <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">Nivel</label>
-            <select
+            <LevelSelect
               name="level"
               value={formData.level}
               onChange={handleChange}
               className="w-full px-3 xs:px-4 py-2 text-sm xs:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
-            >
-              <option value="">Fără nivel</option>
-              {ENGLISH_LEVELS.map(level => (
-                <option key={level} value={level}>{level}</option>
-              ))}
-            </select>
+            />
           </div>
 
           <div>

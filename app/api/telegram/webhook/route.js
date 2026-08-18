@@ -8,7 +8,7 @@ const BOT_TOKEN = process.env.TELEGRAM_LESSONS_BOT_TOKEN
 const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET
 
 const STATUS_LABELS = {
-  LEAD: '🔵 Pending',
+  LEAD: '🔵 New lead',
   CONTACTAT: '🟡 Contactat',
   PROGRAMAT: '🟠 Programat',
   FINALIZAT_LECTIA: '🎓 Finalizat',

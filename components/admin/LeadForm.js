@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { LEAD_STATUSES, LEAD_SOURCES, getSource } from '@/lib/leads-config'
-import { ENGLISH_LEVELS } from '@/lib/english-levels'
+import LevelSelect from '@/components/LevelSelect'
 
 const input =
   'w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
@@ -140,13 +140,12 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null 
           </div>
           <div>
             <label className={label}>Nivel actual</label>
-            <select
-              className={input} value={form.interestedIn}
+            <LevelSelect
+              className={input}
+              value={form.interestedIn}
               onChange={(e) => set('interestedIn', e.target.value)}
-            >
-              <option value="">Nespecificat</option>
-              {ENGLISH_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
-            </select>
+              emptyLabel="Nespecificat"
+            />
           </div>
         </div>
       </section>
