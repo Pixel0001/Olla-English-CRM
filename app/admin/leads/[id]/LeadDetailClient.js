@@ -195,7 +195,7 @@ export default function LeadDetailClient({ lead: initial }) {
                   value={`${lead.studentName}${lead.studentAge ? `, ${lead.studentAge} ani` : ''}`}
                 />
               )}
-              {lead.interestedIn && <Field label="Nivel dorit" value={lead.interestedIn} />}
+              {lead.interestedIn && <Field label="Nivel actual" value={lead.interestedIn} />}
             </div>
           </div>
 
