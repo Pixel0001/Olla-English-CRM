@@ -513,7 +513,6 @@ function AttendanceCell({ value, locked, onClick }) {
 function PaymentModal({ student, monthLabel, defaultLessons, onClose, onSaved }) {
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState('cash')
-  const [lessons, setLessons] = useState(String(defaultLessons))
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [saving, setSaving] = useState(false)
 
@@ -538,7 +537,6 @@ function PaymentModal({ student, monthLabel, defaultLessons, onClose, onSaved })
           amount: value,
           paymentDate: new Date(date).toISOString(),
           paymentMethod: method,
-          lessonsAdded: parseInt(lessons, 10) || 0,
           notes: `Plată ${monthLabel}`,
         }),
       })
@@ -582,17 +580,6 @@ function PaymentModal({ student, monthLabel, defaultLessons, onClose, onSaved })
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Lecții adăugate</label>
-              <input
-                type="number"
-                min="0"
-                max="60"
-                value={lessons}
-                onChange={(e) => setLessons(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-            <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Metodă</label>
               <select
                 value={method}
@@ -616,8 +603,8 @@ function PaymentModal({ student, monthLabel, defaultLessons, onClose, onSaved })
           </div>
 
           <p className="text-[11px] text-gray-500">
-            Lecțiile adăugate intră în contorul individual al elevului. Data plății decide în ce
-            lună apare încasarea.
+            Plata acoperă lecțiile lunii pentru această grupă ({defaultLessons} lecții).
+            Data plății decide în ce lună apare încasarea.
           </p>
 
           <div className="flex gap-2">

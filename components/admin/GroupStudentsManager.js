@@ -221,7 +221,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
       paymentDate: paymentForm.paymentDate,
       paymentMethod: paymentForm.paymentMethod,
       notes: paymentForm.notes,
-      lessonsAdded: paymentForm.lessonsAdded ? parseInt(paymentForm.lessonsAdded) : null
+      lessonsAdded: null
     }
 
     // If user has 2FA enabled, require verification
@@ -1114,38 +1114,6 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Lecții adăugate
-                  </label>
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-xl">📚</div>
-                    <input
-                      type="number"
-                      value={paymentForm.lessonsAdded}
-                      onChange={(e) => setPaymentForm(prev => ({ ...prev, lessonsAdded: e.target.value }))}
-                      className="w-full pl-11 pr-4 py-2.5 xs:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 bg-gradient-to-r from-gray-50 to-white hover:border-gray-300 transition-colors font-medium"
-                      placeholder="Ex: 12"
-                    />
-                  </div>
-                  {/* Quick lesson buttons */}
-                  <div className="flex gap-1.5 xs:gap-2 mt-2">
-                    {[4, 8, 12].map(num => (
-                      <button
-                        key={num}
-                        type="button"
-                        onClick={() => setPaymentForm(prev => ({ ...prev, lessonsAdded: num.toString() }))}
-                        className={`px-2 xs:px-3 py-1 text-xs rounded-lg font-medium transition-all ${
-                          paymentForm.lessonsAdded === num.toString()
-                            ? 'bg-indigo-500 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        {num} lecții
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
 
               {/* Payment Method - Visual Selection */}
@@ -1202,15 +1170,6 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                 />
               </div>
 
-              {/* Info box */}
-              {paymentForm.lessonsAdded && parseInt(paymentForm.lessonsAdded) > 0 && (
-                <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-2.5 xs:p-3 flex items-start gap-2">
-                  <span className="text-indigo-500 text-base xs:text-lg">ℹ️</span>
-                  <p className="text-xs xs:text-sm text-indigo-700">
-                    Se vor adăuga automat <strong>{paymentForm.lessonsAdded} lecții</strong> la soldul elevului după salvare.
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Footer */}
