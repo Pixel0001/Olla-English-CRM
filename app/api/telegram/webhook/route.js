@@ -168,6 +168,55 @@ export async function POST(request) {
 
     const body = await request.json()
 
+    // ── /start <token> — conectarea unui cont la Telegram ──
+    // Linkul din CRM (t.me/bot?start=TOKEN) aduce token-ul aici, iar chat ID-ul
+    // se scrie singur pe contul respectiv. Nimeni nu mai caută ID-uri manual.
+    if (body.message?.text?.startsWith("/start")) {
+      const chat = body.message.chat
+      const token = body.message.text.trim().split(" ")[1]
+
+      if (!token) {
+        await callTelegram("sendMessage", {
+          chat_id: chat.id,
+          text: "Salut! Ca să primești notificări, deschide linkul de conectare din contul tău în CRM → secțiunea Telegram.",
+        })
+        return NextResponse.json({ ok: true })
+      }
+
+      const user = await prisma.user.findFirst({
+        where: { telegramLinkToken: token, telegramLinkExpires: { gt: new Date() } },
+        select: { id: true, name: true, email: true },
+      })
+
+      if (!user) {
+        await callTelegram("sendMessage", {
+          chat_id: chat.id,
+          text: "❌ Link expirat sau deja folosit. Generează altul din CRM → Securitate → Telegram.",
+        })
+        return NextResponse.json({ ok: true })
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          telegramChatId: String(chat.id),
+          telegramUsername: body.message.from?.username || null,
+          telegramLinkToken: null,
+          telegramLinkExpires: null,
+        },
+      })
+
+      await callTelegram("sendMessage", {
+        chat_id: chat.id,
+        parse_mode: "HTML",
+        text: `✅ Cont conectat: <b>${user.name || user.email}</b>
+
+De acum primești aici notificările tale din CRM.`,
+      })
+
+      return NextResponse.json({ ok: true })
+    }
+
     // Procesare callback query (apăsare buton)
     if (body.callback_query) {
       const { id: callbackQueryId, data, message } = body.callback_query

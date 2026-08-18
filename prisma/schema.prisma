@@ -17,7 +17,10 @@ model User {
   password          String?   // null for Google-only users (Argon2id hash)
   name              String?
   phone             String?   // Număr de telefon (opțional)
-  telegramChatId    String?   // Chat ID pentru notificări Telegram
+  telegramChatId    String?   // Chat ID pentru notificări Telegram (completat automat la /start)
+  telegramUsername  String?   // @username-ul de Telegram, pentru afișare
+  telegramLinkToken String?   // Token de unică folosință pentru linkul de conectare
+  telegramLinkExpires DateTime? // Expirarea token-ului de conectare
   image             String?
   role              Role      @default(TEACHER)
   permissions       String[]  @default([]) // Granular permissions for ADMIN

@@ -16,13 +16,6 @@ import { whatsAppLink } from '@/lib/phone'
 
 const ITEMS_PER_PAGE = 30
 
-const PRESETS = [
-  { value: 'all', label: 'Toate' },
-  { value: 'nou', label: 'Noi' },
-  { value: 'lucru', label: 'În lucru' },
-  { value: 'castigat', label: 'Câștigate' },
-  { value: 'pierdut', label: 'Pierdute' },
-]
 
 const PERIODS = [
   { value: '', label: 'Oricând' },
@@ -65,7 +58,7 @@ export default function LeadsClient({ leads }) {
   const [editingLead, setEditingLead] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
   const [search, setSearch] = useState('')
-  const [preset, setPreset] = useState('all')
+
   const [status, setStatus] = useState('')
   const [source, setSource] = useState('')
   const [period, setPeriod] = useState('')
@@ -79,17 +72,36 @@ export default function LeadsClient({ leads }) {
   const resetPaging = () => setDisplayCount(ITEMS_PER_PAGE)
 
   const resetAll = () => {
-    setSearch(''); setPreset('all'); setStatus(''); setSource('')
+    setSearch(''); setStatus(''); setSource('')
     setPeriod(''); setFollowUp(''); setSort('newest'); resetPaging()
   }
 
   const activeFilterCount =
-    (search ? 1 : 0) + (preset !== 'all' ? 1 : 0) + (status ? 1 : 0) +
+    (search ? 1 : 0) + (status ? 1 : 0) +
     (source ? 1 : 0) + (period ? 1 : 0) + (followUp ? 1 : 0)
 
   // Actualizează un lead în listă după o modificare din rândul extins
   const patchLead = useCallback((id, patch) => {
     setItems((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)))
+  }, [])
+
+  // Schimbarea statusului direct din listă, fără a deschide formularul
+  const changeStatus = useCallback(async (lead, newStatus) => {
+    const previous = lead.status
+    setItems((prev) => prev.map((l) => (l.id === lead.id ? { ...l, status: newStatus } : l)))
+    try {
+      const res = await fetch(`/api/admin/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Eroare la schimbarea statusului")
+      if (data.conversion?.created) toast.success("Elevul a fost adăugat în lista de elevi")
+    } catch (err) {
+      toast.error(err.message)
+      setItems((prev) => prev.map((l) => (l.id === lead.id ? { ...l, status: previous } : l)))
+    }
   }, [])
 
   const deleteLead = useCallback(async (lead) => {
@@ -109,30 +121,24 @@ export default function LeadsClient({ leads }) {
 
   // ── Statistici (pe toate lead-urile, nu pe cele filtrate) ───────────────
   const stats = useMemo(() => {
-    const byGroup = (g) => items.filter((l) => getStatus(l.status).group === g).length
     const today = startOfToday()
+
+    // Numărăm pe statusuri reale, nu pe grupuri inventate
+    const byStatus = {}
+    for (const l of items) byStatus[l.status] = (byStatus[l.status] || 0) + 1
+
     const overdue = items.filter(
       (l) => l.nextFollowUpAt && new Date(l.nextFollowUpAt) < today &&
-        !['castigat', 'pierdut'].includes(getStatus(l.status).group)
+        !["castigat", "pierdut"].includes(getStatus(l.status).group)
     ).length
-    const castigate = byGroup('castigat')
-    const inchise = castigate + byGroup('pierdut')
-    return {
-      total: items.length,
-      noi: byGroup('nou'),
-      lucru: byGroup('lucru'),
-      castigate,
-      pierdute: byGroup('pierdut'),
-      overdue,
-      conversie: inchise > 0 ? Math.round((castigate / inchise) * 100) : null,
-    }
+
+    return { total: items.length, byStatus, overdue }
   }, [items])
 
   // ── Filtrare + sortare ─────────────────────────────────────────────────
   const filtered = useMemo(() => {
     let r = items
 
-    if (preset !== 'all') r = r.filter((l) => getStatus(l.status).group === preset)
     if (status) r = r.filter((l) => l.status === status)
     if (source) r = r.filter((l) => l.source === source)
 
@@ -177,7 +183,7 @@ export default function LeadsClient({ leads }) {
     } else sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
     return sorted
-  }, [items, search, preset, status, source, period, followUp, sort])
+  }, [items, search, status, source, period, followUp, sort])
 
   const displayed = filtered.slice(0, displayCount)
   const hasMore = displayCount < filtered.length
@@ -202,13 +208,11 @@ export default function LeadsClient({ leads }) {
         <h1 className="text-lg font-bold text-gray-900">Leads</h1>
         <div className="flex flex-wrap items-center gap-1.5">
           <StatChip label="Total" value={stats.total} />
-          <StatChip label="🔵 Noi" value={stats.noi} color="text-blue-600" />
-          <StatChip label="🟡 Lucru" value={stats.lucru} color="text-amber-600" />
-          <StatChip label="💰 Câștigate" value={stats.castigate} color="text-emerald-600" />
-          <StatChip label="❌ Pierdute" value={stats.pierdute} color="text-red-600" />
-          {stats.overdue > 0
-            ? <StatChip label="🔴 Restante" value={stats.overdue} color="text-red-600" />
-            : <StatChip label="📈 Conversie" value={stats.conversie === null ? '—' : `${stats.conversie}%`} color="text-indigo-600" />}
+          <StatChip label="🔵 New lead" value={stats.byStatus.LEAD || 0} color="text-blue-600" />
+          <StatChip label="📋 Waitlist" value={stats.byStatus.WAITLIST || 0} color="text-teal-700" />
+          <StatChip label="💰 A plătit" value={stats.byStatus.PLATIT || 0} color="text-emerald-600" />
+          <StatChip label="🟣 Studiază" value={stats.byStatus.STUDIAZA || 0} color="text-purple-600" />
+          <StatChip label="🔴 Restante" value={stats.overdue} color="text-red-600" />
           <PermissionGate permission="leads.create">
             <button
               type="button"
@@ -224,17 +228,28 @@ export default function LeadsClient({ leads }) {
 
       {/* Bară unică: preset-uri + căutare îngustă + filtre */}
       <div className="bg-white rounded-lg border border-gray-200 px-2 py-2 flex flex-wrap items-center gap-1.5">
-        {PRESETS.map((p) => (
+        <button
+          onClick={() => { setStatus(""); resetPaging() }}
+          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+            status === ""
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-50 text-gray-700 border border-gray-200 hover:border-indigo-400"
+          }`}
+        >
+          Toate
+        </button>
+        {LEAD_STATUSES.map((s) => (
           <button
-            key={p.value}
-            onClick={() => { setPreset(p.value); resetPaging() }}
-            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-              preset === p.value
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-50 text-gray-700 border border-gray-200 hover:border-indigo-400'
+            key={s.value}
+            onClick={() => { setStatus(s.value); resetPaging() }}
+            title={s.label}
+            className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+              status === s.value
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-50 text-gray-700 border border-gray-200 hover:border-indigo-400"
             }`}
           >
-            {p.label}
+            {s.emoji} {s.label}
           </button>
         ))}
 
@@ -248,12 +263,6 @@ export default function LeadsClient({ leads }) {
             className="w-full pl-7 pr-2 py-1.5 text-xs text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
-
-        <select value={status} onChange={(e) => { setStatus(e.target.value); resetPaging() }} className={selectClass} aria-label="Status">
-          <option value="">Status: toate</option>
-          {LEAD_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.emoji} {s.label}</option>)}
-        </select>
-
         <select value={source} onChange={(e) => { setSource(e.target.value); resetPaging() }} className={selectClass} aria-label="Sursă">
           <option value="">Sursă: toate</option>
           {LEAD_SOURCES.map((s) => <option key={s.value} value={s.value}>{s.emoji} {s.label}</option>)}
@@ -305,6 +314,7 @@ export default function LeadsClient({ leads }) {
               onPatch={patchLead}
               onEdit={() => setEditingLead(lead)}
               onDelete={() => deleteLead(lead)}
+              onStatusChange={(newStatus) => changeStatus(lead, newStatus)}
             />
           ))}
           {hasMore && (
@@ -391,7 +401,7 @@ function NewLeadModal({ onClose, onSaved, lead = null }) {
   )
 }
 
-function LeadRow({ lead, expanded, onToggle, onPatch, onEdit, onDelete }) {
+function LeadRow({ lead, expanded, onToggle, onPatch, onEdit, onDelete, onStatusChange }) {
   const status = getStatus(lead.status)
   const source = getSource(lead.source)
   const today = startOfToday()
@@ -420,10 +430,6 @@ function LeadRow({ lead, expanded, onToggle, onPatch, onEdit, onDelete }) {
 
         <span className="font-medium text-gray-900 truncate min-w-0 max-w-[42%] sm:max-w-none">
           {lead.name}
-        </span>
-
-        <span className={`hidden sm:inline shrink-0 px-1.5 rounded text-[10px] font-medium ${status.color}`}>
-          {status.label}
         </span>
         <span className={`hidden md:inline shrink-0 px-1.5 rounded text-[10px] font-medium ${source.color}`}>
           {source.emoji} {source.label}
@@ -464,8 +470,23 @@ function LeadRow({ lead, expanded, onToggle, onPatch, onEdit, onDelete }) {
         </span>
       </button>
 
-        {/* Acțiuni pe lead */}
+        {/* Status editabil direct din listă */}
+        <PermissionGate permission="leads.edit">
+          <select
+            value={lead.status}
+            onChange={(e) => onStatusChange(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            title="Schimbă statusul"
+            className={`shrink-0 max-w-[8.5rem] px-1 py-0.5 my-1 rounded border text-[10px] font-medium cursor-pointer focus:ring-2 focus:ring-indigo-500 ${status.color}`}
+          >
+            {LEAD_STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>{s.emoji} {s.label}</option>
+            ))}
+          </select>
+        </PermissionGate>
+
         <div className="flex items-center gap-0.5 pr-1.5 shrink-0">
+
           <PermissionGate permission="leads.edit">
             <button
               type="button"
