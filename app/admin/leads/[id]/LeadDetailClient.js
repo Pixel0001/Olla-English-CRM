@@ -11,6 +11,7 @@ import {
 import toast from 'react-hot-toast'
 import { usePermissions } from '@/hooks/usePermissions'
 import { whatsAppLink } from '@/lib/phone'
+import FollowUpPicker from '@/components/admin/FollowUpPicker'
 import { LEAD_STATUSES, getStatus, getSource } from '@/lib/leads-config'
 import LeadForm from '@/components/admin/LeadForm'
 
@@ -313,22 +314,15 @@ export default function LeadDetailClient({ lead: initial }) {
               <BellAlertIcon className="h-5 w-5 text-indigo-600" />
               Recontactare
             </h2>
-            <input
-              type="date"
-              value={lead.nextFollowUpAt ? lead.nextFollowUpAt.slice(0, 10) : ''}
-              onChange={(e) => patch({ nextFollowUpAt: e.target.value || null }, 'Follow-up actualizat')}
+            {/* Același selector ca în listă: dată + oră + minut, în ora Chișinăului */}
+            <FollowUpPicker
+              value={lead.nextFollowUpAt}
               disabled={saving || !canEdit}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 disabled:opacity-60"
+              onChange={(iso) => patch(
+                { nextFollowUpAt: iso },
+                iso ? 'Follow-up actualizat' : 'Follow-up eliminat'
+              )}
             />
-            {lead.nextFollowUpAt && (
-              <button
-                onClick={() => patch({ nextFollowUpAt: null }, 'Follow-up eliminat')}
-                disabled={!canEdit}
-                className="mt-2 text-xs text-gray-500 hover:text-red-600"
-              >
-                Elimină data
-              </button>
-            )}
           </div>
 
           <div className="bg-white rounded-xl p-4 xs:p-6 border border-gray-200">
