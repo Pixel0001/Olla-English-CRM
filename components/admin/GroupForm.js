@@ -6,6 +6,9 @@ import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import TwoFactorModal from './TwoFactorModal'
 import LimitsOverridePanel from './LimitsOverridePanel'
+
+// Ascunde limitele de cooldown/XP din formularul de grupă până sunt necesare
+const SHOW_LIMITS = false
 import LevelSelect from '@/components/LevelSelect'
 
 const days = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică']
@@ -429,16 +432,21 @@ export default function GroupForm({ group, teachers, branches = [] }) {
         </div>
       </div>
 
-      <LimitsOverridePanel
-        scope="group"
-        value={{
-          cooldownOverrideMin: formData.cooldownOverrideMin,
-          dailyXpCapOverride: formData.dailyXpCapOverride,
-          cooldownDisabled: formData.cooldownDisabled,
-          xpCapDisabled: formData.xpCapDisabled,
-        }}
-        onChange={(patch) => setFormData(prev => ({ ...prev, ...patch }))}
-      />
+      {/* Limitele de cooldown și XP țin de partea de învățare, care nu e folosită
+          încă. Valorile rămân în formular și se salvează neschimbate; comută
+          SHOW_LIMITS pe true ca să reapară secțiunea. */}
+      {SHOW_LIMITS && (
+        <LimitsOverridePanel
+          scope="group"
+          value={{
+            cooldownOverrideMin: formData.cooldownOverrideMin,
+            dailyXpCapOverride: formData.dailyXpCapOverride,
+            cooldownDisabled: formData.cooldownDisabled,
+            xpCapDisabled: formData.xpCapDisabled,
+          }}
+          onChange={(patch) => setFormData(prev => ({ ...prev, ...patch }))}
+        />
+      )}
 
       <div className="flex flex-col xs:flex-row gap-2 xs:gap-4 pt-3 xs:pt-4 border-t">
         <button
