@@ -688,6 +688,7 @@ enum LeadStatus {
   PRIMA_LECTIE      // 🟢 A venit la prima lecție
   FINALIZAT_LECTIA  // ⚫ A terminat lecția de probă
   SE_GANDESTE       // 🔘 Se gândește
+  WAITLIST          // 📋 Listă de așteptare (locuri ocupate / grupă în formare)
   ASTEPTAM_PLATA    // 💵 Așteptăm plata
   PLATIT            // 💰 A plătit
   STUDIAZA          // 🟣 Studiază (convertit)
