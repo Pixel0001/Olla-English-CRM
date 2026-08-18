@@ -6,6 +6,7 @@ import { checkPermission } from '@/lib/permissions'
 import { LEAD_STATUS_VALUES, LEAD_SOURCE_VALUES } from '@/lib/leads-config'
 import { convertLeadToStudent, isWonStatus } from '@/lib/lead-conversion'
 import { parseSchoolDate } from '@/lib/timezone'
+import { notifyLeadAssigned } from '@/lib/telegram'
 
 async function requireStaff(permission) {
   const session = await getServerSession(authOptions)
@@ -76,7 +77,29 @@ export async function PATCH(request, { params }) {
       update.convertedStudentId = data.convertedStudentId || null
     }
 
+    const previous = await prisma.lead.findUnique({
+      where: { id },
+      select: { assignedToId: true },
+    })
+
     const lead = await prisma.lead.update({ where: { id }, data: update })
+
+    // Responsabil nou → primește lead-ul în privat, dacă are Telegram conectat
+    if (lead.assignedToId && lead.assignedToId !== previous?.assignedToId) {
+      prisma.user
+        .findUnique({
+          where: { id: lead.assignedToId },
+          select: { name: true, email: true, telegramChatId: true },
+        })
+        .then((owner) => {
+          if (!owner?.telegramChatId) return
+          return notifyLeadAssigned(
+            { ...lead, assignedToName: owner.name || owner.email || null },
+            { chatId: owner.telegramChatId, isNew: false }
+          )
+        })
+        .catch((err) => console.error('Telegram lead assign notify:', err))
+    }
 
     // Lead câștigat → elevul apare automat în lista de elevi (o singură dată)
     let conversion = null

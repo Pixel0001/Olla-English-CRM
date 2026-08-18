@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { checkPermission } from '@/lib/permissions'
 import { LEAD_STATUS_VALUES, LEAD_SOURCE_VALUES } from '@/lib/leads-config'
-import { notifyNewLead } from '@/lib/telegram'
+import { notifyNewLead, notifyLeadAssigned } from '@/lib/telegram'
 import { parseSchoolDate } from '@/lib/timezone'
 
 async function requireStaff(permission) {
@@ -153,15 +153,25 @@ export async function POST(request) {
     ;(async () => {
       const [assignedTo, createdBy] = await Promise.all([
         lead.assignedToId
-          ? prisma.user.findUnique({ where: { id: lead.assignedToId }, select: { name: true, email: true } })
+          ? prisma.user.findUnique({
+              where: { id: lead.assignedToId },
+              select: { name: true, email: true, telegramChatId: true },
+            })
           : null,
         prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true, email: true } }),
       ])
-      await notifyNewLead({
+
+      const enriched = {
         ...lead,
         assignedToName: assignedTo?.name || assignedTo?.email || null,
         createdByName: createdBy?.name || createdBy?.email || null,
-      })
+      }
+
+      // În topicul comun și, dacă are cont conectat, direct responsabilului
+      await notifyNewLead(enriched)
+      if (assignedTo?.telegramChatId) {
+        await notifyLeadAssigned(enriched, { chatId: assignedTo.telegramChatId })
+      }
     })().catch((err) => console.error('Telegram lead notify:', err))
 
     return NextResponse.json(lead, { status: 201 })
