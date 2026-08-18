@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { notifyMissedGroupSession, notifyMissedMakeup, notifyLowLessons, notifyTeacherDailySchedule } from '@/lib/telegram'
+import { notifyMissedGroupSession, notifyMissedMakeup, notifyGroupLessonsLow, notifyTeacherDailySchedule } from '@/lib/telegram'
 
 import { cleanupExpiredSessions } from '@/lib/security/session.js'
 import { cleanupExpiredStepUpTokens } from '@/lib/security/step-up.js'
 import { cleanupExpiredBuckets } from '@/lib/security/rate-limit.js'
 import { cleanupCaptchaStates } from '@/lib/security/captcha.js'
 import { cleanupOldAuditLogs } from '@/lib/security/audit.js'
+
+const MONTH_NAMES_RO = [
+  'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+  'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie',
+]
 
 // Map day index to Romanian day names (as stored in database)
 const DAY_MAP = {
@@ -342,91 +347,91 @@ export async function GET(request) {
     }
 
     // ============================================
-    // 5. LOW/ZERO/NEGATIVE LESSONS NOTIFICATIONS
+    // 5. LECȚII RĂMASE DIN PACHETUL LUNAR (per grupă)
     // ============================================
-    
-    // Find all active group students with low lessons (1, 0 or negative)
-    const groupStudentsWithIssues = await prisma.groupStudent.findMany({
-      where: {
-        status: 'ACTIVE',
-        lessonsRemaining: { lte: 1 } // 1 or less (includes 0 and negative)
-      },
+    // Socoteala e per grupă: din cele N lecții ale lunii, câte s-au ținut.
+    // Absențele individuale nu contează — lecția s-a ținut pentru toți.
+
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 1)
+    const monthLabel = `${MONTH_NAMES_RO[today.getMonth()]} ${today.getFullYear()}`
+
+    const activeGroups = await prisma.group.findMany({
+      where: { active: true },
       include: {
-        student: true,
-        payments: { orderBy: { paymentDate: 'desc' }, take: 1 },
-        group: {
+        teacher: { select: { name: true } },
+        groupStudents: {
+          where: { status: 'ACTIVE' },
           include: {
-          }
-        }
-      }
+            student: { select: { fullName: true } },
+            payments: {
+              where: { paymentDate: { gte: monthStart, lt: monthEnd } },
+              select: { id: true },
+            },
+          },
+        },
+        lessonSessions: {
+          where: { date: { gte: monthStart, lt: monthEnd } },
+          select: { id: true },
+        },
+        lessonPackages: {
+          where: { year: today.getFullYear(), month: today.getMonth() + 1 },
+          select: { totalLessons: true },
+        },
+      },
     })
 
-    for (const gs of groupStudentsWithIssues) {
-      const lessons = gs.lessonsRemaining
-      let type, title, message
+    for (const group of activeGroups) {
+      if (group.groupStudents.length === 0) continue
 
-      if (lessons < 0) {
-        type = 'NEGATIVE_LESSONS'
-        title = `🔴 ${gs.student.fullName} are ${lessons} lecții!`
-        message = `Elevul ${gs.student.fullName} din grupa "${gs.group.name}" are lecții negative (${lessons}). Necesită atenție imediată!`
-      } else if (lessons === 0) {
-        type = 'ZERO_LESSONS'
-        title = `⚠️ ${gs.student.fullName} a rămas fără lecții`
-        message = `Elevul ${gs.student.fullName} din grupa "${gs.group.name}" are 0 lecții rămase. Contactați părinții pentru reînnoire.`
-      } else if (lessons === 1) {
-        type = 'LOW_LESSONS'
-        title = `📉 ${gs.student.fullName} are doar 1 lecție`
-        message = `Elevul ${gs.student.fullName} din grupa "${gs.group.name}" (${gs.group.level}) mai are doar 1 lecție rămasă.`
-      }
+      const total = group.lessonPackages[0]?.totalLessons ?? group.monthlyLessons ?? 8
+      const held = group.lessonSessions.length
+      const remaining = total - held
 
-      // Check if similar notification exists in last 24 hours
+      // Anunțăm doar când se apropie finalul pachetului
+      if (remaining > 1) continue
+
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-      
       const existingNotification = await prisma.notification.findFirst({
         where: {
-          type,
-          studentId: gs.studentId,
-          groupId: gs.groupId,
-          createdAt: { gte: oneDayAgo }
-        }
+          type: remaining <= 0 ? 'ZERO_LESSONS' : 'LOW_LESSONS',
+          groupId: group.id,
+          createdAt: { gte: oneDayAgo },
+        },
+      })
+      if (existingNotification) continue
+
+      const unpaidStudents = group.groupStudents
+        .filter((gs) => gs.payments.length === 0)
+        .map((gs) => gs.student.fullName)
+
+      await prisma.notification.create({
+        data: {
+          type: remaining <= 0 ? 'ZERO_LESSONS' : 'LOW_LESSONS',
+          title: remaining <= 0
+            ? `⚠️ ${group.name}: pachetul lunii s-a terminat`
+            : `📉 ${group.name}: a mai rămas ${remaining} lecție`,
+          message: `Grupa "${group.name}" a ținut ${held} din ${total} lecții în ${monthLabel}.` +
+            (unpaidStudents.length > 0 ? ` Neachitat: ${unpaidStudents.join(', ')}.` : ''),
+          link: `/admin/groups/${group.id}`,
+          recipientId: null,
+          groupId: group.id,
+          data: { total, held, remaining, unpaidStudents },
+        },
       })
 
-      if (!existingNotification) {
-        await prisma.notification.create({
-          data: {
-            type,
-            title,
-            message,
-            link: `/admin/students/${gs.studentId}`,
-            recipientId: null, // For all admins
-            studentId: gs.studentId,
-            groupId: gs.groupId,
-            data: { 
-              lessonsRemaining: lessons,
-              groupName: gs.group.name,
-              levelName: gs.group.level
-            }
-          }
-        })
-        
-        // Trimite pe Telegram (Thread 2 - Ore Rămase)
-        const lastPayment = gs.payments?.[0]
-        await notifyLowLessons(
-          gs.student.fullName,
-          gs.group.name,
-          gs.group.level,
-          lessons,
-          {
-            parentName: gs.student.parentName,
-            parentPhone: gs.student.parentPhone,
-            parentEmail: gs.student.parentEmail,
-            lastPaymentAmount: lastPayment?.amount ?? null,
-            lastPaymentDate: lastPayment?.paymentDate ?? null,
-          }
-        )
-        
-        notificationsCreated.push(`${type}: ${gs.student.fullName} (${lessons} lecții)`)
-      }
+      await notifyGroupLessonsLow({
+        groupName: group.name,
+        levelName: group.level,
+        teacherName: group.teacher?.name,
+        total,
+        held,
+        remaining,
+        monthLabel,
+        unpaidStudents,
+      })
+
+      notificationsCreated.push(`Grupă ${group.name}: ${held}/${total} lecții`)
     }
 
     // ============================================
