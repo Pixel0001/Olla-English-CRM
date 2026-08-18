@@ -13,7 +13,8 @@ const STATUS_LABELS = {
   CONTACTAT: '🟡 Contactat',
   PROGRAMAT: '🟠 Programat',
   FINALIZAT_LECTIA: '🎓 Finalizat',
-  ASTEPTAM_PLATA: '⏳ Așteptăm Plata',
+  WAITLIST: '📋 Waitlist',
+  ASTEPTAM_PLATA: '💵 Așteptăm plata',
   PLATIT: '💰 Achitat',
   LOST_LEAD: '❌ Anulat',
 }
@@ -29,7 +30,7 @@ function buildKeyboard(contactId) {
     ],
     [
       { text: '🎓 Finalizat', callback_data: `c:FINALIZAT_LECTIA:${contactId}` },
-      { text: '⏳ Așteptăm', callback_data: `c:ASTEPTAM_PLATA:${contactId}` },
+      { text: '⏳ Așteptăm', callback_data: `c:WAITLIST:${contactId}` },
     ],
     [
       { text: '💰 Achitat', callback_data: `c:PLATIT:${contactId}` },
