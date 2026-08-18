@@ -52,6 +52,7 @@ model User {
   createdSets       GeneratedSet[]    @relation("CreatedSets")
   bonusPointsAdded  BonusPoint[]      @relation("BonusPointsAdded")
   createdLeads      Lead[]            @relation("CreatedLeads")
+  createdLessonPackages GroupLessonPackage[] @relation("CreatedLessonPackages")
 
   @@map("users")
 }
@@ -379,8 +380,34 @@ model Group {
   lessonTransactions  LessonTransaction[]
   makeupLessons       MakeupLesson[]
   missedSessions      MissedSession[]
+  lessonPackages      GroupLessonPackage[]
 
   @@map("groups")
+}
+
+// ==================== PACHETE LUNARE DE LECȚII (per grupă) ====================
+// Câte lecții s-au achitat pentru grupă într-o lună (de regulă 8).
+// Lecțiile efectuate se numără din LessonSession-urile lunii respective;
+// pachetul e informativ și nu afectează contorul de lecții per elev.
+
+model GroupLessonPackage {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  groupId      String   @db.ObjectId
+  year         Int
+  month        Int      // 1–12
+  totalLessons Int      @default(8)
+  notes        String?
+  createdById  String?  @db.ObjectId
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("CreatedLessonPackages", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([groupId, year, month])
+  @@index([groupId])
+  @@map("group_lesson_packages")
 }
 
 // ==================== GROUP-STUDENT PIVOT ====================

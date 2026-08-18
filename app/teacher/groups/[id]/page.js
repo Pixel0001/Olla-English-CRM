@@ -7,6 +7,7 @@ import Link from 'next/link'
 const StartSessionButton = dynamic(() => import('@/components/teacher/StartSessionButton'))
 const EditGroupDetailsButton = dynamic(() => import('@/components/teacher/EditGroupDetailsButton'))
 import CopyStudentsButton from '@/components/CopyStudentsButton'
+import LessonPackagePanel from '@/components/groups/LessonPackagePanel'
 import { 
   AcademicCapIcon, 
   CalendarDaysIcon, 
@@ -396,6 +397,9 @@ export default async function TeacherGroupDetailPage({ params }) {
           </div>
         )}
       </div>
+
+      {/* Pachetul lunar de lecții + prezențele lunii */}
+      <LessonPackagePanel groupId={group.id} />
 
       {/* Recent Sessions */}
       <div className="bg-white rounded-lg xs:rounded-xl shadow-sm p-3 xs:p-4 md:p-6">

@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { notFound } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import GroupForm from '@/components/admin/GroupForm'
+import LessonPackagePanel from '@/components/groups/LessonPackagePanel'
 
 export default async function EditGroupPage({ params }) {
   const { id } = await params
@@ -31,6 +32,8 @@ export default async function EditGroupPage({ params }) {
           branches={JSON.parse(JSON.stringify(branches))}
         />
       </div>
+
+      <LessonPackagePanel groupId={group.id} />
     </div>
   )
 }
