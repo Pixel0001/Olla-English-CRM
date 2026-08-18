@@ -55,6 +55,7 @@ model User {
   createdSets       GeneratedSet[]    @relation("CreatedSets")
   bonusPointsAdded  BonusPoint[]      @relation("BonusPointsAdded")
   createdLeads      Lead[]            @relation("CreatedLeads")
+  assignedLeads     Lead[]            @relation("AssignedLeads")
   createdLessonPackages GroupLessonPackage[] @relation("CreatedLessonPackages")
 
   @@map("users")
@@ -642,18 +643,22 @@ model Lead {
   notes          String?    // Legacy — notițele noi stau în LeadNote
 
   createdById        String?  @db.ObjectId // Cine a introdus lead-ul în CRM
+  assignedToId       String?  @db.ObjectId // Cine se ocupă de acest lead
+  followUpNotifiedAt DateTime? // Când s-a trimis ultima notificare de recontactare
   convertedStudentId String?  @db.ObjectId // Elevul creat din acest lead
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
   // Relations
-  createdBy User?      @relation("CreatedLeads", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy  User?     @relation("CreatedLeads", fields: [createdById], references: [id], onDelete: SetNull)
+  assignedTo User?     @relation("AssignedLeads", fields: [assignedToId], references: [id], onDelete: SetNull)
   leadNotes LeadNote[] @relation("LeadNotes")
 
   @@index([status])
   @@index([source])
   @@index([createdAt])
   @@index([nextFollowUpAt])
+  @@index([assignedToId])
   @@map("leads")
 }
 

@@ -7,7 +7,7 @@ import toast from 'react-hot-toast'
 import {
   PhoneIcon, ChatBubbleLeftIcon, InboxIcon, MagnifyingGlassIcon,
   PlusIcon, XMarkIcon, BellAlertIcon, ChevronDownIcon, PencilSquareIcon,
-  ArrowTopRightOnSquareIcon, TrashIcon,
+  ArrowTopRightOnSquareIcon, TrashIcon, AcademicCapIcon,
 } from '@heroicons/react/24/outline'
 import { LEAD_STATUSES, LEAD_SOURCES, getStatus, getSource } from '@/lib/leads-config'
 import { PermissionGate } from '@/hooks/usePermissions'
@@ -49,9 +49,15 @@ const startOfToday = () => {
   return d
 }
 
-const toDateInput = (iso) => (iso ? new Date(iso).toISOString().slice(0, 10) : '')
+// Follow-up-ul are și oră; input-ul datetime-local vrea ora locală, nu UTC
+const toDateInput = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 
-export default function LeadsClient({ leads }) {
+export default function LeadsClient({ leads, staff = [] }) {
   const router = useRouter()
   const [items, setItems] = useState(leads)
   const [showNewModal, setShowNewModal] = useState(false)
@@ -83,6 +89,27 @@ export default function LeadsClient({ leads }) {
   // Actualizează un lead în listă după o modificare din rândul extins
   const patchLead = useCallback((id, patch) => {
     setItems((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)))
+  }, [])
+
+  // Cine se ocupă de lead — poate fi schimbat direct din listă
+  const assignLead = useCallback(async (lead, userId) => {
+    const previous = lead.assignedToId
+    setItems((prev) => prev.map((l) => (l.id === lead.id ? { ...l, assignedToId: userId || null } : l)))
+    try {
+      const res = await fetch(`/api/admin/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignedToId: userId || null }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || "Eroare la atribuire")
+      }
+      toast.success(userId ? "Responsabil setat" : "Responsabil eliminat")
+    } catch (err) {
+      toast.error(err.message)
+      setItems((prev) => prev.map((l) => (l.id === lead.id ? { ...l, assignedToId: previous } : l)))
+    }
   }, [])
 
   // Schimbarea statusului direct din listă, fără a deschide formularul
@@ -315,6 +342,8 @@ export default function LeadsClient({ leads }) {
               onEdit={() => setEditingLead(lead)}
               onDelete={() => deleteLead(lead)}
               onStatusChange={(newStatus) => changeStatus(lead, newStatus)}
+              staff={staff}
+              onAssign={(userId) => assignLead(lead, userId)}
             />
           ))}
           {hasMore && (
@@ -401,7 +430,7 @@ function NewLeadModal({ onClose, onSaved, lead = null }) {
   )
 }
 
-function LeadRow({ lead, expanded, onToggle, onPatch, onEdit, onDelete, onStatusChange }) {
+function LeadRow({ lead, expanded, onToggle, onPatch, onEdit, onDelete, onStatusChange, staff, onAssign }) {
   const status = getStatus(lead.status)
   const source = getSource(lead.source)
   const today = startOfToday()
@@ -512,12 +541,12 @@ function LeadRow({ lead, expanded, onToggle, onPatch, onEdit, onDelete, onStatus
         </div>
       </div>
 
-      {expanded && <LeadDetails lead={lead} onPatch={onPatch} />}
+      {expanded && <LeadDetails lead={lead} onPatch={onPatch} staff={staff} onAssign={onAssign} />}
     </div>
   )
 }
 
-function LeadDetails({ lead, onPatch }) {
+function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
   const status = getStatus(lead.status)
   const source = getSource(lead.source)
   const chatLink = source.link ? source.link(lead) : null
@@ -528,6 +557,23 @@ function LeadDetails({ lead, onPatch }) {
   const [savingNote, setSavingNote] = useState(false)
   const [followUpDate, setFollowUpDate] = useState(toDateInput(lead.nextFollowUpAt))
   const [savingFollowUp, setSavingFollowUp] = useState(false)
+  const [converting, setConverting] = useState(false)
+
+  // Trecerea lead-ului în lista de elevi, fără a-i schimba statusul
+  const convertToStudent = async () => {
+    if (!confirm(`Creezi elevul din lead-ul „${lead.name}"?`)) return
+    setConverting(true)
+    try {
+      const res = await fetch(`/api/admin/leads/${lead.id}/convert`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Eroare la conversie')
+      toast.success(data.created ? 'Elev creat din lead' : 'Lead-ul avea deja un elev asociat')
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setConverting(false)
+    }
+  }
 
   // Notițele se încarcă abia la deschiderea rândului
   useEffect(() => {
@@ -640,11 +686,29 @@ function LeadDetails({ lead, onPatch }) {
         </p>
       )}
 
+      {/* Responsabil */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-[10px] uppercase tracking-wide text-gray-400">Responsabil</span>
+        <select
+          value={lead.assignedToId || ""}
+          onChange={(e) => onAssign?.(e.target.value)}
+          className="px-2 py-1 text-xs text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        >
+          <option value="">Nimeni</option>
+          {staff.map((u) => (
+            <option key={u.id} value={u.id}>{u.name || u.email}</option>
+          ))}
+        </select>
+        <span className="text-[10px] text-gray-400">
+          primește notificarea de recontactare pe Telegram
+        </span>
+      </div>
+
       {/* Follow-up */}
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-[10px] uppercase tracking-wide text-gray-400">Recontactare</span>
         <input
-          type="date"
+          type="datetime-local"
           value={followUpDate}
           disabled={savingFollowUp}
           onChange={(e) => saveFollowUp(e.target.value)}
@@ -668,7 +732,8 @@ function LeadDetails({ lead, onPatch }) {
             onClick={() => {
               const t = new Date()
               t.setDate(t.getDate() + d)
-              saveFollowUp(t.toISOString().slice(0, 10))
+              t.setHours(10, 0, 0, 0) // ora 10:00, ora locală
+              saveFollowUp(toDateInput(t.toISOString()))
             }}
             className="px-1.5 py-0.5 rounded border border-gray-200 text-[11px] text-gray-600 hover:border-indigo-400 hover:text-indigo-600 disabled:opacity-50"
           >
@@ -740,6 +805,16 @@ function LeadDetails({ lead, onPatch }) {
             {source.emoji} {source.label}
           </a>
         )}
+        <button
+          type="button"
+          onClick={convertToStudent}
+          disabled={converting}
+          title="Creează elevul din acest lead"
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-600 text-white text-[11px] font-medium hover:bg-teal-700 transition-colors disabled:opacity-50"
+        >
+          <AcademicCapIcon className="h-3 w-3" />
+          {converting ? "…" : "→ elev"}
+        </button>
         <Link href={`/admin/leads/${lead.id}`} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-indigo-300 text-indigo-700 text-[11px] font-medium hover:bg-indigo-50 transition-colors">
           <ArrowTopRightOnSquareIcon className="h-3 w-3" />
           Fișa completă

@@ -142,6 +142,7 @@ export async function POST(request) {
         interestedIn: data.interestedIn?.trim() || null,
         status: data.status || 'LEAD',
         nextFollowUpAt: data.nextFollowUpAt ? new Date(data.nextFollowUpAt) : null,
+        assignedToId: data.assignedToId || null,
         createdById: session.user.id,
       },
     })

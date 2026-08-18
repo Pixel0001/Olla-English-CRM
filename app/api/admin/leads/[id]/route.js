@@ -65,6 +65,11 @@ export async function PATCH(request, { params }) {
     }
     if (data.nextFollowUpAt !== undefined) {
       update.nextFollowUpAt = data.nextFollowUpAt ? new Date(data.nextFollowUpAt) : null
+      // Data schimbată → lead-ul reintră în coada de notificări
+      update.followUpNotifiedAt = null
+    }
+    if (data.assignedToId !== undefined) {
+      update.assignedToId = data.assignedToId || null
     }
     if (data.convertedStudentId !== undefined) {
       update.convertedStudentId = data.convertedStudentId || null

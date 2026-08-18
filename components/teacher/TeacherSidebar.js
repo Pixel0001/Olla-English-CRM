@@ -19,7 +19,8 @@ import {
   ClockIcon,
   InboxIcon,
   PuzzlePieceIcon,
-  BookOpenIcon
+  BookOpenIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
 
 // Spinner component for loading state
@@ -79,6 +80,11 @@ const navigation = [
     name: 'Prezențe', 
     href: '/teacher/attendance', 
     icon: ClipboardDocumentCheckIcon
+  },
+  {
+    name: 'Lecții neefectuate',
+    href: '/teacher/missed-sessions',
+    icon: ExclamationTriangleIcon
   },
   { 
     name: 'Recuperări', 

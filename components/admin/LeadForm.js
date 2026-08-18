@@ -10,6 +10,14 @@ const input =
   'w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
 const label = 'block text-xs xs:text-sm font-medium text-gray-700 mb-1'
 
+// datetime-local lucrează în ora locală, nu în UTC
+const toLocalInput = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 /**
  * Formular pentru lead: creare (fără `lead`) sau editare (cu `lead`).
  */
@@ -26,7 +34,7 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null 
     studentAge: lead?.studentAge ?? '',
     interestedIn: lead?.interestedIn || '',
     status: lead?.status || 'LEAD',
-    nextFollowUpAt: lead?.nextFollowUpAt ? lead.nextFollowUpAt.slice(0, 10) : '',
+    nextFollowUpAt: toLocalInput(lead?.nextFollowUpAt),
     message: lead?.message || '',
   })
 
@@ -166,7 +174,7 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null 
           <div>
             <label className={label}>Recontactează pe</label>
             <input
-              className={input} type="date" value={form.nextFollowUpAt}
+              className={input} type="datetime-local" value={form.nextFollowUpAt}
               onChange={(e) => set('nextFollowUpAt', e.target.value)}
             />
           </div>

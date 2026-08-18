@@ -17,6 +17,7 @@ async function LeadsPageContent() {
     orderBy: { createdAt: 'desc' },
     include: {
       createdBy: { select: { name: true, email: true } },
+      assignedTo: { select: { id: true, name: true, email: true } },
       _count: { select: { leadNotes: true } },
     },
   })
@@ -36,8 +37,16 @@ async function LeadsPageContent() {
     nextFollowUpAt: l.nextFollowUpAt ? l.nextFollowUpAt.toISOString() : null,
     createdAt: l.createdAt.toISOString(),
     createdByName: l.createdBy?.name || l.createdBy?.email || null,
+    assignedToId: l.assignedToId || null,
+    assignedToName: l.assignedTo?.name || l.assignedTo?.email || null,
     notesCount: l._count.leadNotes,
   }))
 
-  return <LeadsClient leads={formatted} />
+  const staff = await prisma.user.findMany({
+    where: { active: true, role: { in: ["SUPERADMIN", "ADMIN", "TEACHER"] } },
+    select: { id: true, name: true, email: true },
+    orderBy: { name: "asc" },
+  })
+
+  return <LeadsClient leads={formatted} staff={JSON.parse(JSON.stringify(staff))} />
 }
