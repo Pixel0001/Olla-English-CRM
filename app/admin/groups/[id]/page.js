@@ -72,7 +72,7 @@ export default async function EditGroupPage({ params }) {
         <p className="text-xs text-gray-600 mb-3">
           Pentru cazurile în care lecția s-a ținut, dar nu a fost pornită din contul profesorului
         </p>
-        <AdminStartSessionButton groupId={group.id} teacherName={group.teacher?.name || null} />
+        <AdminStartSessionButton groupId={group.id} groupName={group.name} teacherName={group.teacher?.name || null} />
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">

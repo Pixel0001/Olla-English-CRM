@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import DeleteGroupButton from '@/components/admin/DeleteGroupButton'
+import AdminStartSessionButton from '@/components/admin/AdminStartSessionButton'
 import { usePermissions } from '@/hooks/usePermissions'
 import { getDaysFromToday, getTodayName, getTomorrowName, nearestDay, getTimeForDay } from '@/lib/scheduleDays'
 
@@ -464,6 +465,14 @@ export default function GroupsPage() {
                       >
                         Editează
                       </Link>
+                      )}
+                      {canEditGroups && (
+                        <AdminStartSessionButton
+                          groupId={group.id}
+                          groupName={group.name}
+                          teacherName={group.teacher?.name || group.teacher?.email || null}
+                          compact
+                        />
                       )}
                       {canViewStudents && (
                       <Link
