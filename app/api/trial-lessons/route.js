@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { checkPermission } from '@/lib/permissions'
+import { parseSchoolDate } from '@/lib/timezone'
 
 /**
  * Lecții de probă — evenimente unice, la o dată și oră anume.
@@ -117,8 +118,8 @@ export async function POST(request) {
     if (!scheduledAt) {
       return NextResponse.json({ error: 'Alege data și ora' }, { status: 400 })
     }
-    const when = new Date(scheduledAt)
-    if (isNaN(when.getTime())) {
+    const when = parseSchoolDate(scheduledAt)
+    if (!when) {
       return NextResponse.json({ error: 'Dată invalidă' }, { status: 400 })
     }
 
@@ -184,8 +185,8 @@ export async function PATCH(request) {
       data.status = status
     }
     if (scheduledAt !== undefined) {
-      const when = new Date(scheduledAt)
-      if (isNaN(when.getTime())) return NextResponse.json({ error: 'Dată invalidă' }, { status: 400 })
+      const when = parseSchoolDate(scheduledAt)
+      if (!when) return NextResponse.json({ error: 'Dată invalidă' }, { status: 400 })
       data.scheduledAt = when
     }
     if (notes !== undefined) data.notes = notes?.trim() || null

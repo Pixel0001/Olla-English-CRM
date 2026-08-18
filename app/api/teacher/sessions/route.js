@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { canStartSession } from '@/lib/schedule-utils'
+import { parseSchoolDate } from '@/lib/timezone'
 
 export async function POST(request) {
   const session = await getServerSession(authOptions)
@@ -44,8 +45,8 @@ export async function POST(request) {
     // Determine session date
     let sessionDate = new Date()
     if (customDate && (isSuperTeacher || isAdmin)) {
-      const parsed = new Date(customDate)
-      if (isNaN(parsed.getTime())) {
+      const parsed = parseSchoolDate(customDate)
+      if (!parsed) {
         return NextResponse.json({ error: 'Dată invalidă' }, { status: 400 })
       }
       sessionDate = parsed

@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { checkPermission } from '@/lib/permissions'
 import { LEAD_STATUS_VALUES, LEAD_SOURCE_VALUES } from '@/lib/leads-config'
 import { notifyNewLead } from '@/lib/telegram'
+import { parseSchoolDate } from '@/lib/timezone'
 
 async function requireStaff(permission) {
   const session = await getServerSession(authOptions)
@@ -141,7 +142,7 @@ export async function POST(request) {
         studentAge: data.studentAge ? parseInt(data.studentAge) : null,
         interestedIn: data.interestedIn?.trim() || null,
         status: data.status || 'LEAD',
-        nextFollowUpAt: data.nextFollowUpAt ? new Date(data.nextFollowUpAt) : null,
+        nextFollowUpAt: parseSchoolDate(data.nextFollowUpAt),
         assignedToId: data.assignedToId || null,
         createdById: session.user.id,
       },

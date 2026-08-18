@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { checkPermission } from '@/lib/permissions'
 import { LEAD_STATUS_VALUES, LEAD_SOURCE_VALUES } from '@/lib/leads-config'
 import { convertLeadToStudent, isWonStatus } from '@/lib/lead-conversion'
+import { parseSchoolDate } from '@/lib/timezone'
 
 async function requireStaff(permission) {
   const session = await getServerSession(authOptions)
@@ -64,7 +65,7 @@ export async function PATCH(request, { params }) {
       update.studentAge = data.studentAge ? parseInt(data.studentAge) : null
     }
     if (data.nextFollowUpAt !== undefined) {
-      update.nextFollowUpAt = data.nextFollowUpAt ? new Date(data.nextFollowUpAt) : null
+      update.nextFollowUpAt = parseSchoolDate(data.nextFollowUpAt)
       // Data schimbată → lead-ul reintră în coada de notificări
       update.followUpNotifiedAt = null
     }
