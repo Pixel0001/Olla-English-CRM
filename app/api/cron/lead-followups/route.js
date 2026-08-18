@@ -75,7 +75,7 @@ export async function GET(request) {
     })
 
     // 1. Digest în topicul comun de lead-uri
-    await notifyLeadFollowUps(items)
+    const digestSent = await notifyLeadFollowUps(items)
 
     // 2. Mesaj direct fiecărui responsabil conectat la Telegram
     const byOwner = new Map()
@@ -137,7 +137,10 @@ export async function GET(request) {
     return NextResponse.json({
       success: true,
       notified: pending.length,
+      digestSent: !!digestSent,
       directMessages,
+      owners: byOwner.size,
+      withoutTelegram: pending.filter((l) => l.assignedTo && !l.assignedTo.telegramChatId).length,
       trigger: fromCron ? 'cron' : 'manual',
       timestamp: now.toISOString(),
     })
