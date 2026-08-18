@@ -473,6 +473,22 @@ export default function GroupsPage() {
                         Elevi
                       </Link>
                       )}
+                      <a
+                        href={`/api/admin/groups/${group.id}/export?format=csv`}
+                        className="text-emerald-700 hover:text-emerald-900 text-xs xs:text-sm font-medium"
+                        title="Descarcă tot istoricul grupei ca CSV"
+                      >
+                        CSV
+                      </a>
+                      <a
+                        href={`/api/admin/groups/${group.id}/export?format=pdf`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-rose-700 hover:text-rose-900 text-xs xs:text-sm font-medium"
+                        title="Deschide istoricul pentru tipar / salvare ca PDF"
+                      >
+                        PDF
+                      </a>
                       {canDeleteGroups && (
                       <DeleteGroupButton id={group.id} name={group.name} />
                       )}

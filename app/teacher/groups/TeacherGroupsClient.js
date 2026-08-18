@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import LevelSelect from '@/components/LevelSelect'
+import StartSessionButton from '@/components/teacher/StartSessionButton'
 import { getDaysFromToday, getTodayName, getTomorrowName, nearestDay } from '@/lib/scheduleDays'
 
 // Helper pentru formatarea programului
@@ -39,7 +40,7 @@ const formatSchedule = (scheduleDays, scheduleTime) => {
 
 const DAYS = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică']
 
-export default function TeacherGroupsClient({ initialGroups, branches, allGroups }) {
+export default function TeacherGroupsClient({ initialGroups, branches, allGroups, isSuperTeacher = false }) {
   const [groups, setGroups] = useState(initialGroups)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showAddStudentModal, setShowAddStudentModal] = useState(false)
@@ -348,7 +349,15 @@ export default function TeacherGroupsClient({ initialGroups, branches, allGroups
         </div>
       )}
 
-      <div className="flex gap-2 pt-3 xs:pt-4 border-t border-gray-100">
+      <div className="flex flex-wrap gap-2 pt-3 xs:pt-4 border-t border-gray-100">
+        <div className="w-full">
+          <StartSessionButton
+            groupId={group.id}
+            scheduleDays={group.scheduleDays}
+            scheduleTime={group.scheduleTime}
+            isSuperTeacher={isSuperTeacher}
+          />
+        </div>
         <Link
           href={`/teacher/groups/${group.id}`}
           className="flex-1 text-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-xs xs:text-sm"

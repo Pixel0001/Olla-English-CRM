@@ -45,11 +45,21 @@ export default function TrialLessonsPanel({ groupId }) {
   const [duration, setDuration] = useState('60')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
+  const [candidateStatus, setCandidateStatus] = useState('')
 
   // Lead-urile grupate pe status, ca alegerea să fie evidentă din listă
+  const visibleCandidates = candidateStatus
+    ? candidates.filter((c) => c.status === candidateStatus)
+    : candidates
+
   const groupedCandidates = LEAD_STATUSES
-    .map((status) => ({ status, items: candidates.filter((c) => c.status === status.value) }))
+    .map((status) => ({ status, items: visibleCandidates.filter((c) => c.status === status.value) }))
     .filter((g) => g.items.length > 0)
+
+  // Statusurile prezente în lista de candidați, pentru filtrele rapide
+  const availableStatuses = LEAD_STATUSES
+    .map((s) => ({ ...s, count: candidates.filter((c) => c.status === s.value).length }))
+    .filter((s) => s.count > 0)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -185,6 +195,35 @@ export default function TrialLessonsPanel({ groupId }) {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-700 mb-1">Cine vine (lead)</label>
+              {availableStatuses.length > 1 && (
+                <div className="flex flex-wrap gap-1 mb-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { setCandidateStatus(""); setLeadId("") }}
+                    className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors ${
+                      candidateStatus === ""
+                        ? "bg-indigo-600 text-white"
+                        : "bg-white text-gray-700 border border-gray-200 hover:border-indigo-400"
+                    }`}
+                  >
+                    Toate ({candidates.length})
+                  </button>
+                  {availableStatuses.map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => { setCandidateStatus(s.value); setLeadId("") }}
+                      className={`px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors ${
+                        candidateStatus === s.value
+                          ? "bg-indigo-600 text-white"
+                          : "bg-white text-gray-700 border border-gray-200 hover:border-indigo-400"
+                      }`}
+                    >
+                      {s.emoji} {s.label} ({s.count})
+                    </button>
+                  ))}
+                </div>
+              )}
               <select
                 value={leadId}
                 onChange={(e) => setLeadId(e.target.value)}

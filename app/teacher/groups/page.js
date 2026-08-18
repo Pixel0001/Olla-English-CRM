@@ -44,6 +44,7 @@ export default async function TeacherGroupsPage() {
       initialGroups={groups}
       branches={branches}
       allGroups={allGroups}
+      isSuperTeacher={!!session.user?.superTeacher}
     />
   )
 }
