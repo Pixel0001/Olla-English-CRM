@@ -75,7 +75,7 @@ export async function PUT(request, { params }) {
     }
 
     const { name, level, teacherId, branchId, scheduleDays, scheduleTime,
-            locationType, locationDetails, startDate, active,
+            locationType, locationDetails, startDate, active, monthlyLessons,
             cooldownOverrideMin, dailyXpCapOverride,
             cooldownDisabled, xpCapDisabled } = body
 
@@ -94,6 +94,7 @@ export async function PUT(request, { params }) {
         locationType,
         locationDetails,
         startDate: startDate ? new Date(startDate) : null,
+        ...(monthlyLessons !== undefined ? { monthlyLessons: parseInt(monthlyLessons, 10) || 8 } : {}),
         active,
         ...(cooldownOverrideMin !== undefined ? { cooldownOverrideMin: norm(cooldownOverrideMin) } : {}),
         ...(dailyXpCapOverride !== undefined  ? { dailyXpCapOverride:  norm(dailyXpCapOverride) }  : {}),

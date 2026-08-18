@@ -5,12 +5,18 @@ import prisma from '@/lib/prisma'
 import { checkPermission } from '@/lib/permissions'
 
 /**
- * Pachete lunare de lecții per grupă (de regulă 8 lecții/lună).
- * Lecțiile efectuate se numără din sesiunile lunii; pachetul e informativ
- * și nu atinge contorul de lecții per elev.
+ * Pachete lunare de lecții per grupă.
  *
- * Acces: adminii cu permisiunea groups.view (groups.edit pentru modificări)
- * sau profesorul care deține grupa.
+ * Regula de bază: grupa are un număr de lecții pe lună (implicit 8), achitate
+ * indiferent dacă un elev vine sau nu. Numărul implicit stă pe grupă
+ * (Group.monthlyLessons); o lună anume poate fi suprascrisă cu un
+ * GroupLessonPackage — deci nu trebuie creat nimic manual în fiecare lună.
+ *
+ * Lecțiile efectuate se numără din sesiunile lunii. Prezențele sunt
+ * informative: nu schimbă ce se achită.
+ *
+ * Acces: adminii cu groups.view (groups.edit pentru modificări) sau
+ * profesorul care deține grupa.
  */
 
 const ACTIVE_STUDENT_STATUSES = ['ACTIVE', 'PAUSED']
@@ -22,7 +28,10 @@ async function resolveAccess(groupId) {
 
   const group = await prisma.group.findUnique({
     where: { id: groupId },
-    select: { id: true, name: true, teacherId: true },
+    select: {
+      id: true, name: true, teacherId: true,
+      monthlyLessons: true, startDate: true, createdAt: true,
+    },
   })
   if (!group) return { error: 'Grupa nu există', status: 404 }
 
@@ -55,7 +64,7 @@ function parseMonthParams(searchParams) {
   return { year, month }
 }
 
-// ── GET: pachetul lunii + sesiunile lunii + prezențele elevilor ──────────
+// ── GET: luna curentă + istoricul lunar + totalurile per elev ────────────
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -63,13 +72,14 @@ export async function GET(request) {
     const access = await resolveAccess(groupId)
     if (access.error) return NextResponse.json({ error: access.error }, { status: access.status })
 
+    const { group } = access
     const { year, month } = parseMonthParams(searchParams)
     if (month < 1 || month > 12) {
       return NextResponse.json({ error: 'Lună invalidă' }, { status: 400 })
     }
     const { start, end } = monthRange(year, month)
 
-    const [pkg, groupStudents, sessions, allPackages] = await Promise.all([
+    const [pkg, groupStudents, sessions, overrides, allSessions] = await Promise.all([
       prisma.groupLessonPackage.findFirst({ where: { groupId, year, month } }),
       prisma.groupStudent.findMany({
         where: { groupId, status: { in: ACTIVE_STUDENT_STATUSES } },
@@ -83,8 +93,16 @@ export async function GET(request) {
       }),
       prisma.groupLessonPackage.findMany({
         where: { groupId },
-        orderBy: [{ year: 'desc' }, { month: 'desc' }],
-        select: { id: true, year: true, month: true, totalLessons: true },
+        select: { year: true, month: true, totalLessons: true },
+      }),
+      // Pentru istoric și totaluri: doar data + prezențele, fără alte relații
+      prisma.lessonSession.findMany({
+        where: { groupId },
+        select: {
+          date: true,
+          attendances: { select: { studentId: true, status: true } },
+        },
+        orderBy: { date: 'asc' },
       }),
     ])
 
@@ -106,32 +124,81 @@ export async function GET(request) {
       }
     })
 
+    // Numărul implicit al grupei, suprascris doar dacă luna are pachet propriu
+    const defaultLessons = group.monthlyLessons ?? 8
+    const total = pkg?.totalLessons ?? defaultLessons
     const held = formattedSessions.length
-    const total = pkg?.totalLessons ?? null
+
+    // ── Istoric lunar, din luna de start a grupei până în luna curentă ────
+    const overrideMap = new Map(overrides.map((o) => [`${o.year}-${o.month}`, o.totalLessons]))
+    const heldByMonth = new Map()
+    const totalsByStudent = {}
+
+    for (const s of allSessions) {
+      const key = `${s.date.getFullYear()}-${s.date.getMonth() + 1}`
+      heldByMonth.set(key, (heldByMonth.get(key) || 0) + 1)
+      for (const a of s.attendances) {
+        const t = (totalsByStudent[a.studentId] ||= { present: 0, absent: 0 })
+        if (a.status === 'PRESENT') t.present++
+        else t.absent++
+      }
+    }
+
+    const firstDate = group.startDate || group.createdAt
+    const history = []
+    const cursor = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1)
+    const now = new Date()
+    const lastMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    while (cursor <= lastMonth) {
+      const y = cursor.getFullYear()
+      const m = cursor.getMonth() + 1
+      const key = `${y}-${m}`
+      const monthTotal = overrideMap.get(key) ?? defaultLessons
+      const monthHeld = heldByMonth.get(key) || 0
+      history.push({
+        year: y,
+        month: m,
+        total: monthTotal,
+        held: monthHeld,
+        remaining: Math.max(monthTotal - monthHeld, 0),
+        isOverride: overrideMap.has(key),
+      })
+      cursor.setMonth(cursor.getMonth() + 1)
+    }
+    history.reverse() // cele mai recente primele
+
+    const studentTotals = students.map((st) => ({
+      studentId: st.studentId,
+      present: totalsByStudent[st.studentId]?.present || 0,
+      absent: totalsByStudent[st.studentId]?.absent || 0,
+    }))
 
     return NextResponse.json({
-      group: { id: access.group.id, name: access.group.name },
+      group: {
+        id: group.id,
+        name: group.name,
+        monthlyLessons: defaultLessons,
+        startDate: (group.startDate || group.createdAt).toISOString(),
+      },
       canEdit: access.canEdit,
-      package: pkg
-        ? {
-            id: pkg.id,
-            year: pkg.year,
-            month: pkg.month,
-            totalLessons: pkg.totalLessons,
-            notes: pkg.notes,
-          }
-        : null,
-      months: allPackages,
       year,
       month,
+      package: {
+        total,
+        isOverride: !!pkg,
+        notes: pkg?.notes || null,
+      },
       students,
       sessions: formattedSessions,
       stats: {
         total,
         held,
-        remaining: total === null ? null : Math.max(total - held, 0),
-        extra: total === null ? 0 : Math.max(held - total, 0),
+        remaining: Math.max(total - held, 0),
+        extra: Math.max(held - total, 0),
       },
+      history,
+      studentTotals,
+      totalSessions: allSessions.length,
     })
   } catch (error) {
     console.error('Eroare la citirea pachetului de lecții:', error)
@@ -139,7 +206,7 @@ export async function GET(request) {
   }
 }
 
-// ── POST: creează sau actualizează pachetul lunii ────────────────────────
+// ── POST: suprascrie numărul de lecții pentru o lună anume ───────────────
 export async function POST(request) {
   try {
     const body = await request.json()
@@ -188,7 +255,7 @@ export async function POST(request) {
   }
 }
 
-// ── DELETE: șterge pachetul unei luni ────────────────────────────────────
+// ── DELETE: revine la numărul implicit al grupei pentru luna respectivă ──
 export async function DELETE(request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -202,7 +269,7 @@ export async function DELETE(request) {
 
     const { year, month } = parseMonthParams(searchParams)
     const existing = await prisma.groupLessonPackage.findFirst({ where: { groupId, year, month } })
-    if (!existing) return NextResponse.json({ error: 'Pachetul nu există' }, { status: 404 })
+    if (!existing) return NextResponse.json({ error: 'Luna nu are un număr propriu de lecții' }, { status: 404 })
 
     await prisma.groupLessonPackage.delete({ where: { id: existing.id } })
 

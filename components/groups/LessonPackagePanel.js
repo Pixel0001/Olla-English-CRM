@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import {
-  ChevronLeftIcon, ChevronRightIcon, PlusIcon, TrashIcon,
-  CheckIcon, XMarkIcon, LockClosedIcon,
+  ChevronLeftIcon, ChevronRightIcon, CheckIcon, XMarkIcon, LockClosedIcon,
 } from '@heroicons/react/24/outline'
 
 const MONTH_NAMES = [
@@ -12,12 +11,12 @@ const MONTH_NAMES = [
   'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie',
 ]
 
-const DEFAULT_LESSONS = 8
-
 /**
- * Pachetul lunar de lecții al unei grupe (de regulă 8 lecții/lună) plus
- * tabelul de prezențe pe lecțiile lunii.
- * Folosit atât în panoul de admin, cât și în cel al profesorului.
+ * Lecțiile lunare ale unei grupe.
+ *
+ * Grupa are un număr de lecții pe lună (implicit 8), achitate indiferent dacă
+ * un elev vine sau nu. O lună anume poate avea alt număr, fără să schimbe
+ * implicitul. Prezențele sunt informative.
  */
 export default function LessonPackagePanel({ groupId }) {
   const now = new Date()
@@ -27,7 +26,8 @@ export default function LessonPackagePanel({ groupId }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState(false)
-  const [lessonsInput, setLessonsInput] = useState(String(DEFAULT_LESSONS))
+  const [lessonsInput, setLessonsInput] = useState('8')
+  const [showHistory, setShowHistory] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -36,7 +36,7 @@ export default function LessonPackagePanel({ groupId }) {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Eroare la încărcare')
       setData(json)
-      setLessonsInput(String(json.package?.totalLessons ?? DEFAULT_LESSONS))
+      setLessonsInput(String(json.stats.total))
       setEditing(false)
     } catch (err) {
       toast.error(err.message)
@@ -54,7 +54,7 @@ export default function LessonPackagePanel({ groupId }) {
     setMonth(d.getMonth() + 1)
   }
 
-  const savePackage = async () => {
+  const saveLessons = async () => {
     const lessons = parseInt(lessonsInput, 10)
     if (!Number.isFinite(lessons) || lessons < 1 || lessons > 60) {
       return toast.error('Numărul de lecții trebuie să fie între 1 și 60')
@@ -68,7 +68,7 @@ export default function LessonPackagePanel({ groupId }) {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Eroare la salvare')
-      toast.success('Pachet salvat')
+      toast.success(`${MONTH_NAMES[month - 1]}: ${lessons} lecții`)
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -77,8 +77,7 @@ export default function LessonPackagePanel({ groupId }) {
     }
   }
 
-  const deletePackage = async () => {
-    if (!confirm(`Ștergi pachetul pentru ${MONTH_NAMES[month - 1]} ${year}?`)) return
+  const resetToDefault = async () => {
     setSaving(true)
     try {
       const res = await fetch(
@@ -86,8 +85,8 @@ export default function LessonPackagePanel({ groupId }) {
         { method: 'DELETE' }
       )
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Eroare la ștergere')
-      toast.success('Pachet șters')
+      if (!res.ok) throw new Error(json.error || 'Eroare la resetare')
+      toast.success('Luna revine la numărul implicit al grupei')
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -96,7 +95,6 @@ export default function LessonPackagePanel({ groupId }) {
     }
   }
 
-  // Marchează prezența unui elev la o lecție (optimist, cu revenire la eroare)
   const toggleAttendance = async (session, studentId, current) => {
     if (session.locked || !data?.canEdit) return
     const next = current === 'PRESENT' ? 'ABSENT' : 'PRESENT'
@@ -129,20 +127,20 @@ export default function LessonPackagePanel({ groupId }) {
     }
   }
 
-  const pkg = data?.package
   const stats = data?.stats
   const sessions = data?.sessions || []
   const students = data?.students || []
   const canEdit = data?.canEdit
+  const isOverride = data?.package?.isOverride
+  const totalsById = Object.fromEntries((data?.studentTotals || []).map((t) => [t.studentId, t]))
 
   return (
     <div className="bg-white rounded-xl xs:rounded-2xl shadow-sm border border-gray-100 p-3 xs:p-4 md:p-6 space-y-4">
-      {/* Antet cu navigare pe luni */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-base xs:text-lg md:text-xl font-bold text-gray-900">Pachet lunar de lecții</h2>
+          <h2 className="text-base xs:text-lg md:text-xl font-bold text-gray-900">Lecții lunare</h2>
           <p className="text-xs xs:text-sm text-gray-600">
-            Câte lecții s-au achitat luna aceasta și câte s-au făcut din ele
+            Se achită {data?.group?.monthlyLessons ?? 8} lecții pe lună, indiferent câți elevi vin
           </p>
         </div>
 
@@ -178,99 +176,87 @@ export default function LessonPackagePanel({ groupId }) {
         <p className="text-sm text-gray-500">Nu s-au putut încărca datele.</p>
       ) : (
         <>
-          {/* Pachetul lunii */}
-          {!pkg && !editing ? (
-            <div className="border border-dashed border-gray-300 rounded-xl p-4 text-center">
-              <p className="text-sm text-gray-600 mb-3">
-                Nu există pachet pentru {MONTH_NAMES[month - 1]} {year}.
-                {sessions.length > 0 && ` S-au ținut deja ${sessions.length} ${sessions.length === 1 ? 'lecție' : 'lecții'}.`}
-              </p>
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={() => { setLessonsInput(String(DEFAULT_LESSONS)); setEditing(true) }}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-                >
-                  <PlusIcon className="h-4 w-4" />
-                  Adaugă pachet
-                </button>
-              )}
-            </div>
-          ) : editing ? (
-            <div className="border border-indigo-200 bg-indigo-50/50 rounded-xl p-4 flex flex-col sm:flex-row sm:items-end gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Lecții achitate pentru {MONTH_NAMES[month - 1]} {year}
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="60"
-                  value={lessonsInput}
-                  onChange={(e) => setLessonsInput(e.target.value)}
-                  className="w-32 px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
+          {/* Luna curentă */}
+          <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+            {editing ? (
+              <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Lecții în {MONTH_NAMES[month - 1]} {year}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="60"
+                    value={lessonsInput}
+                    onChange={(e) => setLessonsInput(e.target.value)}
+                    className="w-32 px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={saveLessons}
+                    disabled={saving}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  >
+                    {saving ? 'Se salvează…' : 'Salvează pentru luna asta'}
+                  </button>
+                  {isOverride && (
+                    <button
+                      type="button"
+                      onClick={resetToDefault}
+                      disabled={saving}
+                      className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    >
+                      Revino la {data.group.monthlyLessons}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setEditing(false); setLessonsInput(String(stats.total)) }}
+                    className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Anulează
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={savePackage}
-                  disabled={saving}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Se salvează…' : 'Salvează'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setEditing(false); setLessonsInput(String(pkg?.totalLessons ?? DEFAULT_LESSONS)) }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-                >
-                  Anulează
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+            ) : (
               <div className="flex flex-wrap items-center gap-4">
-                <Stat label="Achitate" value={stats.total} />
+                <Stat label="De achitat" value={stats.total} />
                 <Stat label="Efectuate" value={stats.held} color="text-indigo-600" />
                 <Stat
                   label="Rămase"
                   value={stats.remaining}
-                  color={stats.remaining === 0 ? 'text-red-600' : 'text-emerald-600'}
+                  color={stats.remaining === 0 ? 'text-gray-500' : 'text-emerald-600'}
                 />
-                {stats.extra > 0 && <Stat label="Peste pachet" value={stats.extra} color="text-amber-600" />}
+                {stats.extra > 0 && <Stat label="Peste plan" value={stats.extra} color="text-amber-600" />}
+
+                {isOverride && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-medium">
+                    lună specială
+                  </span>
+                )}
 
                 {canEdit && (
-                  <div className="ml-auto flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditing(true)}
-                      className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
-                    >
-                      Modifică
-                    </button>
-                    <button
-                      type="button"
-                      onClick={deletePackage}
-                      disabled={saving}
-                      className="p-1.5 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
-                      aria-label="Șterge pachetul"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditing(true)}
+                    className="ml-auto px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Modifică luna asta
+                  </button>
                 )}
               </div>
+            )}
 
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${stats.held >= stats.total ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                  style={{ width: `${Math.min((stats.held / stats.total) * 100, 100)}%` }}
-                />
-              </div>
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full ${stats.held >= stats.total ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                style={{ width: `${Math.min((stats.held / stats.total) * 100, 100)}%` }}
+              />
             </div>
-          )}
+          </div>
 
           {/* Prezențele lunii */}
           <div>
@@ -280,7 +266,8 @@ export default function LessonPackagePanel({ groupId }) {
 
             {sessions.length === 0 ? (
               <p className="text-sm text-gray-500 border border-gray-100 rounded-xl p-4 text-center">
-                Nicio lecție ținută în această lună.
+                Nicio lecție ținută în această lună. Lecțiile apar aici pe măsură ce profesorul
+                pornește sesiuni din pagina grupei.
               </p>
             ) : students.length === 0 ? (
               <p className="text-sm text-gray-500 border border-gray-100 rounded-xl p-4 text-center">
@@ -302,7 +289,10 @@ export default function LessonPackagePanel({ groupId }) {
                         </th>
                       ))}
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
-                        P / A
+                        Luna
+                      </th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
+                        Total grupă
                       </th>
                     </tr>
                   </thead>
@@ -310,6 +300,7 @@ export default function LessonPackagePanel({ groupId }) {
                     {students.map((st) => {
                       const present = sessions.filter((s) => s.attendance[st.studentId] === 'PRESENT').length
                       const absent = sessions.filter((s) => s.attendance[st.studentId] === 'ABSENT').length
+                      const all = totalsById[st.studentId] || { present: 0, absent: 0 }
                       return (
                         <tr key={st.studentId} className="hover:bg-gray-50">
                           <td className="px-3 py-2 font-medium text-gray-900 whitespace-nowrap sticky left-0 bg-white">
@@ -332,6 +323,9 @@ export default function LessonPackagePanel({ groupId }) {
                             <span className="text-gray-300"> / </span>
                             <span className="text-red-600 font-semibold">{absent}</span>
                           </td>
+                          <td className="px-3 py-2 text-center whitespace-nowrap text-xs text-gray-500">
+                            {all.present} prezent / {all.absent} absent
+                          </td>
                         </tr>
                       )
                     })}
@@ -346,7 +340,7 @@ export default function LessonPackagePanel({ groupId }) {
                           {students.filter((st) => s.attendance[st.studentId] === 'PRESENT').length}
                         </td>
                       ))}
-                      <td />
+                      <td /><td />
                     </tr>
                   </tfoot>
                 </table>
@@ -356,10 +350,61 @@ export default function LessonPackagePanel({ groupId }) {
             {sessions.some((s) => s.locked) && (
               <p className="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1">
                 <LockClosedIcon className="h-3 w-3" />
-                Lecțiile cu lacăt au lecțiile deja scăzute din pachetele elevilor — prezența nu mai poate fi modificată.
+                Lecțiile cu lacăt sunt deja închise — prezența nu mai poate fi modificată.
               </p>
             )}
           </div>
+
+          {/* Istoric lunar */}
+          {data.history?.length > 0 && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowHistory((v) => !v)}
+                className="text-sm font-semibold text-gray-900 hover:text-indigo-600 transition-colors"
+              >
+                Istoric lunar ({data.history.length} luni) {showHistory ? '▴' : '▾'}
+              </button>
+
+              {showHistory && (
+                <div className="mt-2 overflow-x-auto border border-gray-100 rounded-xl">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Luna</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">De achitat</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Efectuate</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Rămase</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {data.history.map((h) => (
+                        <tr
+                          key={`${h.year}-${h.month}`}
+                          className={`hover:bg-gray-50 cursor-pointer ${
+                            h.year === year && h.month === month ? 'bg-indigo-50/60' : ''
+                          }`}
+                          onClick={() => { setYear(h.year); setMonth(h.month) }}
+                        >
+                          <td className="px-3 py-1.5 capitalize text-gray-900">
+                            {MONTH_NAMES[h.month - 1]} {h.year}
+                            {h.isOverride && (
+                              <span className="ml-1 text-[10px] text-amber-600">(specială)</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-1.5 text-center text-gray-700">{h.total}</td>
+                          <td className="px-3 py-1.5 text-center font-medium text-indigo-600">{h.held}</td>
+                          <td className={`px-3 py-1.5 text-center font-medium ${h.remaining === 0 ? 'text-gray-400' : 'text-emerald-600'}`}>
+                            {h.remaining}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>

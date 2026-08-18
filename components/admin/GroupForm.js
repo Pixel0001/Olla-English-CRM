@@ -44,6 +44,7 @@ export default function GroupForm({ group, teachers, branches = [] }) {
     locationType: group?.locationType || 'offline',
     locationDetails: group?.locationDetails || '',
     startDate: group?.startDate ? new Date(group.startDate).toISOString().split('T')[0] : '',
+    monthlyLessons: group?.monthlyLessons ?? 8,
     active: group?.active ?? true,
     cooldownOverrideMin: group?.cooldownOverrideMin ?? '',
     dailyXpCapOverride:  group?.dailyXpCapOverride ?? '',
@@ -171,6 +172,7 @@ export default function GroupForm({ group, teachers, branches = [] }) {
         locationType: formData.locationType,
         locationDetails: formData.locationDetails,
         startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
+        monthlyLessons: parseInt(formData.monthlyLessons, 10) || 8,
         active: formData.active,
         cooldownOverrideMin: formData.cooldownOverrideMin === '' ? null : parseInt(formData.cooldownOverrideMin),
         dailyXpCapOverride:  formData.dailyXpCapOverride  === '' ? null : parseInt(formData.dailyXpCapOverride),
@@ -395,6 +397,22 @@ export default function GroupForm({ group, teachers, branches = [] }) {
             onChange={handleChange}
             className="w-full px-3 xs:px-4 py-2 text-sm xs:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
           />
+
+        <div>
+          <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">Lecții pe lună</label>
+          <input
+            type="number"
+            name="monthlyLessons"
+            min={1}
+            max={60}
+            value={formData.monthlyLessons}
+            onChange={handleChange}
+            className="w-full px-3 xs:px-4 py-2 text-sm xs:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+          />
+          <p className="text-[11px] text-gray-500 mt-1">
+            Se achită lunar, indiferent de prezență. O lună anume poate fi schimbată din pagina grupei.
+          </p>
+        </div>
         </div>
 
         <div className="flex items-center">

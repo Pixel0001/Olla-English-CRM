@@ -364,6 +364,7 @@ model Group {
   locationType    String?  // "offline" / "online"
   locationDetails String?  // Sala/Link
   startDate       DateTime?
+  monthlyLessons  Int      @default(8) // Câte lecții se achită lunar pentru grupă (poate fi suprascris pe o lună anume)
   active          Boolean  @default(true)
 
   // Limite per-grupă (override peste global; null = moștenește)

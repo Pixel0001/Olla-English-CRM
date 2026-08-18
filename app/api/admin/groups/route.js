@@ -159,7 +159,7 @@ export async function POST(request) {
     }
 
     const { name, level, teacherId, branchId, scheduleDays, scheduleTime, 
-            locationType, locationDetails, startDate, active } = body
+            locationType, locationDetails, startDate, active, monthlyLessons } = body
 
     const group = await prisma.group.create({
       data: {
@@ -172,6 +172,7 @@ export async function POST(request) {
         locationType,
         locationDetails,
         startDate: startDate ? new Date(startDate) : null,
+        monthlyLessons: parseInt(monthlyLessons, 10) || 8,
         active
       },
       include: {

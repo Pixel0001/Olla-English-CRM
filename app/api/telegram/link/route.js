@@ -16,8 +16,12 @@ import prisma from '@/lib/prisma'
 
 const TOKEN_TTL_MINUTES = 30
 
+// Username-ul botului e public (apare oricum în linkul t.me), deci are un
+// implicit sensibil; variabila de mediu îl poate suprascrie.
 const BOT_USERNAME =
-  process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || process.env.TELEGRAM_BOT_USERNAME || null
+  process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ||
+  process.env.TELEGRAM_BOT_USERNAME ||
+  "olla_english_bot"
 
 async function requireUser() {
   const session = await getServerSession(authOptions)
