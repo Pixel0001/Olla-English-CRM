@@ -7,14 +7,10 @@ const protectedRoutes = ['/admin', '/teacher']
 const adminRoutes = ['/admin']
 const teacherRoutes = ['/teacher']
 
-// Rute fără autentificare de staff.
-// „/" doar redirecționează spre /login; /learn și /solve sunt portalul elevului,
-// protejat prin token în URL, nu prin sesiune NextAuth.
+// Singurele rute fără autentificare
 const publicRoutes = [
   '/login',
   '/',
-  '/solve',
-  '/learn',
 ]
 
 // Auth routes that should redirect if already logged in
@@ -30,17 +26,6 @@ export async function middleware(request) {
     pathname.startsWith('/uploads/') ||
     pathname.includes('.') // Static files
   ) {
-    // Defense-in-depth: blochează orice request API care încearcă să folosească
-    // token-ul sentinel "guest" — modul demo NU trebuie să atingă serverul.
-    if (
-      pathname.startsWith('/api/public/learn/guest') ||
-      pathname.startsWith('/api/public/learn/guest/')
-    ) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Mod demo — server inaccesibil. Intră în contul tău pentru funcționalitate completă.' }),
-        { status: 403, headers: { 'Content-Type': 'application/json' } }
-      )
-    }
     return NextResponse.next()
   }
 

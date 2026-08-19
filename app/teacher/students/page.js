@@ -18,7 +18,6 @@ import {
   StarIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
-import StudentBonusPoints from '@/components/admin/StudentBonusPoints'
 
 // Helper pentru formatarea programului
 const formatSchedule = (scheduleDays, scheduleTime) => {
@@ -721,10 +720,6 @@ export default function TeacherStudentsPage() {
                     </div>
                   </div>
 
-                  {/* XP & Bonus Points Section */}
-                  <div className="mt-4 xs:mt-5" onClick={(e) => e.stopPropagation()}>
-                    <BonusSection studentId={student.id} />
-                  </div>
                 </div>
               )}
             </div>
@@ -944,46 +939,5 @@ export default function TeacherStudentsPage() {
         </div>
       )}
     </div>
-  )
-}
-// ─── BonusSection: încarcă XP + bonus points pentru un student ───
-function BonusSection({ studentId }) {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    let cancelled = false
-    Promise.all([
-      fetch(`/api/admin/students/${studentId}/bonus`).then(r => r.ok ? r.json() : { bonusPoints: [] }),
-      fetch(`/api/admin/students/${studentId}/xp`).then(r => r.ok ? r.json() : { xp: 0 }).catch(() => ({ xp: 0 })),
-    ]).then(([bonusRes, xpRes]) => {
-      if (cancelled) return
-      setData({
-        bonusPoints: bonusRes.bonusPoints || [],
-        submissionXP: xpRes.xp || 0,
-      })
-      setLoading(false)
-    }).catch(() => {
-      if (!cancelled) setLoading(false)
-    })
-    return () => { cancelled = true }
-  }, [studentId])
-
-  if (loading) {
-    return (
-      <div className="bg-white rounded-xl border border-gray-200 p-4 text-center text-sm text-gray-500">
-        <StarIcon className="w-5 h-5 mx-auto mb-1 text-amber-400 animate-pulse" />
-        Se încarcă XP & puncte bonus...
-      </div>
-    )
-  }
-  if (!data) return null
-
-  return (
-    <StudentBonusPoints
-      studentId={studentId}
-      initialBonusPoints={data.bonusPoints}
-      submissionXP={data.submissionXP}
-    />
   )
 }

@@ -46,11 +46,6 @@ const navigation = [
   { name: 'Lecții Ratate', href: '/admin/missed-sessions', icon: 'warning', permission: 'missed-sessions.view' },
   { name: 'Recuperări', href: '/admin/makeup', icon: 'refresh', permission: 'makeup.view' },
   { name: 'Plăți', href: '/admin/payments', icon: 'banknotes', permission: 'payments.view' },
-  { name: 'Banca Probleme', href: '/admin/problems', icon: 'puzzle', permission: 'problems.view' },
-  { name: 'Module Învățare', href: '/admin/modules', icon: 'book', permission: 'modules.view' },
-  { name: 'Submisii', href: '/admin/submissions', icon: 'clipboard', permission: 'submissions.view' },
-  { name: 'Mr. Olla (AI)', href: '/admin/ai-usage', icon: 'puzzle', permission: 'submissions.view' },
-  { name: '🎮 Gamification', href: '/admin/abonamente', icon: 'star', permission: 'system.settings' },
   { name: 'Securitate', href: '/admin/security', icon: 'shield', permission: 'security.manage' },
   { name: 'Alerte Securitate', href: '/admin/security-alerts', icon: 'exclamation', permission: 'security.view' },
   { name: 'Audit Logs', href: '/admin/audit-logs', icon: 'document', permission: 'audit.view' }

@@ -92,11 +92,6 @@ const navigation = [
     icon: ArrowPathIcon
   },
   { 
-    name: 'Submisii', 
-    href: '/teacher/submissions', 
-    icon: InboxIcon
-  },
-  { 
     name: 'Banca Probleme', 
     href: '/teacher/problems', 
     icon: PuzzlePieceIcon

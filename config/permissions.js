@@ -243,90 +243,6 @@ export const PERMISSIONS = {
     description: 'Poate vedea absențele',
     category: 'Sesiuni'
   },
-
-  // Problem Bank (Banca de probleme)
-  'problems.view': {
-    label: 'Vezi banca de probleme',
-    description: 'Poate vedea lista de probleme și seturile generate',
-    category: 'Banca de Probleme'
-  },
-  'problems.create': {
-    label: 'Creează probleme',
-    description: 'Poate adăuga probleme noi în bancă',
-    category: 'Banca de Probleme'
-  },
-  'problems.edit': {
-    label: 'Editează probleme',
-    description: 'Poate modifica probleme existente',
-    category: 'Banca de Probleme'
-  },
-  'problems.delete': {
-    label: 'Șterge probleme',
-    description: 'Poate șterge probleme din bancă',
-    category: 'Banca de Probleme'
-  },
-  // Module de învățare
-  'modules.view': {
-    label: 'Vezi modulele de învățare',
-    description: 'Poate vedea modulele și lecțiile',
-    category: 'Module Învățare'
-  },
-  'modules.create': {
-    label: 'Creează module/lecții',
-    description: 'Poate crea module și lecții, alege ce e gratis/plătit',
-    category: 'Module Învățare'
-  },
-  'modules.edit': {
-    label: 'Editează module/lecții',
-    description: 'Poate edita conținutul modulelor și lecțiilor',
-    category: 'Module Învățare'
-  },
-  'modules.delete': {
-    label: 'Șterge module/lecții',
-    description: 'Poate șterge module și lecții',
-    category: 'Module Învățare'
-  },
-  'modules.access': {
-    label: 'Acordă acces la module',
-    description: 'Poate acorda acces elevilor la module (paid/granted)',
-    category: 'Module Învățare'
-  },
-  // Submisii probleme (cabinet profesor)
-  'submissions.view': {
-    label: 'Vezi submisii probleme',
-    description: 'Poate vedea răspunsurile elevilor în cabinetul profesorului',
-    category: 'Submisii Probleme'
-  },
-  'submissions.grade': {
-    label: 'Notează submisii',
-    description: 'Poate da notă și feedback la submisii',
-    category: 'Submisii Probleme'
-  },
-  'submissions.advance': {
-    label: 'Acordă advance la modul următor',
-    description: 'Poate permite elevului să treacă la modulul următor',
-    category: 'Submisii Probleme'
-  },
-
-  'problems.assign': {
-    label: 'Generează / atribuie seturi',
-    description: 'Poate genera seturi de probleme și le poate atribui elevilor',
-    category: 'Banca de Probleme'
-  },
-
-  // Sistem (cooldown, XP cap, niveluri)
-  'system.settings': {
-    label: 'Setări sistem (Abonamente)',
-    description: 'Configurează cooldown între probleme, cap zilnic XP și curba de niveluri',
-    category: 'Sistem'
-  },
-
-  // Gamification
-  'gamification.manage': {
-    label: 'Gestionează Gamification',
-    description: 'Cosmetics, Themes, Chests, Leaderboard Events, Rewards',
-    category: 'Sistem'
-  }
 }
 
 // Grupează permisiunile pe categorii
@@ -380,11 +296,7 @@ export const PERMISSION_CATEGORIES = [
   'Recuperări',
   'Notificări',
   'Orar',
-  'Securitate',
-  'Banca de Probleme',
-  'Module Învățare',
-  'Submisii Probleme',
-  'Sistem'
+  'Securitate'
 ]
 
 export default PERMISSIONS
