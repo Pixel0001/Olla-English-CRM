@@ -136,6 +136,7 @@ export default function LessonPackagePanel({ groupId }) {
   const sessions = data?.sessions || []
   const students = data?.students || []
   const canEdit = data?.canEdit
+  const isIndividual = data?.group?.billingType === 'INDIVIDUAL'
   const isOverride = data?.package?.isOverride
   const totalsById = Object.fromEntries((data?.studentTotals || []).map((t) => [t.studentId, t]))
 
@@ -145,7 +146,9 @@ export default function LessonPackagePanel({ groupId }) {
         <div>
           <h2 className="text-base xs:text-lg md:text-xl font-bold text-gray-900">Lecții lunare</h2>
           <p className="text-xs xs:text-sm text-gray-600">
-            Se achită {data?.group?.monthlyLessons ?? 8} lecții pe lună, indiferent câți elevi vin
+            {isIndividual
+              ? 'Plată individuală — fiecare elev are pachetul lui, din care se scade la prezență'
+              : `Se achită ${data?.group?.monthlyLessons ?? 8} lecții pe lună, indiferent câți elevi vin`}
           </p>
         </div>
 
@@ -181,7 +184,31 @@ export default function LessonPackagePanel({ groupId }) {
         <p className="text-sm text-gray-500">Nu s-au putut încărca datele.</p>
       ) : (
         <>
-          {/* Luna curentă */}
+          {/* Pachetul lunar — doar la grupele plătite lunar */}
+          {isIndividual ? (
+            <div className="border border-gray-200 rounded-xl p-4">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 xs:gap-3">
+                <BigStat
+                  label="Elevi"
+                  value={students.length}
+                  hint="în grupă"
+                  tone="neutral"
+                />
+                <BigStat
+                  label={`Lecții în ${MONTH_NAMES[month - 1]}`}
+                  value={stats.held}
+                  hint="ținute luna asta"
+                  tone="indigo"
+                />
+                <BigStat
+                  label="Total grupă"
+                  value={data.totalSessions ?? 0}
+                  hint="lecții de la început"
+                  tone="neutral"
+                />
+              </div>
+            </div>
+          ) : (
           <div className="border border-gray-200 rounded-xl p-4 space-y-3">
             {editing ? (
               <div className="flex flex-col sm:flex-row sm:items-end gap-3">
@@ -305,6 +332,8 @@ export default function LessonPackagePanel({ groupId }) {
             </div>
           </div>
 
+          )}
+
           {/* Prezențele lunii */}
           <div>
             <h3 className="text-base font-bold text-gray-900 mb-2">
@@ -344,6 +373,11 @@ export default function LessonPackagePanel({ groupId }) {
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
                         Total grupă
                       </th>
+                      {isIndividual && (
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
+                          Lecții rămase
+                        </th>
+                      )}
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
                         Plată
                       </th>
@@ -379,6 +413,17 @@ export default function LessonPackagePanel({ groupId }) {
                           <td className="px-3 py-2 text-center whitespace-nowrap text-xs text-gray-500">
                             {all.present} prezent / {all.absent} absent
                           </td>
+                          {isIndividual && (
+                            <td className="px-3 py-2 text-center whitespace-nowrap">
+                              <span className={`font-bold ${
+                                (st.lessonsRemaining ?? 0) <= 0 ? 'text-red-600'
+                                  : (st.lessonsRemaining ?? 0) <= 2 ? 'text-amber-600'
+                                  : 'text-emerald-600'
+                              }`}>
+                                {st.lessonsRemaining ?? 0}
+                              </span>
+                            </td>
+                          )}
                           <td className="px-3 py-2 text-center whitespace-nowrap">
                             {st.payment ? (
                               <span className="text-emerald-700 font-semibold">
@@ -422,7 +467,7 @@ export default function LessonPackagePanel({ groupId }) {
                           </td>
                         )
                       })}
-                      <td /><td /><td />
+                      <td /><td /><td />{isIndividual && <td />}
                     </tr>
                   </tfoot>
                 </table>
@@ -502,6 +547,7 @@ export default function LessonPackagePanel({ groupId }) {
           monthLabel={`${MONTH_NAMES[month - 1]} ${year}`}
           year={year}
           month={month}
+          billingType={data?.group?.billingType}
           defaultLessons={stats?.total ?? 8}
           onClose={() => setPayingStudent(null)}
           onSaved={() => { setPayingStudent(null); load() }}
@@ -583,12 +629,12 @@ function AttendanceCell({ value, locked, onClick }) {
   )
 }
 
-function PaymentModal({ student, monthLabel, defaultLessons, year, month, onClose, onSaved }) {
+function PaymentModal({ student, monthLabel, defaultLessons, year, month, billingType, onClose, onSaved }) {
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState('cash')
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [period, setPeriod] = useState(`${year}-${month}`)
-  const [payMode, setPayMode] = useState('MONTHLY')
+  const [payMode, setPayMode] = useState(billingType === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'MONTHLY')
   const [lessons, setLessons] = useState('8')
   const periods = monthOptions()
   const [saving, setSaving] = useState(false)

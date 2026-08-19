@@ -208,6 +208,7 @@ export async function GET(request) {
       group: {
         id: group.id,
         name: group.name,
+        billingType: group.billingType || 'MONTHLY',
         monthlyLessons: defaultLessons,
         startDate: (group.startDate || group.createdAt).toISOString(),
       },

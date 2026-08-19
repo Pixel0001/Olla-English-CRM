@@ -675,7 +675,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                                     {payment.paymentMethod === 'cash' ? 'Numerar' :
                                      payment.paymentMethod === 'card' ? 'Card' : 'Transfer'}
                                   </span>
-                                  <span className="text-indigo-600">{periodLabel(payment)}</span>
+                                  <span className="text-indigo-600">{payment.lessonsAdded ? `+${payment.lessonsAdded} lecții` : periodLabel(payment)}</span>
                                   {payment.notes && (
                                     <span className="text-xs text-gray-500 italic">{payment.notes}</span>
                                   )}
@@ -818,7 +818,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                               <span className="text-gray-500">
                                 {new Date(payment.paymentDate).toLocaleDateString('ro-RO')}
                               </span>
-                              <span className="text-indigo-600">{periodLabel(payment)}</span>
+                              <span className="text-indigo-600">{payment.lessonsAdded ? `+${payment.lessonsAdded} lecții` : periodLabel(payment)}</span>
                             </div>
                             {canDeletePayments && (
                             <button

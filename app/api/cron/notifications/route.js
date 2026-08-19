@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { notifyMissedGroupSession, notifyMissedMakeup, notifyGroupLessonsLow, notifyTeacherDailySchedule } from '@/lib/telegram'
+import { notifyMissedGroupSession, notifyMissedMakeup, notifyGroupLessonsLow, notifyLowLessons, notifyTeacherDailySchedule } from '@/lib/telegram'
 
 import { cleanupExpiredSessions } from '@/lib/security/session.js'
 import { cleanupExpiredStepUpTokens } from '@/lib/security/step-up.js'
@@ -363,7 +363,7 @@ export async function GET(request) {
         groupStudents: {
           where: { status: 'ACTIVE' },
           include: {
-            student: { select: { fullName: true } },
+            student: { select: { fullName: true, parentName: true, parentPhone: true, parentEmail: true } },
             payments: {
               where: {
         OR: [
@@ -393,6 +393,57 @@ export async function GET(request) {
 
     for (const group of activeGroups) {
       if (group.groupStudents.length === 0) continue
+
+      // Grupele plătite individual: alerta e per elev, pe pachetul lui
+      if (group.billingType === 'INDIVIDUAL') {
+        for (const gs of group.groupStudents) {
+          const lessons = gs.lessonsRemaining ?? 0
+          if (lessons > 1) continue
+
+          const type = lessons < 0 ? 'NEGATIVE_LESSONS' : lessons === 0 ? 'ZERO_LESSONS' : 'LOW_LESSONS'
+
+          const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+          const existing = await prisma.notification.findFirst({
+            where: {
+              type,
+              studentId: gs.studentId,
+              groupId: group.id,
+              createdAt: { gte: oneDayAgo },
+            },
+          })
+          if (existing) continue
+
+          await prisma.notification.create({
+            data: {
+              type,
+              title: lessons <= 0
+                ? `⚠️ ${gs.student.fullName} a rămas fără lecții`
+                : `📉 ${gs.student.fullName} mai are 1 lecție`,
+              message: `Grupa "${group.name}" — plată individuală. Lecții rămase: ${lessons}.`,
+              link: `/admin/students/${gs.studentId}`,
+              recipientId: null,
+              studentId: gs.studentId,
+              groupId: group.id,
+              data: { lessonsRemaining: lessons },
+            },
+          })
+
+          await notifyLowLessons(
+            gs.student.fullName,
+            group.name,
+            group.level,
+            lessons,
+            {
+              parentName: gs.student.parentName,
+              parentPhone: gs.student.parentPhone,
+              parentEmail: gs.student.parentEmail,
+            }
+          )
+
+          notificationsCreated.push(`Individual ${gs.student.fullName}: ${lessons} lecții`)
+        }
+        continue
+      }
 
       const total = group.lessonPackages[0]?.totalLessons ?? group.monthlyLessons ?? 8
       const held = group.lessonSessions.length
