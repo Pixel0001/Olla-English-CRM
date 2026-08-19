@@ -144,15 +144,24 @@ export default function LessonPackagePanel({ groupId }) {
     <div className="bg-white rounded-xl xs:rounded-2xl shadow-sm border border-gray-100 p-3 xs:p-4 md:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-base xs:text-lg md:text-xl font-bold text-gray-900">Lecții lunare</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-base xs:text-lg md:text-xl font-bold text-gray-900">
+              {isIndividual ? 'Lecții individuale' : 'Lecții lunare'}
+            </h2>
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+              isIndividual ? 'bg-purple-100 text-purple-800' : 'bg-indigo-100 text-indigo-800'
+            }`}>
+              {isIndividual ? 'plată individuală' : 'plată lunară'}
+            </span>
+          </div>
           <p className="text-xs xs:text-sm text-gray-600">
             {isIndividual
-              ? 'Plată individuală — fiecare elev are pachetul lui, din care se scade la prezență'
+              ? 'Fiecare elev are pachetul lui — la fiecare prezență se scade o lecție'
               : `Se achită ${data?.group?.monthlyLessons ?? 8} lecții pe lună, indiferent câți elevi vin`}
           </p>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className={`items-center gap-1 ${isIndividual ? 'hidden' : 'flex'}`}>
           <button
             type="button"
             onClick={() => shiftMonth(-1)}
@@ -186,26 +195,87 @@ export default function LessonPackagePanel({ groupId }) {
         <>
           {/* Pachetul lunar — doar la grupele plătite lunar */}
           {isIndividual ? (
-            <div className="border border-gray-200 rounded-xl p-4">
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 xs:gap-3">
+            <div className="border border-gray-200 rounded-xl p-3 xs:p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-2 xs:gap-3">
+                <BigStat
+                  label="Lecții ținute"
+                  value={data.totalSessions ?? 0}
+                  hint="de la începutul grupei"
+                  tone="indigo"
+                />
                 <BigStat
                   label="Elevi"
                   value={students.length}
                   hint="în grupă"
                   tone="neutral"
                 />
-                <BigStat
-                  label={`Lecții în ${MONTH_NAMES[month - 1]}`}
-                  value={stats.held}
-                  hint="ținute luna asta"
-                  tone="indigo"
-                />
-                <BigStat
-                  label="Total grupă"
-                  value={data.totalSessions ?? 0}
-                  hint="lecții de la început"
-                  tone="neutral"
-                />
+              </div>
+
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 mb-2">
+                  Lecții rămase
+                  <span className="ml-1.5 text-xs font-normal text-gray-500">
+                    pachetul fiecărui elev
+                  </span>
+                </h3>
+                {students.length === 0 ? (
+                  <p className="text-sm text-gray-500 border border-gray-100 rounded-xl p-4 text-center">
+                    Grupa nu are elevi activi.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 xs:gap-3">
+                    {students.map((st) => {
+                      const left = st.lessonsRemaining ?? 0
+                      const tone = left <= 0
+                        ? 'border-red-200 bg-red-50'
+                        : left <= 2
+                          ? 'border-amber-200 bg-amber-50'
+                          : 'border-emerald-200 bg-emerald-50'
+                      const numberTone = left <= 0
+                        ? 'text-red-600'
+                        : left <= 2 ? 'text-amber-600' : 'text-emerald-600'
+                      return (
+                        <div key={st.studentId} className={`rounded-xl border p-2.5 xs:p-3 ${tone}`}>
+                          <p className="text-xs font-medium text-gray-700 truncate" title={st.name}>
+                            {st.name}
+                            {st.status === 'PAUSED' && (
+                              <span className="ml-1 text-[10px] text-amber-600">(pauză)</span>
+                            )}
+                          </p>
+                          <p className={`text-2xl xs:text-3xl font-bold leading-tight ${numberTone}`}>
+                            {left}
+                          </p>
+                          <p className="text-[11px] text-gray-500">
+                            {left === 1 ? 'lecție rămasă' : 'lecții rămase'}
+                          </p>
+                          <p className="text-[11px] text-gray-600 mt-1">
+                            {(totalsById[st.studentId]?.present ?? 0)} lecții făcute
+                          </p>
+                          {st.payments?.[0] ? (
+                            <p className="text-[11px] text-gray-500">
+                              ultima plată:{' '}
+                              {st.payments[0].lessons > 0 ? `+${st.payments[0].lessons} lecții · ` : ''}
+                              {new Date(st.payments[0].date).toLocaleDateString('ro-RO', {
+                                day: '2-digit', month: 'short', year: 'numeric',
+                              })}
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-gray-400">fără plăți</p>
+                          )}
+                          {canPay && (
+                            <button
+                              type="button"
+                              onClick={() => setPayingStudent(st)}
+                              className="mt-1.5 px-2 py-1 rounded-lg border border-gray-200 bg-white text-[11px] font-medium text-gray-700 hover:border-emerald-400 hover:text-emerald-700"
+                            >
+                              + adaugă lecții
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           ) : (
@@ -339,14 +409,15 @@ export default function LessonPackagePanel({ groupId }) {
             <h3 className="text-base font-bold text-gray-900 mb-2">
               Prezențe
               <span className="ml-1.5 text-sm font-normal text-gray-500 capitalize">
-                {MONTH_NAMES[month - 1]} {year}
+                {isIndividual ? 'toate lecțiile' : `${MONTH_NAMES[month - 1]} ${year}`}
               </span>
             </h3>
 
             {sessions.length === 0 ? (
               <p className="text-sm text-gray-500 border border-gray-100 rounded-xl p-4 text-center">
-                Nicio lecție ținută în această lună. Lecțiile apar aici pe măsură ce profesorul
-                pornește sesiuni din pagina grupei.
+                {isIndividual
+                  ? 'Nicio lecție ținută încă. Lecțiile apar aici pe măsură ce profesorul pornește sesiuni din pagina grupei.'
+                  : 'Nicio lecție ținută în această lună. Lecțiile apar aici pe măsură ce profesorul pornește sesiuni din pagina grupei.'}
               </p>
             ) : students.length === 0 ? (
               <p className="text-sm text-gray-500 border border-gray-100 rounded-xl p-4 text-center">
@@ -368,18 +439,20 @@ export default function LessonPackagePanel({ groupId }) {
                         </th>
                       ))}
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
-                        Luna
+                        {isIndividual ? 'Prezențe' : 'Luna'}
                       </th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
-                        Total grupă
-                      </th>
+                      {!isIndividual && (
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
+                          Total grupă
+                        </th>
+                      )}
                       {isIndividual && (
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
                           Lecții rămase
                         </th>
                       )}
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
-                        Plată
+                        {isIndividual ? 'Ultima plată' : 'Plată'}
                       </th>
                     </tr>
                   </thead>
@@ -410,9 +483,11 @@ export default function LessonPackagePanel({ groupId }) {
                             <span className="text-gray-300"> / </span>
                             <span className="text-red-600 font-semibold">{absent}</span>
                           </td>
-                          <td className="px-3 py-2 text-center whitespace-nowrap text-xs text-gray-500">
-                            {all.present} prezent / {all.absent} absent
-                          </td>
+                          {!isIndividual && (
+                            <td className="px-3 py-2 text-center whitespace-nowrap text-xs text-gray-500">
+                              {all.present} prezent / {all.absent} absent
+                            </td>
+                          )}
                           {isIndividual && (
                             <td className="px-3 py-2 text-center whitespace-nowrap">
                               <span className={`font-bold ${
@@ -425,7 +500,20 @@ export default function LessonPackagePanel({ groupId }) {
                             </td>
                           )}
                           <td className="px-3 py-2 text-center whitespace-nowrap">
-                            {st.payment ? (
+                            {isIndividual ? (
+                              st.payments?.[0] ? (
+                                <span className="text-xs text-gray-700">
+                                  {st.payments[0].lessons > 0 && (
+                                    <b className="text-emerald-700">+{st.payments[0].lessons} lecții</b>
+                                  )}{' '}
+                                  {new Date(st.payments[0].date).toLocaleDateString('ro-RO', {
+                                    day: '2-digit', month: '2-digit', year: 'numeric',
+                                  })}
+                                </span>
+                              ) : (
+                                <span className="text-red-500 text-xs">fără plăți</span>
+                              )
+                            ) : st.payment ? (
                               <span className="text-emerald-700 font-semibold">
                                 {st.payment.amount.toLocaleString("ro-RO")} lei
                               </span>
@@ -467,7 +555,7 @@ export default function LessonPackagePanel({ groupId }) {
                           </td>
                         )
                       })}
-                      <td /><td /><td />{isIndividual && <td />}
+                      <td /><td /><td />
                     </tr>
                   </tfoot>
                 </table>
@@ -483,7 +571,7 @@ export default function LessonPackagePanel({ groupId }) {
           </div>
 
           {/* Istoric lunar */}
-          {data.history?.length > 0 && (
+          {!isIndividual && data.history?.length > 0 && (
             <div>
               <button
                 type="button"

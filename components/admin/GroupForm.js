@@ -247,8 +247,68 @@ export default function GroupForm({ group, teachers, branches = [] }) {
           </label>
         </div>
 
+        {!formData.isTrial && (
+          <div className="md:col-span-2 space-y-2">
+            <p className="text-xs xs:text-sm font-medium text-gray-700">Cum se plătește</p>
+            <div className="grid xs:grid-cols-2 gap-2 xs:gap-3">
+              {[
+                {
+                  value: 'MONTHLY',
+                  title: 'Lunar (grupă)',
+                  desc: 'Grupa are un număr fix de lecții pe lună. Se achită lunar, indiferent de prezență.',
+                },
+                {
+                  value: 'INDIVIDUAL',
+                  title: 'Individual (per elev)',
+                  desc: 'Fiecare elev cumpără lecții. La fiecare prezență i se scade o lecție.',
+                },
+              ].map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex items-start gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                    formData.billingType === opt.value
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : 'border-gray-200 hover:border-indigo-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="billingType"
+                    value={opt.value}
+                    checked={formData.billingType === opt.value}
+                    onChange={handleChange}
+                    className="mt-0.5 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-gray-900">{opt.title}</span>
+                    <span className="block text-xs text-gray-500">{opt.desc}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            {formData.billingType === 'MONTHLY' && (
+              <div className="xs:max-w-xs">
+                <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">Lecții pe lună</label>
+                <input
+                  type="number"
+                  name="monthlyLessons"
+                  min={1}
+                  max={60}
+                  value={formData.monthlyLessons}
+                  onChange={handleChange}
+                  className="w-full px-3 xs:px-4 py-2 text-sm xs:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                />
+                <p className="text-[11px] text-gray-500 mt-1">
+                  O lună anume poate fi schimbată din pagina grupei.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {formData.isTrial && (
-          <div className="sm:col-span-2 grid xs:grid-cols-2 gap-3 p-3 border border-indigo-200 bg-indigo-50/40 rounded-lg">
+          <div className="md:col-span-2 grid xs:grid-cols-2 gap-3 p-3 border border-indigo-200 bg-indigo-50/40 rounded-lg">
             <div>
               <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">Data probei</label>
               <input
@@ -450,39 +510,6 @@ export default function GroupForm({ group, teachers, branches = [] }) {
             className="w-full px-3 xs:px-4 py-2 text-sm xs:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
           />
 
-        <div className={formData.isTrial ? 'hidden' : ''}>
-          <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">Cum se plătește</label>
-          <select
-            name="billingType"
-            value={formData.billingType}
-            onChange={handleChange}
-            className="w-full px-3 xs:px-4 py-2 text-sm xs:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
-          >
-            <option value="MONTHLY">Lunar — grupa are un număr fix de lecții</option>
-            <option value="INDIVIDUAL">Individual — fiecare elev cumpără lecții</option>
-          </select>
-          <p className="text-[11px] text-gray-500 mt-1">
-            {formData.billingType === 'INDIVIDUAL'
-              ? 'Lecțiile se scad din pachetul fiecărui elev, la prezență.'
-              : 'Se achită lunar, indiferent de prezență.'}
-          </p>
-        </div>
-
-        <div className={formData.isTrial || formData.billingType === 'INDIVIDUAL' ? 'hidden' : ''}>
-          <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">Lecții pe lună</label>
-          <input
-            type="number"
-            name="monthlyLessons"
-            min={1}
-            max={60}
-            value={formData.monthlyLessons}
-            onChange={handleChange}
-            className="w-full px-3 xs:px-4 py-2 text-sm xs:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
-          />
-          <p className="text-[11px] text-gray-500 mt-1">
-            Se achită lunar, indiferent de prezență. O lună anume poate fi schimbată din pagina grupei.
-          </p>
-        </div>
         </div>
 
         <div className="flex items-center">

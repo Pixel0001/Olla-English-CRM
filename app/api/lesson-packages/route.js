@@ -29,7 +29,7 @@ async function resolveAccess(groupId) {
   const group = await prisma.group.findUnique({
     where: { id: groupId },
     select: {
-      id: true, name: true, teacherId: true,
+      id: true, name: true, teacherId: true, billingType: true,
       monthlyLessons: true, startDate: true, createdAt: true,
     },
   })
@@ -99,7 +99,9 @@ export async function GET(request) {
       prisma.lessonSession.findMany({
         where: { groupId },
         select: {
+          id: true,
           date: true,
+          lessonsDeducted: true,
           attendances: { select: { studentId: true, status: true } },
         },
         orderBy: { date: 'asc' },
@@ -135,6 +137,24 @@ export async function GET(request) {
       if (!acc.lastDate) acc.lastDate = p.paymentDate.toISOString()
     }
 
+    const isIndividual = (group.billingType || 'MONTHLY') === 'INDIVIDUAL'
+
+    const paymentsByStudent = {}
+    if (isIndividual) {
+      const rows = await prisma.payment.findMany({
+        where: { groupStudentId: { in: groupStudents.map((gs) => gs.id) } },
+        select: { groupStudentId: true, amount: true, paymentDate: true, lessonsAdded: true },
+        orderBy: { paymentDate: 'desc' },
+      })
+      for (const r of rows) {
+        ;(paymentsByStudent[r.groupStudentId] ||= []).push({
+          date: r.paymentDate.toISOString(),
+          amount: r.amount || 0,
+          lessons: r.lessonsAdded || 0,
+        })
+      }
+    }
+
     const students = groupStudents.map((gs) => ({
       groupStudentId: gs.id,
       studentId: gs.studentId,
@@ -142,6 +162,10 @@ export async function GET(request) {
       status: gs.status,
       lessonsRemaining: gs.lessonsRemaining,
       payment: paidByStudent[gs.id] || null,
+      payments: isIndividual ? (paymentsByStudent[gs.id] || []) : undefined,
+      lessonsBought: isIndividual
+        ? (paymentsByStudent[gs.id] || []).reduce((sum, r) => sum + r.lessons, 0)
+        : undefined,
     }))
 
     const formattedSessions = sessions.map((s) => {
@@ -204,6 +228,19 @@ export async function GET(request) {
       absent: totalsByStudent[st.studentId]?.absent || 0,
     }))
 
+    const responseSessions = isIndividual
+      ? allSessions.map((ses) => {
+          const byStudent = {}
+          for (const a of ses.attendances) byStudent[a.studentId] = a.status
+          return {
+            id: ses.id,
+            date: ses.date.toISOString(),
+            locked: ses.lessonsDeducted,
+            attendance: byStudent,
+          }
+        })
+      : formattedSessions
+
     return NextResponse.json({
       group: {
         id: group.id,
@@ -221,7 +258,7 @@ export async function GET(request) {
         notes: pkg?.notes || null,
       },
       students,
-      sessions: formattedSessions,
+      sessions: responseSessions,
       stats: {
         total,
         held,

@@ -55,7 +55,7 @@ const csvCell = (v) => {
 const csvRow = (cells) => cells.map(csvCell).join(',')
 
 function buildCsv(data) {
-  const { group, students, sessions, payments, months, trials, totals } = data
+  const { group, students, sessions, payments, months, trials, totals, isIndividual } = data
   const out = []
 
   out.push('GRUPA')
@@ -65,7 +65,8 @@ function buildCsv(data) {
   out.push(csvRow(['Filială', group.branch?.name || '—']))
   out.push(csvRow(['Program', formatSchedule(group.scheduleDays, group.scheduleTime)]))
   out.push(csvRow(['Început', fmtDate(group.startDate || group.createdAt)]))
-  out.push(csvRow(['Lecții pe lună', group.monthlyLessons ?? 8]))
+  out.push(csvRow(['Mod de plată', isIndividual ? 'Individual (per elev)' : 'Lunar (grupă)']))
+  if (!isIndividual) out.push(csvRow(['Lecții pe lună', group.monthlyLessons ?? 8]))
   out.push(csvRow(['Status', group.active ? 'Activă' : 'Inactivă']))
   out.push(csvRow(['Total lecții ținute', sessions.length]))
   out.push(csvRow(['Total încasat (lei)', totals.paid]))
@@ -73,11 +74,19 @@ function buildCsv(data) {
   out.push('')
 
   out.push('ELEVI')
-  out.push(csvRow(['Nume', 'Status', 'Înscris la', 'Prezențe', 'Absențe', 'Total plătit (lei)', 'Părinte', 'Telefon']))
+  out.push(csvRow([
+    'Nume', 'Status', 'Înscris la', 'Lecții făcute', 'Absențe',
+    ...(isIndividual ? ['Lecții cumpărate', 'Lecții rămase', 'Ultima plată'] : []),
+    'Total plătit (lei)', 'Părinte', 'Telefon',
+  ]))
   for (const s of students) {
     out.push(csvRow([
       s.name, STUDENT_STATUS[s.status] || s.status, fmtDate(s.enrolledAt),
-      s.present, s.absent, s.paid, s.parentName || '', s.parentPhone || '',
+      s.present, s.absent,
+      ...(isIndividual
+        ? [s.lessonsBought ?? 0, s.lessonsRemaining ?? 0, fmtDate(s.lastPaymentDate)]
+        : []),
+      s.paid, s.parentName || '', s.parentPhone || '',
     ]))
   }
   out.push('')
@@ -110,10 +119,12 @@ function buildCsv(data) {
   }
   out.push('')
 
-  out.push('SITUAȚIE LUNARĂ')
-  out.push(csvRow(['Luna', 'Lecții de achitat', 'Lecții ținute', 'Rămase', 'Încasat (lei)']))
-  for (const m of months) {
-    out.push(csvRow([`${MONTH_NAMES[m.month - 1]} ${m.year}`, m.total, m.held, m.remaining, m.paid]))
+  if (!isIndividual) {
+    out.push('SITUAȚIE LUNARĂ')
+    out.push(csvRow(['Luna', 'Lecții de achitat', 'Lecții ținute', 'Rămase', 'Încasat (lei)']))
+    for (const m of months) {
+      out.push(csvRow([`${MONTH_NAMES[m.month - 1]} ${m.year}`, m.total, m.held, m.remaining, m.paid]))
+    }
   }
 
   if (trials.length > 0) {
@@ -136,7 +147,7 @@ const esc = (v) =>
   String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 function buildHtml(data) {
-  const { group, students, sessions, payments, months, trials, totals } = data
+  const { group, students, sessions, payments, months, trials, totals, isIndividual } = data
 
   const table = (headers, rows) => `
     <table>
@@ -202,26 +213,35 @@ function buildHtml(data) {
   <div class="cards">
     <div class="card"><span>Elevi</span><b>${students.length}</b></div>
     <div class="card"><span>Lecții ținute</span><b>${sessions.length}</b></div>
-    <div class="card"><span>Lecții pe lună</span><b>${group.monthlyLessons ?? 8}</b></div>
+    ${isIndividual
+      ? '<div class="card"><span>Mod de plată</span><b style="font-size:13px">Individual</b></div>'
+      : `<div class="card"><span>Lecții pe lună</span><b>${group.monthlyLessons ?? 8}</b></div>`}
     <div class="card"><span>Total încasat</span><b>${totals.paid} lei</b></div>
     <div class="card"><span>Probe</span><b>${trials.length}</b></div>
   </div>
 
   <h2>Elevi</h2>
   ${table(
-    ['Nume', 'Status', 'Înscris', 'Prezențe', 'Absențe', 'Plătit (lei)', 'Contact'],
+    [
+      'Nume', 'Status', 'Înscris', 'Lecții făcute', 'Absențe',
+      ...(isIndividual ? ['Cumpărate', 'Rămase', 'Ultima plată'] : []),
+      'Plătit (lei)', 'Contact',
+    ],
     students.map((s) => [
       s.name, STUDENT_STATUS[s.status] || s.status, fmtDate(s.enrolledAt),
-      s.present, s.absent, s.paid,
+      s.present, s.absent,
+      ...(isIndividual
+        ? [s.lessonsBought ?? 0, s.lessonsRemaining ?? 0, fmtDate(s.lastPaymentDate) || '—']
+        : []),
+      s.paid,
       [s.parentName, s.parentPhone].filter(Boolean).join(' · '),
     ])
   )}
 
-  <h2>Situație lunară</h2>
-  ${table(
+  ${isIndividual ? '' : `<h2>Situație lunară</h2>${table(
     ['Luna', 'De achitat', 'Ținute', 'Rămase', 'Încasat (lei)'],
     months.map((m) => [`${MONTH_NAMES[m.month - 1]} ${m.year}`, m.total, m.held, m.remaining, m.paid])
-  )}
+  )}`}
 
   <h2>Sesiuni și prezențe</h2>
   <table>
@@ -330,6 +350,8 @@ export async function GET(request, { params }) {
       present: attendanceByStudent[gs.studentId]?.present || 0,
       absent: attendanceByStudent[gs.studentId]?.absent || 0,
       paid: gs.payments.reduce((sum, p) => sum + (p.amount || 0), 0),
+      lessonsBought: gs.payments.reduce((sum, p) => sum + (p.lessonsAdded || 0), 0),
+      lastPaymentDate: gs.payments[0]?.paymentDate || null,
     }))
 
     const nameById = Object.fromEntries(students.map((s) => [s.studentId, s.name]))
@@ -411,6 +433,7 @@ export async function GET(request, { params }) {
 
     const data = {
       group,
+      isIndividual: (group.billingType || 'MONTHLY') === 'INDIVIDUAL',
       students,
       sessions,
       payments,

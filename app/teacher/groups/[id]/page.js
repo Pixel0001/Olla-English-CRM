@@ -319,9 +319,17 @@ export default async function TeacherGroupDetailPage({ params }) {
                       </div>
                     </div>
 
-                    {/* Plata lunii curente — lecțiile se numără per grupă */}
+                    {/* La grupele individuale contează pachetul elevului, nu luna */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {paidThisMonth(gs.payments) ? (
+                      {group.billingType === 'INDIVIDUAL' ? (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] xs:text-xs font-medium whitespace-nowrap ${
+                          (gs.lessonsRemaining ?? 0) <= 0 ? 'bg-red-100 text-red-800'
+                            : (gs.lessonsRemaining ?? 0) <= 2 ? 'bg-amber-100 text-amber-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {gs.lessonsRemaining ?? 0} lecții rămase
+                        </span>
+                      ) : paidThisMonth(gs.payments) ? (
                         <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] xs:text-xs font-medium whitespace-nowrap">
                           achitat {paidThisMonth(gs.payments).toLocaleString('ro-RO')} MDL
                         </span>
