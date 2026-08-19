@@ -106,40 +106,9 @@ export default async function TeacherGroupDetailPage({ params }) {
   // Elevii LEFT sunt deja excluși din query
   const activeStudents = group.groupStudents.filter(gs => gs.status === 'ACTIVE' || !gs.status)
   const pausedStudents = group.groupStudents.filter(gs => gs.status === 'PAUSED')
-  const studentsWithZeroLessons = activeStudents.filter(gs => gs.lessonsRemaining === 0)
-  const studentsWithLowLessons = activeStudents.filter(gs => gs.lessonsRemaining > 0 && gs.lessonsRemaining <= 2)
 
   return (
     <div className="space-y-4 xs:space-y-5 md:space-y-6">
-      {/* Warning Messages */}
-      {studentsWithZeroLessons.length > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg xs:rounded-xl p-3 xs:p-4 flex items-start gap-2 xs:gap-3">
-          <ExclamationTriangleIcon className="w-5 h-5 xs:w-6 xs:h-6 text-red-600 flex-shrink-0" />
-          <div className="min-w-0">
-            <p className="font-semibold text-red-800 text-xs xs:text-sm md:text-base">
-              Atenție: {studentsWithZeroLessons.length} {studentsWithZeroLessons.length === 1 ? 'elev' : 'elevi'} cu 0 lecții!
-            </p>
-            <p className="text-[10px] xs:text-xs md:text-sm text-red-700 mt-0.5 xs:mt-1 break-words">
-              {studentsWithZeroLessons.map(gs => gs.student.fullName).join(', ')}
-            </p>
-          </div>
-        </div>
-      )}
-      
-      {studentsWithLowLessons.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg xs:rounded-xl p-3 xs:p-4 flex items-start gap-2 xs:gap-3">
-          <ExclamationTriangleIcon className="w-5 h-5 xs:w-6 xs:h-6 text-amber-600 flex-shrink-0" />
-          <div className="min-w-0">
-            <p className="font-semibold text-amber-800 text-xs xs:text-sm md:text-base">
-              Atenție: {studentsWithLowLessons.length} {studentsWithLowLessons.length === 1 ? 'elev are' : 'elevi au'} puține lecții
-            </p>
-            <p className="text-[10px] xs:text-xs md:text-sm text-amber-700 mt-0.5 xs:mt-1 break-words">
-              {studentsWithLowLessons.map(gs => `${gs.student.fullName} (${gs.lessonsRemaining})`).join(', ')}
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col gap-3 xs:gap-4">
         <div>
@@ -399,11 +368,12 @@ export default async function TeacherGroupDetailPage({ params }) {
         )}
       </div>
 
-      {/* Pachetul lunar de lecții + prezențele lunii */}
-      <LessonPackagePanel groupId={group.id} />
-
-      {/* Lecții de probă — evenimente unice, nu în orarul săptămânal */}
-      <TrialLessonsPanel groupId={group.id} />
+      {/* La o probă contează participanții; la grupele obișnuite, pachetul lunar */}
+      {group.isTrial ? (
+        <TrialLessonsPanel groupId={group.id} />
+      ) : (
+        <LessonPackagePanel groupId={group.id} />
+      )}
 
       {/* Recent Sessions */}
       <div className="bg-white rounded-lg xs:rounded-xl shadow-sm p-3 xs:p-4 md:p-6">

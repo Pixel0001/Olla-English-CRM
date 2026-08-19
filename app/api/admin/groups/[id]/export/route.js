@@ -72,11 +72,11 @@ function buildCsv(data) {
   out.push('')
 
   out.push('ELEVI')
-  out.push(csvRow(['Nume', 'Status', 'Înscris la', 'Lecții rămase', 'Prezențe', 'Absențe', 'Total plătit (lei)', 'Părinte', 'Telefon']))
+  out.push(csvRow(['Nume', 'Status', 'Înscris la', 'Prezențe', 'Absențe', 'Total plătit (lei)', 'Părinte', 'Telefon']))
   for (const s of students) {
     out.push(csvRow([
       s.name, STUDENT_STATUS[s.status] || s.status, fmtDate(s.enrolledAt),
-      s.lessonsRemaining, s.present, s.absent, s.paid, s.parentName || '', s.parentPhone || '',
+      s.present, s.absent, s.paid, s.parentName || '', s.parentPhone || '',
     ]))
   }
   out.push('')
@@ -205,10 +205,10 @@ function buildHtml(data) {
 
   <h2>Elevi</h2>
   ${table(
-    ['Nume', 'Status', 'Înscris', 'Lecții rămase', 'Prezențe', 'Absențe', 'Plătit (lei)', 'Contact'],
+    ['Nume', 'Status', 'Înscris', 'Prezențe', 'Absențe', 'Plătit (lei)', 'Contact'],
     students.map((s) => [
       s.name, STUDENT_STATUS[s.status] || s.status, fmtDate(s.enrolledAt),
-      s.lessonsRemaining, s.present, s.absent, s.paid,
+      s.present, s.absent, s.paid,
       [s.parentName, s.parentPhone].filter(Boolean).join(' · '),
     ])
   )}

@@ -369,6 +369,10 @@ model Group {
   locationDetails String?  // Sala/Link
   startDate       DateTime?
   monthlyLessons  Int      @default(8) // Câte lecții se achită lunar pentru grupă (poate fi suprascris pe o lună anume)
+
+  // Lecție de probă: eveniment unic, cu dată și oră proprie, fără orar săptămânal
+  isTrial         Boolean  @default(false)
+  trialDate       DateTime?
   active          Boolean  @default(true)
 
   // Limite per-grupă (override peste global; null = moștenește)
@@ -641,6 +645,7 @@ model Lead {
   // Cine învață — poate fi altcineva decât persoana de contact
   studentName  String?
   studentAge   Int?
+  isAdult      Boolean @default(false) // Adult — nu are rost o vârstă exactă
   interestedIn String?    // Nivelul dorit: A1, B2, IELTS, Kids...
 
   status         LeadStatus @default(LEAD)

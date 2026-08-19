@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { parseSchoolDate } from '@/lib/timezone'
 import { requireAdmin, getCurrentUser } from '@/lib/session'
 import { require2FAToken } from '@/lib/security/action-tokens'
 import { checkPermission } from '@/lib/permissions'
@@ -75,7 +76,7 @@ export async function PUT(request, { params }) {
     }
 
     const { name, level, teacherId, branchId, scheduleDays, scheduleTime,
-            locationType, locationDetails, startDate, active, monthlyLessons,
+            locationType, locationDetails, startDate, active, monthlyLessons, isTrial, trialDate,
             cooldownOverrideMin, dailyXpCapOverride,
             cooldownDisabled, xpCapDisabled } = body
 
@@ -95,6 +96,12 @@ export async function PUT(request, { params }) {
         locationDetails,
         startDate: startDate ? new Date(startDate) : null,
         ...(monthlyLessons !== undefined ? { monthlyLessons: parseInt(monthlyLessons, 10) || 8 } : {}),
+        ...(isTrial !== undefined ? { isTrial: !!isTrial } : {}),
+        ...(isTrial !== undefined
+          ? isTrial
+            ? { trialDate: parseSchoolDate(trialDate), scheduleDays: [], scheduleTime: null }
+            : { trialDate: null }
+          : {}),
         active,
         ...(cooldownOverrideMin !== undefined ? { cooldownOverrideMin: norm(cooldownOverrideMin) } : {}),
         ...(dailyXpCapOverride !== undefined  ? { dailyXpCapOverride:  norm(dailyXpCapOverride) }  : {}),

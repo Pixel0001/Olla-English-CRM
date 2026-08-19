@@ -48,6 +48,13 @@ export default function GroupForm({ group, teachers, branches = [] }) {
     locationDetails: group?.locationDetails || '',
     startDate: group?.startDate ? new Date(group.startDate).toISOString().split('T')[0] : '',
     monthlyLessons: group?.monthlyLessons ?? 8,
+    isTrial: group?.isTrial ?? false,
+    trialDate: group?.trialDate
+      ? new Date(group.trialDate).toISOString().slice(0, 10)
+      : '',
+    trialTime: group?.trialDate
+      ? new Date(group.trialDate).toISOString().slice(11, 16)
+      : '17:00',
     active: group?.active ?? true,
     cooldownOverrideMin: group?.cooldownOverrideMin ?? '',
     dailyXpCapOverride:  group?.dailyXpCapOverride ?? '',
@@ -176,6 +183,11 @@ export default function GroupForm({ group, teachers, branches = [] }) {
         locationDetails: formData.locationDetails,
         startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
         monthlyLessons: parseInt(formData.monthlyLessons, 10) || 8,
+        isTrial: formData.isTrial,
+        // Proba are o singură dată; nu intră în orarul săptămânal
+        trialDate: formData.isTrial && formData.trialDate
+          ? `${formData.trialDate}T${formData.trialTime || '17:00'}`
+          : null,
         active: formData.active,
         cooldownOverrideMin: formData.cooldownOverrideMin === '' ? null : parseInt(formData.cooldownOverrideMin),
         dailyXpCapOverride:  formData.dailyXpCapOverride  === '' ? null : parseInt(formData.dailyXpCapOverride),
@@ -223,6 +235,51 @@ export default function GroupForm({ group, teachers, branches = [] }) {
               placeholder="ex: B1 Adulți — Luni/Miercuri"
             />
           </div>
+
+        <div className="sm:col-span-2">
+          <label className="flex items-start gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-indigo-300">
+            <input
+              type="checkbox"
+              name="isTrial"
+              checked={formData.isTrial}
+              onChange={handleChange}
+              className="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span>
+              <span className="block text-sm font-medium text-gray-900">Lecție de probă</span>
+              <span className="block text-xs text-gray-500">
+                Se ține o singură dată, la data și ora alese — fără orar săptămânal și fără
+                pachet lunar de lecții
+              </span>
+            </span>
+          </label>
+        </div>
+
+        {formData.isTrial && (
+          <div className="sm:col-span-2 grid xs:grid-cols-2 gap-3 p-3 border border-indigo-200 bg-indigo-50/40 rounded-lg">
+            <div>
+              <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">Data probei</label>
+              <input
+                type="date"
+                name="trialDate"
+                value={formData.trialDate}
+                onChange={handleChange}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+              />
+            </div>
+            <div>
+              <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">Ora probei</label>
+              <input
+                type="time"
+                name="trialTime"
+                step={300}
+                value={formData.trialTime}
+                onChange={handleChange}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+              />
+            </div>
+          </div>
+        )}
 
           <div>
             <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">Nivel</label>
@@ -401,7 +458,7 @@ export default function GroupForm({ group, teachers, branches = [] }) {
             className="w-full px-3 xs:px-4 py-2 text-sm xs:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
           />
 
-        <div>
+        <div className={formData.isTrial ? 'hidden' : ''}>
           <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">Lecții pe lună</label>
           <input
             type="number"

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { parseSchoolDate } from '@/lib/timezone'
 import { requireAdmin, getCurrentUser } from '@/lib/session'
 import { require2FAToken } from '@/lib/security/action-tokens'
 import { checkPermission } from '@/lib/permissions'
@@ -159,7 +160,7 @@ export async function POST(request) {
     }
 
     const { name, level, teacherId, branchId, scheduleDays, scheduleTime, 
-            locationType, locationDetails, startDate, active, monthlyLessons } = body
+            locationType, locationDetails, startDate, active, monthlyLessons, isTrial, trialDate } = body
 
     const group = await prisma.group.create({
       data: {
@@ -173,6 +174,10 @@ export async function POST(request) {
         locationDetails,
         startDate: startDate ? new Date(startDate) : null,
         monthlyLessons: parseInt(monthlyLessons, 10) || 8,
+        isTrial: !!isTrial,
+        trialDate: isTrial ? parseSchoolDate(trialDate) : null,
+        // O probă nu se repetă săptămânal
+        ...(isTrial ? { scheduleDays: [], scheduleTime: null } : {}),
         active
       },
       include: {

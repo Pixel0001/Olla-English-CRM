@@ -365,13 +365,6 @@ export default async function StudentDetailPage({ params }) {
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}>
                         {statusInfo.label}
                       </span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        gs.lessonsRemaining === 0 ? 'bg-red-100 text-red-700' :
-                        gs.lessonsRemaining <= 2 ? 'bg-amber-100 text-amber-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {gs.lessonsRemaining} lecții rămase
-                      </span>
                       {gs.absences > 0 && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
                           {gs.absences} absențe

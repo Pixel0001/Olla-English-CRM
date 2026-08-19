@@ -42,6 +42,17 @@ export default async function EditGroupPage({ params }) {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{group.name}</h1>
           <p className="text-gray-600">
+            {group.isTrial && (
+              <span className="inline-flex items-center px-1.5 py-0.5 mr-1.5 rounded bg-amber-100 text-amber-800 text-xs font-medium align-middle">
+                lecție de probă
+                {group.trialDate
+                  ? ' · ' + new Date(group.trialDate).toLocaleString('ro-RO', {
+                      day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+                      timeZone: 'Europe/Chisinau',
+                    })
+                  : ''}
+              </span>
+            )}
             {group.level || 'fără nivel'} · {stats.studentsCount} elevi · {stats.sessionsCount} lecții ținute
             {stats.paid > 0 ? ` · ${stats.paid.toLocaleString('ro-RO')} lei încasați` : ''}
           </p>
@@ -83,9 +94,13 @@ export default async function EditGroupPage({ params }) {
         />
       </div>
 
-      <LessonPackagePanel groupId={group.id} />
-
-      <TrialLessonsPanel groupId={group.id} />
+      {/* Pachetul lunar are sens doar la grupele care se repetă săptămânal;
+          la o probă contează cine vine, o singură dată */}
+      {group.isTrial ? (
+        <TrialLessonsPanel groupId={group.id} />
+      ) : (
+        <LessonPackagePanel groupId={group.id} />
+      )}
     </div>
   )
 }

@@ -62,7 +62,11 @@ export async function PATCH(request, { params }) {
     if (data.name !== undefined && !update.name) {
       return NextResponse.json({ error: 'Numele nu poate fi gol' }, { status: 400 })
     }
-    if (data.studentAge !== undefined) {
+    if (data.isAdult !== undefined) {
+      update.isAdult = !!data.isAdult
+      if (data.isAdult) update.studentAge = null
+    }
+    if (data.studentAge !== undefined && !data.isAdult) {
       update.studentAge = data.studentAge ? parseInt(data.studentAge) : null
     }
     if (data.nextFollowUpAt !== undefined) {

@@ -32,6 +32,7 @@ async function LeadsPageContent() {
     message: l.message,
     studentName: l.studentName,
     studentAge: l.studentAge,
+    isAdult: l.isAdult,
     interestedIn: l.interestedIn,
     status: l.status,
     nextFollowUpAt: l.nextFollowUpAt ? l.nextFollowUpAt.toISOString() : null,

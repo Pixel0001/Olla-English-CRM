@@ -233,7 +233,7 @@ export async function PATCH(request, { params }) {
             })
             
             const updateData = {
-              lessonsRemaining: { decrement: 1 }
+              // contorul individual nu mai e folosit
             }
             
             // Only decrement absences if student has absences > 0

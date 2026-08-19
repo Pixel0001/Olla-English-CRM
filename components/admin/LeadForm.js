@@ -42,6 +42,7 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
     sourceDetail: lead?.sourceDetail || '',
     studentName: lead?.studentName || '',
     studentAge: lead?.studentAge ?? '',
+    isAdult: lead?.isAdult ?? false,
     interestedIn: lead?.interestedIn || '',
     status: lead?.status || 'LEAD',
     assignedToId: lead?.assignedToId || '',
@@ -153,10 +154,26 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
           </div>
           <div>
             <label className={label}>Vârstă</label>
-            <input
-              className={input} type="number" min="1" max="99" value={form.studentAge}
-              onChange={(e) => set('studentAge', e.target.value)} placeholder="ex: 12"
-            />
+            {form.isAdult ? (
+              <div className={`${input} bg-gray-50 text-gray-500 flex items-center`}>Adult</div>
+            ) : (
+              <input
+                className={input} type="number" min="1" max="99" value={form.studentAge}
+                onChange={(e) => set('studentAge', e.target.value)} placeholder="ex: 12"
+              />
+            )}
+            <label className="mt-1 flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.isAdult}
+                onChange={(e) => {
+                  set('isAdult', e.target.checked)
+                  if (e.target.checked) set('studentAge', '')
+                }}
+                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              Adult (fără vârstă exactă)
+            </label>
           </div>
           <div>
             <label className={label}>Nivel actual</label>

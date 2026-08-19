@@ -431,6 +431,11 @@ export default function GroupsPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                           <span className="truncate">Profesor: {group.teacher?.name || group.teacher?.email || '-'}</span>
+                        {group.isTrial && (
+                          <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-medium">
+                            probă{group.trialDate ? ' · ' + new Date(group.trialDate).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' }) : ''}
+                          </span>
+                        )}
                         </div>
                         <div className="flex items-center gap-1.5 xs:gap-2 text-gray-600">
                           <svg className="w-3.5 h-3.5 xs:w-4 xs:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

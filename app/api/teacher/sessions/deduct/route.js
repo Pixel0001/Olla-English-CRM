@@ -60,15 +60,8 @@ export async function POST(request) {
       if (!groupStudent) continue
 
       if (attendance.status === 'PRESENT') {
-        // Deduct one lesson for present students
-        await prisma.groupStudent.update({
-          where: { id: groupStudent.id },
-          data: {
-            lessonsRemaining: { decrement: 1 }
-          }
-        })
-
-        // Create transaction record
+        // Lecțiile se numără per grupă, în pachetul lunar — contorul individual
+        // nu mai e scăzut. Tranzacția rămâne, ca istoric al prezenței.
         transactions.push({
           studentId: attendance.studentId,
           groupId: lessonSession.groupId,
