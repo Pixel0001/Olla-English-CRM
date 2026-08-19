@@ -160,7 +160,7 @@ export async function POST(request) {
     }
 
     const { name, level, teacherId, branchId, scheduleDays, scheduleTime, 
-            locationType, locationDetails, startDate, active, monthlyLessons, isTrial, trialDate } = body
+            locationType, locationDetails, startDate, active, monthlyLessons, isTrial, trialDate, billingType } = body
 
     const group = await prisma.group.create({
       data: {
@@ -174,6 +174,7 @@ export async function POST(request) {
         locationDetails,
         startDate: startDate ? new Date(startDate) : null,
         monthlyLessons: parseInt(monthlyLessons, 10) || 8,
+        billingType: billingType === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'MONTHLY',
         isTrial: !!isTrial,
         trialDate: isTrial ? parseSchoolDate(trialDate) : null,
         // O probă nu se repetă săptămânal

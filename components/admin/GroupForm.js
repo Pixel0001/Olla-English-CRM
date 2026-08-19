@@ -44,6 +44,7 @@ export default function GroupForm({ group, teachers, branches = [] }) {
     locationDetails: group?.locationDetails || '',
     startDate: group?.startDate ? new Date(group.startDate).toISOString().split('T')[0] : '',
     monthlyLessons: group?.monthlyLessons ?? 8,
+    billingType: group?.billingType || 'MONTHLY',
     isTrial: group?.isTrial ?? false,
     trialDate: group?.trialDate
       ? new Date(group.trialDate).toISOString().slice(0, 10)
@@ -175,6 +176,7 @@ export default function GroupForm({ group, teachers, branches = [] }) {
         locationDetails: formData.locationDetails,
         startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
         monthlyLessons: parseInt(formData.monthlyLessons, 10) || 8,
+        billingType: formData.billingType,
         isTrial: formData.isTrial,
         // Proba are o singură dată; nu intră în orarul săptămânal
         trialDate: formData.isTrial && formData.trialDate
@@ -447,6 +449,24 @@ export default function GroupForm({ group, teachers, branches = [] }) {
           />
 
         <div className={formData.isTrial ? 'hidden' : ''}>
+          <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">Cum se plătește</label>
+          <select
+            name="billingType"
+            value={formData.billingType}
+            onChange={handleChange}
+            className="w-full px-3 xs:px-4 py-2 text-sm xs:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+          >
+            <option value="MONTHLY">Lunar — grupa are un număr fix de lecții</option>
+            <option value="INDIVIDUAL">Individual — fiecare elev cumpără lecții</option>
+          </select>
+          <p className="text-[11px] text-gray-500 mt-1">
+            {formData.billingType === 'INDIVIDUAL'
+              ? 'Lecțiile se scad din pachetul fiecărui elev, la prezență.'
+              : 'Se achită lunar, indiferent de prezență.'}
+          </p>
+        </div>
+
+        <div className={formData.isTrial || formData.billingType === 'INDIVIDUAL' ? 'hidden' : ''}>
           <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">Lecții pe lună</label>
           <input
             type="number"

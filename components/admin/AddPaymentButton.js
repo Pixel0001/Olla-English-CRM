@@ -29,6 +29,8 @@ export default function AddPaymentButton({
   const [groupStudentId, setGroupStudentId] = useState(groups[0]?.groupStudentId || '')
   const [amount, setAmount] = useState('')
   const [period, setPeriod] = useState(currentPeriod())
+  const [mode, setMode] = useState('MONTHLY')   // MONTHLY = lunar pe grupă, INDIVIDUAL = pe lecții
+  const [lessons, setLessons] = useState('8')
   const [method, setMethod] = useState('cash')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [notes, setNotes] = useState('')
@@ -37,6 +39,12 @@ export default function AddPaymentButton({
   useEffect(() => {
     if (!groupStudentId && groups.length > 0) setGroupStudentId(groups[0].groupStudentId)
   }, [groups, groupStudentId])
+
+  // Grupele plătite individual pornesc direct pe modul „pe lecții"
+  useEffect(() => {
+    const g = groups.find((x) => x.groupStudentId === groupStudentId)
+    if (g?.billingType) setMode(g.billingType)
+  }, [groupStudentId, groups])
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
@@ -51,6 +59,11 @@ export default function AddPaymentButton({
     const value = parseFloat(amount)
     if (!Number.isFinite(value) || value <= 0) return toast.error('Introdu o sumă validă')
 
+    if (mode === 'INDIVIDUAL') {
+      const n = parseInt(lessons, 10)
+      if (!Number.isFinite(n) || n < 1) return toast.error('Introdu numărul de lecții achitate')
+    }
+
     setSaving(true)
     try {
       const res = await fetch('/api/admin/payments', {
@@ -62,8 +75,12 @@ export default function AddPaymentButton({
           paymentDate: new Date(date).toISOString(),
           paymentMethod: method,
           notes: notes.trim() || null,
-          forYear: parseInt(period.split('-')[0], 10),
-          forMonth: parseInt(period.split('-')[1], 10),
+          ...(mode === 'INDIVIDUAL'
+            ? { lessonsAdded: parseInt(lessons, 10) || 0 }
+            : {
+                forYear: parseInt(period.split('-')[0], 10),
+                forMonth: parseInt(period.split('-')[1], 10),
+              }),
         }),
       })
       const data = await res.json()
@@ -145,6 +162,28 @@ export default function AddPaymentButton({
               </div>
             )}
 
+            {/* Lunar pe grupă sau individual, pe lecții — ca înainte */}
+            <div className="grid grid-cols-2 gap-1 p-1 bg-gray-100 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setMode('MONTHLY')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  mode === 'MONTHLY' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Grupă — lunar
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('INDIVIDUAL')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  mode === 'INDIVIDUAL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Individual — pe lecții
+              </button>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Sumă (MDL) *</label>
@@ -160,18 +199,34 @@ export default function AddPaymentButton({
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Plată pentru luna *</label>
-                <select
-                  value={period}
-                  onChange={(e) => setPeriod(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                >
-                  {monthOptions().map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}{o.isCurrent ? ' (curentă)' : ''}
-                    </option>
-                  ))}
-                </select>
+                {mode === 'INDIVIDUAL' ? (
+                  <>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Lecții achitate *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={lessons}
+                      onChange={(e) => setLessons(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Plată pentru luna *</label>
+                    <select
+                      value={period}
+                      onChange={(e) => setPeriod(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    >
+                      {monthOptions().map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}{o.isCurrent ? ' (curentă)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Metodă</label>
@@ -205,8 +260,9 @@ export default function AddPaymentButton({
             />
 
             <p className="text-[11px] text-gray-500">
-              Plata acoperă lecțiile lunii alese. Data încasării e separată — poți înregistra
-              o plată în avans sau cu întârziere.
+              {mode === 'INDIVIDUAL'
+                ? 'Lecțiile intră în pachetul elevului și se consumă pe măsură ce vine la ore.'
+                : 'Plata acoperă lecțiile lunii alese. Data încasării e separată — poți înregistra o plată în avans sau cu întârziere.'}
             </p>
 
             <div className="flex gap-2">

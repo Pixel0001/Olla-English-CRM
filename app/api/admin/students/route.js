@@ -50,7 +50,7 @@ export async function GET(request) {
           groupStudents: {
             include: {
               group: {
-                select: { id: true, name: true }
+                select: { id: true, name: true, billingType: true }
               }
             }
           }

@@ -76,7 +76,7 @@ export async function PUT(request, { params }) {
     }
 
     const { name, level, teacherId, branchId, scheduleDays, scheduleTime,
-            locationType, locationDetails, startDate, active, monthlyLessons, isTrial, trialDate,
+            locationType, locationDetails, startDate, active, monthlyLessons, isTrial, trialDate, billingType,
             cooldownOverrideMin, dailyXpCapOverride,
             cooldownDisabled, xpCapDisabled } = body
 
@@ -96,6 +96,9 @@ export async function PUT(request, { params }) {
         locationDetails,
         startDate: startDate ? new Date(startDate) : null,
         ...(monthlyLessons !== undefined ? { monthlyLessons: parseInt(monthlyLessons, 10) || 8 } : {}),
+        ...(billingType !== undefined
+          ? { billingType: billingType === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'MONTHLY' }
+          : {}),
         ...(isTrial !== undefined ? { isTrial: !!isTrial } : {}),
         ...(isTrial !== undefined
           ? isTrial

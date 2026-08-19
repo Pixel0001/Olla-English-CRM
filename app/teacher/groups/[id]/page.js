@@ -334,7 +334,7 @@ export default async function TeacherGroupDetailPage({ params }) {
                       <AddPaymentButton
                         variant="link"
                         studentName={gs.student?.fullName}
-                        groups={[{ groupStudentId: gs.id, groupName: group.name }]}
+                        groups={[{ groupStudentId: gs.id, groupName: group.name, billingType: group.billingType }]}
                       />
                     </div>
                   </div>

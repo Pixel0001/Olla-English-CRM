@@ -60,8 +60,15 @@ export async function POST(request) {
       if (!groupStudent) continue
 
       if (attendance.status === 'PRESENT') {
-        // Lecțiile se numără per grupă, în pachetul lunar — contorul individual
-        // nu mai e scăzut. Tranzacția rămâne, ca istoric al prezenței.
+        // La grupele plătite individual, prezența consumă o lecție din pachetul
+        // elevului. La cele lunare, socoteala e a grupei — nu se scade nimic.
+        if (lessonSession.group.billingType === 'INDIVIDUAL') {
+          await prisma.groupStudent.update({
+            where: { id: groupStudent.id },
+            data: { lessonsRemaining: { decrement: 1 } },
+          })
+        }
+
         transactions.push({
           studentId: attendance.studentId,
           groupId: lessonSession.groupId,

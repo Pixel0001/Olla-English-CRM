@@ -139,7 +139,7 @@ export default async function StudentDetailPage({ params }) {
             studentName={student.fullName}
             groups={student.groupStudents
               .filter((gs) => !['LEFT', 'TRANSFERRED'].includes(gs.status))
-              .map((gs) => ({ groupStudentId: gs.id, groupName: gs.group.name }))}
+              .map((gs) => ({ groupStudentId: gs.id, groupName: gs.group.name, billingType: gs.group.billingType }))}
           />
 
         {canEdit.allowed && (

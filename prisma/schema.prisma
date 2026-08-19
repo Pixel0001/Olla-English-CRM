@@ -368,6 +368,8 @@ model Group {
   locationType    String?  // "offline" / "online"
   locationDetails String?  // Sala/Link
   startDate       DateTime?
+  // Cum se plătește: lunar pe grupă (implicit) sau individual, pe lecții
+  billingType     BillingType @default(MONTHLY)
   monthlyLessons  Int      @default(8) // Câte lecții se achită lunar pentru grupă (poate fi suprascris pe o lună anume)
 
   // Lecție de probă: eveniment unic, cu dată și oră proprie, fără orar săptămânal
@@ -443,6 +445,11 @@ model GroupStudent {
 
   @@unique([groupId, studentId])
   @@map("group_students")
+}
+
+enum BillingType {
+  MONTHLY    // grupa are N lecții pe lună, achitate indiferent de prezență
+  INDIVIDUAL // fiecare elev cumpără un număr de lecții, care se consumă la prezență
 }
 
 enum GroupStudentStatus {

@@ -272,7 +272,7 @@ export default function StudentsPage() {
                         studentName={student.fullName}
                         groups={(student.groupStudents || [])
                           .filter((gs) => !['LEFT', 'TRANSFERRED'].includes(gs.status))
-                          .map((gs) => ({ groupStudentId: gs.id, groupName: gs.group?.name || 'Grupă' }))}
+                          .map((gs) => ({ groupStudentId: gs.id, groupName: gs.group?.name || 'Grupă', billingType: gs.group?.billingType }))}
                         onSaved={() => fetchStudents()}
                       />
                       <PermissionGate permission="students.delete">
