@@ -252,7 +252,8 @@ export async function GET(request) {
             yesterdayDayOfWeek,
             scheduledTime,
             group.groupStudents.length,
-            missedSession.id
+            missedSession.id,
+            group.teacher?.telegramChatId || null
           )
           
           notificationsCreated.push(`Missed group session: ${group.name} (${group.teacher.name})`)
@@ -339,7 +340,8 @@ export async function GET(request) {
           makeup.group.name,
           makeup.teacher.name,
           scheduledTime,
-          studentNames
+          studentNames,
+          makeup.teacher?.telegramChatId || null
         )
         
         notificationsCreated.push(`Missed makeup: ${makeup.group.name} (${makeup.teacher.name})`)
