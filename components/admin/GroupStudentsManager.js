@@ -219,7 +219,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
       paymentDate: new Date().toISOString().split('T')[0],
       paymentMethod: 'cash',
       notes: '',
-      lessonsAdded: ''
+      forPeriod: currentPeriod()
     })
   }
 
@@ -272,7 +272,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
           paymentDate: new Date().toISOString().split('T')[0],
           paymentMethod: 'cash',
           notes: '',
-          lessonsAdded: ''
+          forPeriod: currentPeriod()
         })
         setShowPaymentModal(null)
         setShow2FAModal(false)

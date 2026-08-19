@@ -2,6 +2,12 @@
 
 import { monthOptions, periodLabel } from '@/lib/payments'
 
+// Luna curentă, în formatul folosit de selectorul de plată
+const currentPeriod = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${now.getMonth() + 1}`
+}
+
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import StudentsLoading from './loading'
@@ -75,7 +81,7 @@ export default function TeacherStudentsPage() {
   const [paymentForm, setPaymentForm] = useState({
     groupStudentId: '',
     amount: '',
-    forPeriod: '',
+    forPeriod: currentPeriod(),
     paymentMethod: 'cash',
     notes: ''
   })
@@ -178,7 +184,7 @@ export default function TeacherStudentsPage() {
 
       toast.success('Plată înregistrată cu succes!')
       setShowPaymentModal(false)
-      setPaymentForm({ groupStudentId: '', amount: '', forPeriod: '', paymentMethod: 'cash', notes: '' })
+      setPaymentForm({ groupStudentId: '', amount: '', forPeriod: currentPeriod(), paymentMethod: 'cash', notes: '' })
       setSelectedStudent(null)
       fetchData()
     } catch (error) {
@@ -256,7 +262,7 @@ export default function TeacherStudentsPage() {
     setPaymentForm({ 
       groupStudentId: student.groups[0]?.groupStudentId || '', 
       amount: '', 
-      forPeriod: '', 
+      forPeriod: currentPeriod(), 
       paymentMethod: 'cash', 
       notes: '' 
     })
