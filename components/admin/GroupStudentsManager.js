@@ -45,7 +45,7 @@ function paidThisMonth(payments = []) {
   return total > 0 ? total : null
 }
 
-export default function GroupStudentsManager({ group, allStudents, allGroups = [], permissions = {} }) {
+export default function GroupStudentsManager({ group, allStudents, allGroups = [], permissions = {} , attendanceStats = {}, totalSessions = 0 }) {
   // Destructure permissions with defaults
   const {
     canViewStudents = false,
@@ -63,6 +63,11 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
   const router = useRouter()
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [lessonsRemaining, setLessonsRemaining] = useState(0)
+
+  // Lecțiile făcute se numără din prezențe; cele rămase stau pe înscriere
+  const lessonsDone = (gs) => attendanceStats[gs.studentId]?.present ?? 0
+  const remainingTone = (n) =>
+    n <= 0 ? 'bg-red-100 text-red-700' : n <= 2 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
   const [loading, setLoading] = useState(false)
   const [addingLessons, setAddingLessons] = useState({})
   const [lessonsToAdd, setLessonsToAdd] = useState({})
@@ -507,6 +512,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Elev</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lecții</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plăți</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Înscris la</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acțiuni</th>
@@ -515,7 +521,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
             <tbody className="bg-white divide-y divide-gray-200">
               {group.groupStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     Nu există elevi în această grupă
                   </td>
               </tr>
@@ -575,6 +581,19 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                           {gs.statusNote}
                         </p>
                       )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-1">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${remainingTone(gs.lessonsRemaining ?? 0)}`}>
+                          {gs.lessonsRemaining ?? 0} rămase
+                        </span>
+                        <p className="text-xs text-gray-500">
+                          {lessonsDone(gs)} făcute
+                          {(attendanceStats[gs.studentId]?.absent ?? 0) > 0 && (
+                            <span className="text-red-500"> · {attendanceStats[gs.studentId].absent} absențe</span>
+                          )}
+                        </p>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       {(canViewPayments || canAddPayments || canDeletePayments) ? (
@@ -650,7 +669,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                   {/* Expanded Payments Row */}
                   {expandedPayments[gs.id] && gs.payments?.length > 0 && (
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 bg-gray-50">
+                      <td colSpan={6} className="px-6 py-4 bg-gray-50">
                         <div className="ml-4">
                           <h4 className="text-sm font-semibold text-gray-700 mb-2">Istoricul plăților:</h4>
                           <div className="space-y-2">
@@ -759,6 +778,16 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                       {statusConfig.label}
                     </span>
                     )}
+                  </div>
+
+                  <div className="bg-white/50 rounded-lg p-2 xs:p-3 flex items-center justify-between">
+                    <span className="text-xs text-gray-500">Lecții:</span>
+                    <span className="flex items-center gap-2">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] xs:text-xs font-medium ${remainingTone(gs.lessonsRemaining ?? 0)}`}>
+                        {gs.lessonsRemaining ?? 0} rămase
+                      </span>
+                      <span className="text-[10px] xs:text-xs text-gray-500">{lessonsDone(gs)} făcute</span>
+                    </span>
                   </div>
 
                   {/* Plata lunii curente — lecțiile se numără per grupă, nu per elev */}

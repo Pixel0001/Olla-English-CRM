@@ -245,6 +245,21 @@ export default async function StudentDetailPage({ params }) {
                   <p className="text-xs text-gray-600 mt-1.5">
                     Plătit în această grupă: <b>{groupPaid.toLocaleString('ro-RO')} MDL</b>
                     {` · ${gs.payments.length} ${gs.payments.length === 1 ? 'plată' : 'plăți'}`}
+                    {gs.payments.some((p) => p.lessonsAdded) && (
+                      <>
+                        {' · '}
+                        <b className="text-indigo-600">
+                          +{gs.payments.reduce((sum, p) => sum + (p.lessonsAdded || 0), 0)} lecții cumpărate
+                        </b>
+                      </>
+                    )}
+                    {' · '}
+                    <b className={
+                      (gs.lessonsRemaining ?? 0) <= 0 ? 'text-red-600'
+                        : (gs.lessonsRemaining ?? 0) <= 2 ? 'text-amber-600' : 'text-emerald-600'
+                    }>
+                      {gs.lessonsRemaining ?? 0} lecții rămase
+                    </b>
                   </p>
                 </div>
               )
@@ -319,6 +334,7 @@ export default async function StudentDetailPage({ params }) {
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Grupa</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pentru luna</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Lecții</th>
                   <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Sumă</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Metodă</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Înregistrat de</th>
@@ -332,6 +348,13 @@ export default async function StudentDetailPage({ params }) {
                       <td className="px-3 py-2 whitespace-nowrap text-gray-700">{formatDate(p.paymentDate)}</td>
                       <td className="px-3 py-2 text-gray-700">{p.groupName}</td>
                       <td className="px-3 py-2 text-gray-700 capitalize whitespace-nowrap">{periodLabel(p)}</td>
+                      <td className="px-3 py-2 text-center whitespace-nowrap">
+                        {p.lessonsAdded ? (
+                          <span className="font-semibold text-indigo-600">+{p.lessonsAdded}</span>
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-right font-semibold text-emerald-700 whitespace-nowrap">
                         {(p.amount || 0).toLocaleString('ro-RO')} MDL
                       </td>

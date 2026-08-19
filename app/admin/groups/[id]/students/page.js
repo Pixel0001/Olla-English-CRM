@@ -51,13 +51,16 @@ export default async function GroupStudentsPage({ params }) {
       where: { id },
       include: {
         groupStudents: {
-          include: { 
+          include: {
             student: true,
             payments: {
               orderBy: { paymentDate: 'desc' }
             }
           }
-        }
+        },
+        lessonSessions: {
+          select: { attendances: { select: { studentId: true, status: true } } },
+        },
       }
     }),
     prisma.student.findMany({ orderBy: { fullName: 'asc' } }),
@@ -74,6 +77,17 @@ export default async function GroupStudentsPage({ params }) {
   // Excludem grupa curentă din lista de grupe pentru transfer
   const otherGroups = allGroups.filter(g => g.id !== id)
 
+  // Câte lecții a făcut fiecare elev în grupa asta (și câte a lipsit)
+  const attendanceStats = {}
+  for (const session of group.lessonSessions) {
+    for (const a of session.attendances) {
+      const acc = (attendanceStats[a.studentId] ||= { present: 0, absent: 0 })
+      if (a.status === 'PRESENT') acc.present++
+      else acc.absent++
+    }
+  }
+  const totalSessions = group.lessonSessions.length
+
   return (
     <div className="space-y-3 xs:space-y-4 sm:space-y-6">
       <div>
@@ -81,7 +95,9 @@ export default async function GroupStudentsPage({ params }) {
         <p className="text-xs xs:text-sm sm:text-base text-gray-600">{group.name}{group.level ? ` — ${group.level}` : ''}</p>
       </div>
 
-      <GroupStudentsManager 
+      <GroupStudentsManager
+        attendanceStats={attendanceStats}
+        totalSessions={totalSessions} 
         group={JSON.parse(JSON.stringify(group))}
         allStudents={JSON.parse(JSON.stringify(allStudents))}
         allGroups={JSON.parse(JSON.stringify(otherGroups))}
