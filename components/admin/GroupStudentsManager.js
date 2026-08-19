@@ -62,7 +62,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
 
   const router = useRouter()
   const [selectedStudentId, setSelectedStudentId] = useState('')
-  const [lessonsRemaining, setLessonsRemaining] = useState(group.lessonsCount || 12)
+  const [lessonsRemaining, setLessonsRemaining] = useState(0)
   const [loading, setLoading] = useState(false)
   const [addingLessons, setAddingLessons] = useState({})
   const [lessonsToAdd, setLessonsToAdd] = useState({})
