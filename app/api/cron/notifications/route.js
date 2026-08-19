@@ -365,7 +365,17 @@ export async function GET(request) {
           include: {
             student: { select: { fullName: true } },
             payments: {
-              where: { paymentDate: { gte: monthStart, lt: monthEnd } },
+              where: {
+        OR: [
+          { forYear: today.getFullYear(), forMonth: today.getMonth() + 1 },
+          {
+            AND: [
+              { forMonth: null },
+              { paymentDate: { gte: monthStart, lt: monthEnd } },
+            ],
+          },
+        ],
+      },
               select: { id: true },
             },
           },

@@ -1,5 +1,7 @@
 'use client'
 
+import { monthOptions, periodLabel } from '@/lib/payments'
+
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import StudentsLoading from './loading'
@@ -73,7 +75,7 @@ export default function TeacherStudentsPage() {
   const [paymentForm, setPaymentForm] = useState({
     groupStudentId: '',
     amount: '',
-    lessonsAdded: '',
+    forPeriod: '',
     paymentMethod: 'cash',
     notes: ''
   })
@@ -162,6 +164,8 @@ export default function TeacherStudentsPage() {
         body: JSON.stringify({
           groupStudentId: paymentForm.groupStudentId,
           amount: paymentForm.amount,
+          forYear: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[0], 10) : null,
+          forMonth: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[1], 10) : null,
           paymentMethod: paymentForm.paymentMethod,
           notes: paymentForm.notes
         })
@@ -174,7 +178,7 @@ export default function TeacherStudentsPage() {
 
       toast.success('Plată înregistrată cu succes!')
       setShowPaymentModal(false)
-      setPaymentForm({ groupStudentId: '', amount: '', lessonsAdded: '', paymentMethod: 'cash', notes: '' })
+      setPaymentForm({ groupStudentId: '', amount: '', forPeriod: '', paymentMethod: 'cash', notes: '' })
       setSelectedStudent(null)
       fetchData()
     } catch (error) {
@@ -252,7 +256,7 @@ export default function TeacherStudentsPage() {
     setPaymentForm({ 
       groupStudentId: student.groups[0]?.groupStudentId || '', 
       amount: '', 
-      lessonsAdded: '', 
+      forPeriod: '', 
       paymentMethod: 'cash', 
       notes: '' 
     })
@@ -858,6 +862,20 @@ export default function TeacherStudentsPage() {
                     required
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Plată pentru luna *</label>
+                <select
+                  value={paymentForm.forPeriod}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, forPeriod: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+                >
+                  {monthOptions().map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}{o.isCurrent ? ' (curentă)' : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">Metodă Plată</label>

@@ -611,6 +611,9 @@ model Payment {
   groupStudentId String?       @db.ObjectId  // Opțional: rămâne NULL dacă elevul/grupa au fost șterse
   amount         Float         // Suma achitată (RON)
   paymentDate    DateTime      @default(now())
+  // Luna acoperită de plată (nu ziua în care a intrat banul)
+  forYear        Int?
+  forMonth       Int?          // 1–12
   paymentMethod  String?       // "cash", "card", "transfer"
   notes          String?       // Notițe adiționale
   lessonsAdded   Int?          // Câte lecții s-au adăugat pentru această plată

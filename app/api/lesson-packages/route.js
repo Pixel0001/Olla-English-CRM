@@ -110,7 +110,17 @@ export async function GET(request) {
     const monthPayments = await prisma.payment.findMany({
       where: {
         groupStudentId: { in: groupStudents.map((gs) => gs.id) },
-        paymentDate: { gte: start, lt: end },
+        ...{
+        OR: [
+          { forYear: year, forMonth: month },
+          {
+            AND: [
+              { forMonth: null },
+              { paymentDate: { gte: start, lt: end } },
+            ],
+          },
+        ],
+      },
       },
       select: { groupStudentId: true, amount: true, paymentDate: true, lessonsAdded: true },
       orderBy: { paymentDate: "desc" },

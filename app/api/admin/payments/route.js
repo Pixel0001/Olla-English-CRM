@@ -103,7 +103,7 @@ export async function POST(request) {
     }
 
     const data = await request.json()
-    const { groupStudentId, amount, paymentDate, paymentMethod, notes, lessonsAdded } = data
+    const { groupStudentId, amount, paymentDate, paymentMethod, notes, lessonsAdded, forYear, forMonth } = data
 
     // 2FA is not required for adding payments - only for sensitive actions
 
@@ -117,6 +117,8 @@ export async function POST(request) {
         groupStudentId,
         amount: parseFloat(amount),
         paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+        forYear: forYear ? parseInt(forYear, 10) : null,
+        forMonth: forMonth ? parseInt(forMonth, 10) : null,
         paymentMethod,
         notes,
         lessonsAdded: lessonsAdded ? parseInt(lessonsAdded) : null

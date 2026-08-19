@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { notifyTeacherActivity } from '@/lib/telegram'
+import { periodLabel } from '@/lib/payments'
 
 // GET - Fetch payments created by this teacher
 export async function GET(request) {
@@ -46,16 +47,13 @@ export async function POST(request) {
 
   try {
     const body = await request.json()
-    const { groupStudentId, amount, paymentMethod, notes, lessonsToAdd } = body
+    const { groupStudentId, amount, paymentMethod, notes, forYear, forMonth } = body
 
     if (!groupStudentId) {
       return NextResponse.json({ error: 'Selectează o grupă' }, { status: 400 })
     }
     if (!amount || parseFloat(amount) <= 0) {
       return NextResponse.json({ error: 'Introdu o sumă validă' }, { status: 400 })
-    }
-    if (!lessonsToAdd || parseInt(lessonsToAdd) <= 0) {
-      return NextResponse.json({ error: 'Introdu numărul de lecții (minim 1)' }, { status: 400 })
     }
 
     // Verify groupStudent exists and teacher has access
@@ -87,9 +85,11 @@ export async function POST(request) {
         data: {
           groupStudentId,
           amount: parseFloat(amount),
+          forYear: forYear ? parseInt(forYear, 10) : null,
+          forMonth: forMonth ? parseInt(forMonth, 10) : null,
           paymentMethod: paymentMethod || null,
           notes: notes || null,
-          lessonsAdded: lessonsToAdd ? parseInt(lessonsToAdd) : null,
+          lessonsAdded: null,
           createdById: session.user.id
         },
         include: {
@@ -105,26 +105,6 @@ export async function POST(request) {
         }
       })
 
-      // Update groupStudent with added lessons (always, since lessonsToAdd is required)
-      await tx.groupStudent.update({
-        where: { id: groupStudentId },
-        data: {
-          lessonsRemaining: {
-            increment: parseInt(lessonsToAdd)
-          }
-        }
-      })
-
-      // Create transaction record
-      await tx.lessonTransaction.create({
-        data: {
-          studentId: groupStudent.studentId,
-          groupId: groupStudent.groupId,
-          delta: parseInt(lessonsToAdd),
-          reason: `Plată ${amount} MDL - ${lessonsToAdd} lecții adăugate`
-        }
-      })
-
       return payment
     })
 
@@ -133,7 +113,7 @@ export async function POST(request) {
 📚 Grupa: ${result.groupStudent.group.name}
 📘 Nivel: ${result.groupStudent.group.level || 'N/A'}
 💵 Sumă: <b>${amount} MDL</b>
-📖 Lecții adăugate: <b>${lessonsToAdd}</b>
+🗓 Pentru luna: <b>${periodLabel({ forYear, forMonth, paymentDate: new Date() })}</b>
 💳 Metodă: ${paymentMethod || 'Nespecificată'}`
 
     notifyTeacherActivity('payment', session.user.name || session.user.email, details)

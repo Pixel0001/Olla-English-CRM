@@ -252,10 +252,16 @@ export default function StudentsPage() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-3">
+                      <Link
+                        href={`/admin/students/${student.id}`}
+                        className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+                      >
+                        Detalii
+                      </Link>
                       <PermissionGate permission="students.edit">
                         <Link
-                          href={`/admin/students/${student.id}`}
-                          className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+                          href={`/admin/students/${student.id}/edit`}
+                          className="text-gray-600 hover:text-gray-900 text-sm font-medium"
                         >
                           Editează
                         </Link>
@@ -331,10 +337,16 @@ export default function StudentsPage() {
 
               {/* Action Buttons */}
               <div className="flex gap-2">
+                <Link
+                  href={`/admin/students/${student.id}`}
+                  className="flex-1 px-3 xs:px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm xs:text-base font-medium hover:bg-indigo-700 transition-colors text-center"
+                >
+                  Detalii
+                </Link>
                 <PermissionGate permission="students.edit">
                   <Link
-                    href={`/admin/students/${student.id}`}
-                    className="flex-1 px-3 xs:px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm xs:text-base font-medium hover:bg-indigo-700 transition-colors text-center"
+                    href={`/admin/students/${student.id}/edit`}
+                    className="px-3 xs:px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm xs:text-base font-medium hover:bg-gray-300 transition-colors"
                   >
                     Editează
                   </Link>

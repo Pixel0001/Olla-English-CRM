@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { usePermissions } from '@/hooks/usePermissions'
+import { monthOptions, paidForMonth, periodLabel } from '@/lib/payments'
 import {
   ChevronLeftIcon, ChevronRightIcon, CheckIcon, XMarkIcon, LockClosedIcon,
 } from '@heroicons/react/24/outline'
@@ -448,6 +449,8 @@ export default function LessonPackagePanel({ groupId }) {
         <PaymentModal
           student={payingStudent}
           monthLabel={`${MONTH_NAMES[month - 1]} ${year}`}
+          year={year}
+          month={month}
           defaultLessons={stats?.total ?? 8}
           onClose={() => setPayingStudent(null)}
           onSaved={() => { setPayingStudent(null); load() }}
@@ -510,10 +513,12 @@ function AttendanceCell({ value, locked, onClick }) {
   )
 }
 
-function PaymentModal({ student, monthLabel, defaultLessons, onClose, onSaved }) {
+function PaymentModal({ student, monthLabel, defaultLessons, year, month, onClose, onSaved }) {
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState('cash')
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [period, setPeriod] = useState(`${year}-${month}`)
+  const periods = monthOptions()
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -537,6 +542,8 @@ function PaymentModal({ student, monthLabel, defaultLessons, onClose, onSaved })
           amount: value,
           paymentDate: new Date(date).toISOString(),
           paymentMethod: method,
+          forYear: parseInt(period.split('-')[0], 10),
+          forMonth: parseInt(period.split('-')[1], 10),
           notes: `Plată ${monthLabel}`,
         }),
       })
@@ -592,7 +599,21 @@ function PaymentModal({ student, monthLabel, defaultLessons, onClose, onSaved })
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Data</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Plată pentru luna *</label>
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                {periods.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}{o.isCurrent ? ' (curentă)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Data încasării</label>
               <input
                 type="date"
                 value={date}
@@ -603,8 +624,8 @@ function PaymentModal({ student, monthLabel, defaultLessons, onClose, onSaved })
           </div>
 
           <p className="text-[11px] text-gray-500">
-            Plata acoperă lecțiile lunii pentru această grupă ({defaultLessons} lecții).
-            Data plății decide în ce lună apare încasarea.
+            Plata acoperă lecțiile lunii alese pentru această grupă ({defaultLessons} lecții).
+            Data încasării rămâne separată — poți plăti în avans sau cu întârziere.
           </p>
 
           <div className="flex gap-2">

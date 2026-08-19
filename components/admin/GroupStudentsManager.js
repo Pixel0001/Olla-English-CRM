@@ -1,5 +1,7 @@
 'use client'
 
+import { monthOptions, paidForMonth, periodLabel } from '@/lib/payments'
+
 import { useState, Fragment, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -34,12 +36,7 @@ const STATUS_CONFIG = {
 // Suma achitată de elev în luna curentă (0 = neachitat)
 function paidThisMonth(payments = []) {
   const now = new Date()
-  const total = (payments || [])
-    .filter((p) => {
-      const d = new Date(p.paymentDate)
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
-    })
-    .reduce((sum, p) => sum + (p.amount || 0), 0)
+  const total = paidForMonth(payments, now.getFullYear(), now.getMonth() + 1)
   return total > 0 ? total : null
 }
 
@@ -79,7 +76,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
     paymentDate: new Date().toISOString().split('T')[0],
     paymentMethod: 'cash',
     notes: '',
-    lessonsAdded: ''
+    forPeriod: currentPeriod()
   })
   const [savingPayment, setSavingPayment] = useState(false)
   const [show2FAModal, setShow2FAModal] = useState(false)
@@ -233,7 +230,9 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
       paymentDate: paymentForm.paymentDate,
       paymentMethod: paymentForm.paymentMethod,
       notes: paymentForm.notes,
-      lessonsAdded: null
+      lessonsAdded: null,
+      forYear: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[0], 10) : null,
+      forMonth: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[1], 10) : null
     }
 
     // If user has 2FA enabled, require verification
@@ -667,11 +666,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                                     {payment.paymentMethod === 'cash' ? 'Numerar' :
                                      payment.paymentMethod === 'card' ? 'Card' : 'Transfer'}
                                   </span>
-                                  {payment.lessonsAdded && (
-                                    <span className="text-xs text-indigo-600 font-medium">
-                                      +{payment.lessonsAdded} lecții
-                                    </span>
-                                  )}
+                                  <span className="text-indigo-600">{periodLabel(payment)}</span>
                                   {payment.notes && (
                                     <span className="text-xs text-gray-500 italic">{payment.notes}</span>
                                   )}
@@ -814,9 +809,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                               <span className="text-gray-500">
                                 {new Date(payment.paymentDate).toLocaleDateString('ro-RO')}
                               </span>
-                              {payment.lessonsAdded && (
-                                <span className="text-indigo-600">+{payment.lessonsAdded} lecții</span>
-                              )}
+                              <span className="text-indigo-600">{periodLabel(payment)}</span>
                             </div>
                             {canDeletePayments && (
                             <button
@@ -957,6 +950,23 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                   </div>
                 </div>
 
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Plată pentru luna
+                </label>
+                <select
+                  value={paymentForm.forPeriod}
+                  onChange={(e) => setPaymentForm(prev => ({ ...prev, forPeriod: e.target.value }))}
+                  className="w-full px-4 py-2.5 xs:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 font-medium"
+                >
+                  {monthOptions().map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}{o.isCurrent ? ' (curentă)' : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Payment Method - Visual Selection */}
