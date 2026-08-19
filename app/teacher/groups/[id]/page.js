@@ -8,6 +8,8 @@ const StartSessionButton = dynamic(() => import('@/components/teacher/StartSessi
 const EditGroupDetailsButton = dynamic(() => import('@/components/teacher/EditGroupDetailsButton'))
 import CopyStudentsButton from '@/components/CopyStudentsButton'
 import LessonPackagePanel from '@/components/groups/LessonPackagePanel'
+import AddPaymentButton from '@/components/admin/AddPaymentButton'
+import { paidForMonth } from '@/lib/payments'
 import TrialLessonsPanel from '@/components/groups/TrialLessonsPanel'
 import { 
   AcademicCapIcon, 
@@ -16,6 +18,13 @@ import {
   PlusIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
+
+// Cât a achitat elevul pentru luna curentă (null dacă nimic)
+const paidThisMonth = (payments = []) => {
+  const now = new Date()
+  const total = paidForMonth(payments, now.getFullYear(), now.getMonth() + 1)
+  return total > 0 ? total : null
+}
 
 // Helper pentru formatarea programului
 const formatSchedule = (scheduleDays, scheduleTime) => {
@@ -73,7 +82,6 @@ export default async function TeacherGroupDetailPage({ params }) {
           student: true,
           payments: {
             orderBy: { paymentDate: 'desc' },
-            take: 1,
           },
         }
       },
@@ -275,26 +283,17 @@ export default async function TeacherGroupDetailPage({ params }) {
                 <div 
                   key={gs.student?.id || gs.id} 
                   className={`p-2.5 xs:p-3 md:p-4 rounded-lg xs:rounded-xl border ${
-                    isInactive ? 'bg-gray-50 border-gray-200 opacity-60' :
-                    gs.lessonsRemaining === 0 ? 'bg-red-50 border-red-200' : 
-                    gs.lessonsRemaining <= 2 ? 'bg-amber-50 border-amber-200' : 
-                    'bg-gray-50 border-gray-100'
+                    isInactive ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-gray-50 border-gray-100'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2 xs:gap-3">
                     {/* Student Info */}
                     <div className="flex items-center gap-2 xs:gap-3 min-w-0 flex-1">
                       <div className={`w-8 h-8 xs:w-9 xs:h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        isInactive ? 'bg-gray-200' :
-                        gs.lessonsRemaining === 0 ? 'bg-red-200' : 
-                        gs.lessonsRemaining <= 2 ? 'bg-amber-200' : 
-                        'bg-teal-100'
+                        isInactive ? 'bg-gray-200' : 'bg-teal-100'
                       }`}>
                         <span className={`font-semibold text-xs xs:text-sm ${
-                          isInactive ? 'text-gray-500' :
-                          gs.lessonsRemaining === 0 ? 'text-red-700' : 
-                          gs.lessonsRemaining <= 2 ? 'text-amber-700' : 
-                          'text-teal-700'
+                          isInactive ? 'text-gray-500' : 'text-teal-700'
                         }`}>
                           {gs.student?.fullName?.charAt(0) || 'E'}
                         </span>
@@ -316,33 +315,27 @@ export default async function TeacherGroupDetailPage({ params }) {
                              status === 'LEFT' ? 'Plecat' :
                              status === 'TRANSFERRED' ? 'Transferat' : 'Terminat'}
                           </span>
-                          {!isInactive && gs.lessonsRemaining === 0 && (
-                            <span className="text-[10px] xs:text-xs text-red-600 font-medium">Nu a achitat!</span>
-                          )}
                         </div>
                       </div>
                     </div>
 
-                    {/* Stats */}
-                    <div className="flex items-center gap-1.5 xs:gap-2 flex-shrink-0">
-                      <div className="text-center">
-                        <p className={`text-sm xs:text-base md:text-lg font-bold ${
-                          gs.lessonsRemaining > 3 ? 'text-green-600' :
-                          gs.lessonsRemaining > 0 ? 'text-amber-600' :
-                          'text-red-600'
-                        }`}>
-                          {gs.lessonsRemaining}
-                        </p>
-                        <p className="text-[9px] xs:text-[10px] text-gray-500">lecții</p>
-                      </div>
-                      <div className="text-center">
-                        <p className={`text-sm xs:text-base md:text-lg font-bold ${
-                          gs.absences === 0 ? 'text-gray-400' : 'text-red-600'
-                        }`}>
-                          {gs.absences}
-                        </p>
-                        <p className="text-[9px] xs:text-[10px] text-gray-500">abs</p>
-                      </div>
+                    {/* Plata lunii curente — lecțiile se numără per grupă */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {paidThisMonth(gs.payments) ? (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] xs:text-xs font-medium whitespace-nowrap">
+                          achitat {paidThisMonth(gs.payments).toLocaleString('ro-RO')} MDL
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 text-[10px] xs:text-xs font-medium whitespace-nowrap">
+                          neachitat
+                        </span>
+                      )}
+
+                      <AddPaymentButton
+                        variant="link"
+                        studentName={gs.student?.fullName}
+                        groups={[{ groupStudentId: gs.id, groupName: group.name }]}
+                      />
                     </div>
                   </div>
 
