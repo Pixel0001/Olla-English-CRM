@@ -718,6 +718,7 @@ enum LeadStatus {
   LEAD              // 🔵 Lead nou
   FARA_RASPUNS      // 🔘 Fără răspuns
   CONTACTAT         // 🟡 Contactat
+  PROGRAMAT_TESTARE // 📝 Programat la testare
   PROGRAMAT         // 🟠 Programat la lecție
   PRIMA_LECTIE      // 🟢 A venit la prima lecție
   FINALIZAT_LECTIA  // ⚫ A terminat lecția de probă
