@@ -6,6 +6,7 @@ import prisma from '@/lib/prisma'
 import { requireAdmin } from '@/lib/session'
 import { checkPermission } from '@/lib/permissions'
 import { paidForMonth, periodLabel } from '@/lib/payments'
+import AddPaymentButton from '@/components/admin/AddPaymentButton'
 import {
   ArrowLeftIcon,
   PencilSquareIcon,
@@ -130,6 +131,14 @@ export default async function StudentDetailPage({ params }) {
           </div>
         </div>
 
+        <div className="flex flex-wrap gap-2">
+          <AddPaymentButton
+            studentName={student.fullName}
+            groups={student.groupStudents
+              .filter((gs) => !['LEFT', 'TRANSFERRED'].includes(gs.status))
+              .map((gs) => ({ groupStudentId: gs.id, groupName: gs.group.name }))}
+          />
+
         {canEdit.allowed && (
           <Link
             href={`/admin/students/${id}/edit`}
@@ -139,6 +148,7 @@ export default async function StudentDetailPage({ params }) {
             Editează
           </Link>
         )}
+        </div>
       </div>
 
       {/* Sinteză */}

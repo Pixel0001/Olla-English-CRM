@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AddStudentButton from '@/components/admin/AddStudentButton'
 import DeleteStudentButton from '@/components/admin/DeleteStudentButton'
+import AddPaymentButton from '@/components/admin/AddPaymentButton'
 import { usePermissions, PermissionGate } from '@/hooks/usePermissions'
 
 export default function StudentsPage() {
@@ -266,6 +267,14 @@ export default function StudentsPage() {
                           Editează
                         </Link>
                       </PermissionGate>
+                      <AddPaymentButton
+                        variant="link"
+                        studentName={student.fullName}
+                        groups={(student.groupStudents || [])
+                          .filter((gs) => !['LEFT', 'TRANSFERRED'].includes(gs.status))
+                          .map((gs) => ({ groupStudentId: gs.id, groupName: gs.group?.name || 'Grupă' }))}
+                        onSaved={() => fetchStudents()}
+                      />
                       <PermissionGate permission="students.delete">
                         <DeleteStudentButton id={student.id} name={student.fullName} />
                       </PermissionGate>
