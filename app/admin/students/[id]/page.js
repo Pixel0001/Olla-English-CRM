@@ -79,9 +79,10 @@ export default async function StudentDetailPage({ params }) {
     },
   })
 
-  // Prezențele, grupate pe lună, cele mai recente primele
+  // Prezențele, grupate pe lună, în ordine cronologică — la fel ca în
+  // tabelul grupei, ca lecția 1 să fie prima, nu ultima
   const byMonth = new Map()
-  for (const a of [...attendances].sort((x, y) => new Date(y.session.date) - new Date(x.session.date))) {
+  for (const a of [...attendances].sort((x, y) => new Date(x.session.date) - new Date(y.session.date))) {
     const d = new Date(a.session.date)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     if (!byMonth.has(key)) {
@@ -97,7 +98,9 @@ export default async function StudentDetailPage({ params }) {
     if (a.status === 'PRESENT') bucket.present++
     else bucket.absent++
   }
-  const attendanceMonths = [...byMonth.values()]
+  const attendanceMonths = [...byMonth.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, v]) => v)
 
   const presentCount = attendances.filter((a) => a.status === 'PRESENT').length
   const absentCount = attendances.filter((a) => a.status === 'ABSENT').length
@@ -269,7 +272,7 @@ export default async function StudentDetailPage({ params }) {
                 </div>
 
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                  {m.items.map((a) => (
+                  {m.items.map((a, i) => (
                     <div
                       key={a.id}
                       className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs ${
@@ -278,6 +281,7 @@ export default async function StudentDetailPage({ params }) {
                           : 'border-red-200 bg-red-50'
                       }`}
                     >
+                      <span className="text-gray-400 tabular-nums w-4 shrink-0">{i + 1}.</span>
                       <span className={a.status === 'PRESENT' ? 'text-emerald-700' : 'text-red-700'}>
                         {a.status === 'PRESENT' ? '✓' : '✗'}
                       </span>
