@@ -232,6 +232,8 @@ model Student {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   fullName     String
   age          Int?
+  isAdult      Boolean @default(false) // Elev adult — fără părinte și fără clasă
+  level        String?  // Nivelul de engleză (A1.2, B1.3, Cambridge…)
   parentName   String?
   parentPhone  String?
   parentEmail  String?

@@ -127,8 +127,9 @@ export default async function StudentDetailPage({ params }) {
           <div>
             <h1 className="text-xl xs:text-2xl font-bold text-gray-900">{student.fullName}</h1>
             <p className="text-sm text-gray-600">
-              {student.age ? `${student.age} ani` : 'vârstă nespecificată'}
-              {student.grade ? ` · clasa ${student.grade}` : ''}
+              {student.isAdult ? 'adult' : student.age ? `${student.age} ani` : 'vârstă nespecificată'}
+              {student.level ? ` · ${student.level}` : ''}
+              {!student.isAdult && student.grade ? ` · clasa ${student.grade}` : ''}
               {activeGroups.length > 0 ? ` · ${activeGroups.length} ${activeGroups.length === 1 ? 'grupă' : 'grupe'}` : ''}
             </p>
           </div>
@@ -173,7 +174,7 @@ export default async function StudentDetailPage({ params }) {
           Date de contact
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-          <Field label="Părinte" value={student.parentName} />
+          {!student.isAdult && <Field label="Părinte" value={student.parentName} />}
           <Field label="Telefon">
             {student.parentPhone ? (
               <a href={`tel:${student.parentPhone}`} className="text-indigo-600 hover:underline flex items-center gap-1">

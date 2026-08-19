@@ -87,7 +87,7 @@ export async function PATCH(request, { params }) {
     const body = await request.json()
 
     const allowedFields = [
-      'superStudent', 'active',
+      'superStudent', 'active', 'isAdult', 'level',
       'cooldownOverrideMin', 'dailyXpCapOverride',
       'cooldownDisabled', 'xpCapDisabled',
     ]

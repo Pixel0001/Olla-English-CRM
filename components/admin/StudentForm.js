@@ -1,5 +1,7 @@
 'use client'
 
+import LevelSelect from '@/components/LevelSelect'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -15,6 +17,8 @@ export default function StudentForm({ student }) {
   const [formData, setFormData] = useState({
     fullName: student?.fullName || '',
     age: student?.age || '',
+    isAdult: student?.isAdult ?? false,
+    level: student?.level || '',
     grade: student?.grade || '',
     parentName: student?.parentName || '',
     parentPhone: student?.parentPhone || '',
@@ -49,6 +53,10 @@ export default function StudentForm({ student }) {
       const payload = {
         ...formData,
         age: formData.age ? parseInt(formData.age) : null,
+        isAdult: formData.isAdult,
+        level: formData.level || null,
+        // La adulți nu are rost clasa sau datele părintelui
+        ...(formData.isAdult ? { grade: null, parentName: null } : {}),
         grade: formData.grade ? parseInt(formData.grade) : null,
       }
       if (actionToken) {
@@ -99,6 +107,34 @@ export default function StudentForm({ student }) {
             />
           </div>
 
+          <div className="sm:col-span-2">
+            <label className="flex items-start gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-indigo-300">
+              <input
+                type="checkbox"
+                name="isAdult"
+                checked={formData.isAdult}
+                onChange={handleChange}
+                className="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span>
+                <span className="block text-sm font-medium text-gray-900">Elev adult</span>
+                <span className="block text-xs text-gray-500">
+                  Fără clasă și fără datele părintelui — contactul e al lui
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nivel</label>
+            <LevelSelect
+              value={formData.level}
+              onChange={(e) => setFormData(prev => ({ ...prev, level: e.target.value }))}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+              emptyLabel="— Nespecificat —"
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Vârstă</label>
             <input
@@ -112,7 +148,7 @@ export default function StudentForm({ student }) {
             />
           </div>
 
-          <div>
+          <div className={formData.isAdult ? 'hidden' : ''}>
             <label className="block text-sm font-medium text-gray-700 mb-1">Clasa</label>
             <select
               name="grade"
@@ -127,7 +163,7 @@ export default function StudentForm({ student }) {
             </select>
           </div>
 
-          <div>
+          <div className={formData.isAdult ? 'hidden' : ''}>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nume părinte</label>
             <input
               type="text"
@@ -139,7 +175,9 @@ export default function StudentForm({ student }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Telefon părinte</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {formData.isAdult ? 'Telefon' : 'Telefon părinte'}
+            </label>
             <input
               type="tel"
               name="parentPhone"
@@ -150,7 +188,9 @@ export default function StudentForm({ student }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email părinte</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {formData.isAdult ? 'Email' : 'Email părinte'}
+            </label>
             <input
               type="email"
               name="parentEmail"
