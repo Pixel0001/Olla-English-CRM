@@ -69,6 +69,7 @@ function buildCsv(data) {
   out.push(csvRow(['Status', group.active ? 'Activă' : 'Inactivă']))
   out.push(csvRow(['Total lecții ținute', sessions.length]))
   out.push(csvRow(['Total încasat (lei)', totals.paid]))
+  if (group.notes) out.push(csvRow(['Detalii', group.notes]))
   out.push('')
 
   out.push('ELEVI')
@@ -173,6 +174,7 @@ function buildHtml(data) {
   .names.ok { color: #047857; }
   .names.bad { color: #b91c1c; }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .notes { margin: 12px 0 4px; padding: 8px 12px; border-left: 3px solid #e5e7eb; background: #f9fafb; font-size: 11px; color: #374151; white-space: pre-wrap; }
   footer { margin-top: 20px; padding-top: 8px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 9px; }
   @media print {
     body { padding: 10mm; }
@@ -194,6 +196,8 @@ function buildHtml(data) {
       <b>Status:</b> ${group.active ? 'activă' : 'inactivă'}
     </div>
   </header>
+
+  ${group.notes ? `<div class="notes"><b>Detalii:</b> ${esc(group.notes)}</div>` : ''}
 
   <div class="cards">
     <div class="card"><span>Elevi</span><b>${students.length}</b></div>

@@ -370,6 +370,8 @@ model Group {
   locationType    String?  // "offline" / "online"
   locationDetails String?  // Sala/Link
   startDate       DateTime?
+  notes           String?  // Detalii despre grupă (manual, condiții, observații)
+
   // Cum se plătește: lunar pe grupă (implicit) sau individual, pe lecții
   billingType     BillingType @default(MONTHLY)
   monthlyLessons  Int      @default(8) // Câte lecții se achită lunar pentru grupă (poate fi suprascris pe o lună anume)

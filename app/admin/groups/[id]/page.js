@@ -78,6 +78,13 @@ export default async function EditGroupPage({ params }) {
       </div>
 
       {/* Pornirea unei lecții la orice dată, când profesorul nu a apucat */}
+      {group.notes && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 xs:p-4">
+          <p className="text-xs font-semibold text-amber-900 mb-1">Detalii despre grupă</p>
+          <p className="text-sm text-amber-900 whitespace-pre-wrap">{group.notes}</p>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 xs:p-6">
         <h2 className="text-base font-semibold text-gray-900 mb-1">Înregistrează o lecție</h2>
         <p className="text-xs text-gray-600 mb-3">

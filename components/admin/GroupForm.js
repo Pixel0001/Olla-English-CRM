@@ -45,6 +45,7 @@ export default function GroupForm({ group, teachers, branches = [] }) {
     startDate: group?.startDate ? new Date(group.startDate).toISOString().split('T')[0] : '',
     monthlyLessons: group?.monthlyLessons ?? 8,
     billingType: group?.billingType || 'MONTHLY',
+    notes: group?.notes || '',
     isTrial: group?.isTrial ?? false,
     trialDate: group?.trialDate
       ? new Date(group.trialDate).toISOString().slice(0, 10)
@@ -177,6 +178,7 @@ export default function GroupForm({ group, teachers, branches = [] }) {
         startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
         monthlyLessons: parseInt(formData.monthlyLessons, 10) || 8,
         billingType: formData.billingType,
+        notes: formData.notes?.trim() || null,
         isTrial: formData.isTrial,
         // Proba are o singură dată; nu intră în orarul săptămânal
         trialDate: formData.isTrial && formData.trialDate
@@ -495,6 +497,18 @@ export default function GroupForm({ group, teachers, branches = [] }) {
             <span className="text-xs xs:text-sm font-medium text-gray-700">Grupă activă</span>
           </label>
         </div>
+      </div>
+
+      <div>
+        <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">Detalii despre grupă</label>
+        <textarea
+          name="notes"
+          value={formData.notes}
+          onChange={handleChange}
+          rows={3}
+          placeholder="Manual folosit, condiții speciale, observații — apar și în raportul grupei"
+          className="w-full px-3 xs:px-4 py-2 text-sm xs:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 resize-none"
+        />
       </div>
 
       <div className="flex flex-col xs:flex-row gap-2 xs:gap-4 pt-3 xs:pt-4 border-t">
