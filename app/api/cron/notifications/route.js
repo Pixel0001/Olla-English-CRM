@@ -256,7 +256,7 @@ export async function GET(request) {
             group.teacher?.telegramChatId || null
           )
           
-          notificationsCreated.push(`Missed group session: ${group.name} (${group.teacher.name})`)
+          notificationsCreated.push(`Missed group session: ${group.name} (${group.teacher.name}) — ${group.teacher?.telegramChatId ? 'mesaj privat trimis' : 'profesorul nu are Telegram conectat'}`)
         }
       }
     }
