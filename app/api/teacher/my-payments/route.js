@@ -47,7 +47,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json()
-    const { groupStudentId, amount, paymentMethod, notes, forYear, forMonth } = body
+    const { groupStudentId, amount, paymentMethod, notes, forYear, forMonth, lessonsAdded } = body
 
     if (!groupStudentId) {
       return NextResponse.json({ error: 'Selectează o grupă' }, { status: 400 })
@@ -89,7 +89,7 @@ export async function POST(request) {
           forMonth: forMonth ? parseInt(forMonth, 10) : null,
           paymentMethod: paymentMethod || null,
           notes: notes || null,
-          lessonsAdded: null,
+          lessonsAdded: lessonsAdded ? parseInt(lessonsAdded, 10) : null,
           createdById: session.user.id
         },
         include: {
@@ -104,6 +104,13 @@ export async function POST(request) {
           }
         }
       })
+
+      if (lessonsAdded && parseInt(lessonsAdded, 10) > 0) {
+        await tx.groupStudent.update({
+          where: { id: groupStudentId },
+          data: { lessonsRemaining: { increment: parseInt(lessonsAdded, 10) } },
+        })
+      }
 
       return payment
     })

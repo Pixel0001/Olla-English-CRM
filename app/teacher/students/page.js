@@ -82,6 +82,8 @@ export default function TeacherStudentsPage() {
     groupStudentId: '',
     amount: '',
     forPeriod: currentPeriod(),
+    mode: 'MONTHLY',
+    lessons: '8',
     paymentMethod: 'cash',
     notes: ''
   })
@@ -170,8 +172,12 @@ export default function TeacherStudentsPage() {
         body: JSON.stringify({
           groupStudentId: paymentForm.groupStudentId,
           amount: paymentForm.amount,
-          forYear: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[0], 10) : null,
-          forMonth: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[1], 10) : null,
+          ...(paymentForm.mode === 'INDIVIDUAL'
+            ? { lessonsAdded: parseInt(paymentForm.lessons, 10) || 0 }
+            : {
+                forYear: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[0], 10) : null,
+                forMonth: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[1], 10) : null,
+              }),
           paymentMethod: paymentForm.paymentMethod,
           notes: paymentForm.notes
         })
@@ -869,20 +875,55 @@ export default function TeacherStudentsPage() {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-1">Plată pentru luna *</label>
-                <select
-                  value={paymentForm.forPeriod}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, forPeriod: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+              <div className="grid grid-cols-2 gap-1 p-1 bg-gray-100 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setPaymentForm({ ...paymentForm, mode: 'MONTHLY' })}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    paymentForm.mode === 'MONTHLY' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+                  }`}
                 >
-                  {monthOptions().map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}{o.isCurrent ? ' (curentă)' : ''}
-                    </option>
-                  ))}
-                </select>
+                  Grupă — lunar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentForm({ ...paymentForm, mode: 'INDIVIDUAL' })}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    paymentForm.mode === 'INDIVIDUAL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+                  }`}
+                >
+                  Individual — pe lecții
+                </button>
               </div>
+
+              {paymentForm.mode === 'INDIVIDUAL' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">Lecții achitate *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={paymentForm.lessons}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, lessons: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">Plată pentru luna *</label>
+                  <select
+                    value={paymentForm.forPeriod}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, forPeriod: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+                  >
+                    {monthOptions().map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}{o.isCurrent ? ' (curentă)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">Metodă Plată</label>
                 <select

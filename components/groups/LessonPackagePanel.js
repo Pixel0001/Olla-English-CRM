@@ -581,6 +581,8 @@ function PaymentModal({ student, monthLabel, defaultLessons, year, month, onClos
   const [method, setMethod] = useState('cash')
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [period, setPeriod] = useState(`${year}-${month}`)
+  const [payMode, setPayMode] = useState('MONTHLY')
+  const [lessons, setLessons] = useState('8')
   const periods = monthOptions()
   const [saving, setSaving] = useState(false)
 
@@ -605,8 +607,12 @@ function PaymentModal({ student, monthLabel, defaultLessons, year, month, onClos
           amount: value,
           paymentDate: new Date(date).toISOString(),
           paymentMethod: method,
-          forYear: parseInt(period.split('-')[0], 10),
-          forMonth: parseInt(period.split('-')[1], 10),
+          ...(payMode === 'INDIVIDUAL'
+            ? { lessonsAdded: parseInt(lessons, 10) || 0 }
+            : {
+                forYear: parseInt(period.split('-')[0], 10),
+                forMonth: parseInt(period.split('-')[1], 10),
+              }),
           notes: `Plată ${monthLabel}`,
         }),
       })
@@ -661,20 +667,55 @@ function PaymentModal({ student, monthLabel, defaultLessons, year, month, onClos
                 <option value="transfer">Transfer</option>
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Plată pentru luna *</label>
-              <select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            <div className="col-span-2 grid grid-cols-2 gap-1 p-1 bg-gray-100 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setPayMode('MONTHLY')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  payMode === 'MONTHLY' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+                }`}
               >
-                {periods.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}{o.isCurrent ? ' (curentă)' : ''}
-                  </option>
-                ))}
-              </select>
+                Grupă — lunar
+              </button>
+              <button
+                type="button"
+                onClick={() => setPayMode('INDIVIDUAL')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  payMode === 'INDIVIDUAL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+                }`}
+              >
+                Individual — pe lecții
+              </button>
             </div>
+
+            {payMode === 'INDIVIDUAL' ? (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Lecții achitate *</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={lessons}
+                  onChange={(e) => setLessons(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Plată pentru luna *</label>
+                <select
+                  value={period}
+                  onChange={(e) => setPeriod(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  {periods.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}{o.isCurrent ? ' (curentă)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Data încasării</label>
               <input
