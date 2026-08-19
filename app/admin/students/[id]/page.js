@@ -5,6 +5,7 @@ import Link from 'next/link'
 import prisma from '@/lib/prisma'
 import { requireAdmin } from '@/lib/session'
 import { checkPermission } from '@/lib/permissions'
+import { paidForMonth, periodLabel } from '@/lib/payments'
 import {
   ArrowLeftIcon,
   PencilSquareIcon,
@@ -14,7 +15,13 @@ import {
   EnvelopeIcon,
   UserIcon,
   BanknotesIcon,
+  CheckCircleIcon,
 } from '@heroicons/react/24/outline'
+
+const MONTH_NAMES = [
+  'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+  'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie',
+]
 
 const STATUS_LABELS = {
   ACTIVE: { label: 'Activ', color: 'bg-green-100 text-green-700' },
@@ -27,11 +34,7 @@ const STATUS_LABELS = {
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'
 
-const isThisMonth = (d) => {
-  const now = new Date()
-  const date = new Date(d)
-  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
-}
+
 
 export default async function StudentDetailPage({ params }) {
   await requireAdmin()
@@ -65,8 +68,35 @@ export default async function StudentDetailPage({ params }) {
   // Prezențele elevului, din sesiunile grupelor în care e înscris
   const attendances = await prisma.attendance.findMany({
     where: { studentId: id },
-    select: { status: true, session: { select: { date: true, groupId: true } } },
+    select: {
+      id: true,
+      status: true,
+      notes: true,
+      session: {
+        select: { date: true, groupId: true, group: { select: { name: true } } },
+      },
+    },
   })
+
+  // Prezențele, grupate pe lună, cele mai recente primele
+  const byMonth = new Map()
+  for (const a of [...attendances].sort((x, y) => new Date(y.session.date) - new Date(x.session.date))) {
+    const d = new Date(a.session.date)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    if (!byMonth.has(key)) {
+      byMonth.set(key, {
+        label: `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`,
+        items: [],
+        present: 0,
+        absent: 0,
+      })
+    }
+    const bucket = byMonth.get(key)
+    bucket.items.push(a)
+    if (a.status === 'PRESENT') bucket.present++
+    else bucket.absent++
+  }
+  const attendanceMonths = [...byMonth.values()]
 
   const presentCount = attendances.filter((a) => a.status === 'PRESENT').length
   const absentCount = attendances.filter((a) => a.status === 'ABSENT').length
@@ -75,9 +105,8 @@ export default async function StudentDetailPage({ params }) {
     gs.payments.map((p) => ({ ...p, groupName: gs.group.name }))
   )
   const totalPaid = allPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
-  const paidThisMonth = allPayments
-    .filter((p) => isThisMonth(p.paymentDate))
-    .reduce((sum, p) => sum + (p.amount || 0), 0)
+  const now = new Date()
+  const paidThisMonth = paidForMonth(allPayments, now.getFullYear(), now.getMonth() + 1)
 
   const activeGroups = student.groupStudents.filter(
     (gs) => !['LEFT', 'TRANSFERRED'].includes(gs.status)
@@ -210,6 +239,54 @@ export default async function StudentDetailPage({ params }) {
         )}
       </div>
 
+      {/* Prezențe */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 xs:p-6">
+        <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <CheckCircleIcon className="h-5 w-5 text-emerald-600" />
+          Prezențe
+        </h2>
+
+        {attendanceMonths.length === 0 ? (
+          <p className="text-sm text-gray-500">Nicio lecție înregistrată încă.</p>
+        ) : (
+          <div className="space-y-4">
+            {attendanceMonths.map((m) => (
+              <div key={m.label}>
+                <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                  <h3 className="text-sm font-semibold text-gray-900 capitalize">{m.label}</h3>
+                  <span className="text-xs text-emerald-700">{m.present} prezent</span>
+                  <span className="text-xs text-red-600">{m.absent} absent</span>
+                </div>
+
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                  {m.items.map((a) => (
+                    <div
+                      key={a.id}
+                      className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs ${
+                        a.status === 'PRESENT'
+                          ? 'border-emerald-200 bg-emerald-50'
+                          : 'border-red-200 bg-red-50'
+                      }`}
+                    >
+                      <span className={a.status === 'PRESENT' ? 'text-emerald-700' : 'text-red-700'}>
+                        {a.status === 'PRESENT' ? '✓' : '✗'}
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {new Date(a.session.date).toLocaleDateString('ro-RO', {
+                          day: '2-digit', month: '2-digit', year: 'numeric',
+                        })}
+                      </span>
+                      <span className="text-gray-500 truncate">{a.session.group?.name || '—'}</span>
+                      {a.notes && <span className="text-gray-400 truncate">· {a.notes}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Plăți */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 xs:p-6">
         <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -226,6 +303,7 @@ export default async function StudentDetailPage({ params }) {
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Grupa</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pentru luna</th>
                   <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Sumă</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Metodă</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Înregistrat de</th>
@@ -238,6 +316,7 @@ export default async function StudentDetailPage({ params }) {
                     <tr key={p.id} className="hover:bg-gray-50">
                       <td className="px-3 py-2 whitespace-nowrap text-gray-700">{formatDate(p.paymentDate)}</td>
                       <td className="px-3 py-2 text-gray-700">{p.groupName}</td>
+                      <td className="px-3 py-2 text-gray-700 capitalize whitespace-nowrap">{periodLabel(p)}</td>
                       <td className="px-3 py-2 text-right font-semibold text-emerald-700 whitespace-nowrap">
                         {(p.amount || 0).toLocaleString('ro-RO')} MDL
                       </td>

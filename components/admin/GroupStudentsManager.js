@@ -1,13 +1,18 @@
 'use client'
 
-import { monthOptions, paidForMonth, periodLabel } from '@/lib/payments'
-
 import { useState, Fragment, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import TwoFactorModal from './TwoFactorModal'
 import CopyStudentsButton from '@/components/CopyStudentsButton'
+import { monthOptions, paidForMonth, periodLabel } from '@/lib/payments'
+
+// Luna curentă, în formatul folosit de selectorul de plată
+const currentPeriod = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${now.getMonth() + 1}`
+}
 import { 
   PlusIcon, 
   MinusIcon, 
