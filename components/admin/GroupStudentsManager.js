@@ -31,6 +31,18 @@ const STATUS_CONFIG = {
   TRANSFERRED: { label: 'Transferat', color: 'purple', icon: ArrowsRightLeftIcon }
 }
 
+// Suma achitată de elev în luna curentă (0 = neachitat)
+function paidThisMonth(payments = []) {
+  const now = new Date()
+  const total = (payments || [])
+    .filter((p) => {
+      const d = new Date(p.paymentDate)
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+    })
+    .reduce((sum, p) => sum + (p.amount || 0), 0)
+  return total > 0 ? total : null
+}
+
 export default function GroupStudentsManager({ group, allStudents, allGroups = [], permissions = {} }) {
   // Destructure permissions with defaults
   const {
@@ -487,8 +499,6 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Elev</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lecții rămase</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Absențe</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plăți</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Înscris la</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acțiuni</th>
@@ -556,97 +566,6 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                         <p className="text-xs text-gray-500 mt-1" title={gs.statusNote}>
                           {gs.statusNote}
                         </p>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          gs.lessonsRemaining > 3 ? 'bg-green-100 text-green-800' : 
-                          gs.lessonsRemaining > 0 ? 'bg-yellow-100 text-yellow-800' : 
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {gs.lessonsRemaining} lecții
-                        </span>
-                        {gs.lessonsRemaining === 0 && (
-                          <span className="text-xs text-red-600 font-medium">Nu a achitat!</span>
-                        )}
-                        {gs.lessonsRemaining > 0 && gs.lessonsRemaining <= 2 && (
-                          <span className="text-xs text-amber-600 font-medium">Aproape expirat</span>
-                        )}
-                      </div>
-                      
-                      {/* Add/Remove lessons controls */}
-                      {canModifyLessons && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <button
-                          onClick={() => setLessonsToAdd(prev => ({ ...prev, [gs.id]: (prev[gs.id] || 0) - 1 }))}
-                          className="p-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600"
-                        >
-                          <MinusIcon className="w-4 h-4" />
-                        </button>
-                        <input
-                          type="number"
-                          value={lessonsToAdd[gs.id] || 0}
-                          onChange={(e) => setLessonsToAdd(prev => ({ ...prev, [gs.id]: parseInt(e.target.value) || 0 }))}
-                          className="w-16 px-2 py-1 text-center border border-gray-300 rounded text-sm text-gray-900"
-                        />
-                        <button
-                          onClick={() => setLessonsToAdd(prev => ({ ...prev, [gs.id]: (prev[gs.id] || 0) + 1 }))}
-                          className="p-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600"
-                        >
-                          <PlusIcon className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleAddLessons(gs.id)}
-                          disabled={!lessonsToAdd[gs.id] || addingLessons[gs.id]}
-                          className="px-3 py-1 bg-indigo-600 text-white text-xs rounded font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {addingLessons[gs.id] ? '...' : 'Salvează'}
-                        </button>
-                      </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {/* Absences display */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          (gs.absences || 0) === 0 ? 'bg-green-100 text-green-800' :
-                          (gs.absences || 0) <= 2 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {Math.max(0, gs.absences || 0)} {Math.max(0, gs.absences || 0) === 1 ? 'absență' : 'absențe'}
-                        </span>
-                      </div>
-                      
-                      {/* Add/Remove absences controls */}
-                      {canModifyAbsences && (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setAbsencesToAdd(prev => ({ ...prev, [gs.id]: (prev[gs.id] || 0) - 1 }))}
-                          className="p-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600"
-                        >
-                          <MinusIcon className="w-4 h-4" />
-                        </button>
-                        <input
-                          type="number"
-                          value={absencesToAdd[gs.id] || 0}
-                          onChange={(e) => setAbsencesToAdd(prev => ({ ...prev, [gs.id]: parseInt(e.target.value) || 0 }))}
-                          className="w-16 px-2 py-1 text-center border border-gray-300 rounded text-sm text-gray-900"
-                        />
-                        <button
-                          onClick={() => setAbsencesToAdd(prev => ({ ...prev, [gs.id]: (prev[gs.id] || 0) + 1 }))}
-                          className="p-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600"
-                        >
-                          <PlusIcon className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleAddAbsences(gs.id)}
-                          disabled={!absencesToAdd[gs.id] || addingAbsences[gs.id]}
-                          className="px-3 py-1 bg-orange-600 text-white text-xs rounded font-medium hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {addingAbsences[gs.id] ? '...' : 'Salvează'}
-                        </button>
-                      </div>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -838,98 +757,22 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                     )}
                   </div>
 
-                  {/* Lessons Section */}
-                  <div className="bg-white/50 rounded-lg p-2 xs:p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">Lecții rămase:</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] xs:text-xs font-medium ${
-                          gs.lessonsRemaining > 3 ? 'bg-green-100 text-green-800' : 
-                          gs.lessonsRemaining > 0 ? 'bg-yellow-100 text-yellow-800' : 
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {gs.lessonsRemaining}
+                  {/* Plata lunii curente — lecțiile se numără per grupă, nu per elev */}
+                  {canViewPayments && (
+                    <div className="bg-white/50 rounded-lg p-2 xs:p-3 flex items-center justify-between">
+                      <span className="text-xs text-gray-500">Luna curentă:</span>
+                      {paidThisMonth(gs.payments) ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] xs:text-xs font-medium bg-emerald-100 text-emerald-800">
+                          achitat {paidThisMonth(gs.payments).toLocaleString('ro-RO')} MDL
                         </span>
-                        {gs.lessonsRemaining === 0 && (
-                          <span className="text-[10px] text-red-600 font-medium">Nu a achitat!</span>
-                        )}
-                      </div>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] xs:text-xs font-medium bg-red-100 text-red-800">
+                          neachitat
+                        </span>
+                      )}
                     </div>
-                    {canModifyLessons && (
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => setLessonsToAdd(prev => ({ ...prev, [gs.id]: (prev[gs.id] || 0) - 1 }))}
-                        className="p-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600"
-                      >
-                        <MinusIcon className="w-3 h-3 xs:w-4 xs:h-4" />
-                      </button>
-                      <input
-                        type="number"
-                        value={lessonsToAdd[gs.id] || 0}
-                        onChange={(e) => setLessonsToAdd(prev => ({ ...prev, [gs.id]: parseInt(e.target.value) || 0 }))}
-                        className="w-12 xs:w-14 px-1 py-1 text-center border border-gray-300 rounded text-xs xs:text-sm text-gray-900"
-                      />
-                      <button
-                        onClick={() => setLessonsToAdd(prev => ({ ...prev, [gs.id]: (prev[gs.id] || 0) + 1 }))}
-                        className="p-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600"
-                      >
-                        <PlusIcon className="w-3 h-3 xs:w-4 xs:h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleAddLessons(gs.id)}
-                        disabled={!lessonsToAdd[gs.id] || addingLessons[gs.id]}
-                        className="flex-1 px-2 py-1 bg-indigo-600 text-white text-[10px] xs:text-xs rounded font-medium hover:bg-indigo-700 disabled:opacity-50"
-                      >
-                        {addingLessons[gs.id] ? '...' : 'Salvează'}
-                      </button>
-                    </div>
-                    )}
-                  </div>
+                  )}
 
-                  {/* Absences Section */}
-                  <div className="bg-white/50 rounded-lg p-2 xs:p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">Absențe:</span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] xs:text-xs font-medium ${
-                        (gs.absences || 0) === 0 ? 'bg-green-100 text-green-800' :
-                        (gs.absences || 0) <= 2 ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {Math.max(0, gs.absences || 0)}
-                      </span>
-                    </div>
-                    {canModifyAbsences && (
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => setAbsencesToAdd(prev => ({ ...prev, [gs.id]: (prev[gs.id] || 0) - 1 }))}
-                        className="p-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600"
-                      >
-                        <MinusIcon className="w-3 h-3 xs:w-4 xs:h-4" />
-                      </button>
-                      <input
-                        type="number"
-                        value={absencesToAdd[gs.id] || 0}
-                        onChange={(e) => setAbsencesToAdd(prev => ({ ...prev, [gs.id]: parseInt(e.target.value) || 0 }))}
-                        className="w-12 xs:w-14 px-1 py-1 text-center border border-gray-300 rounded text-xs xs:text-sm text-gray-900"
-                      />
-                      <button
-                        onClick={() => setAbsencesToAdd(prev => ({ ...prev, [gs.id]: (prev[gs.id] || 0) + 1 }))}
-                        className="p-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600"
-                      >
-                        <PlusIcon className="w-3 h-3 xs:w-4 xs:h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleAddAbsences(gs.id)}
-                        disabled={!absencesToAdd[gs.id] || addingAbsences[gs.id]}
-                        className="flex-1 px-2 py-1 bg-orange-600 text-white text-[10px] xs:text-xs rounded font-medium hover:bg-orange-700 disabled:opacity-50"
-                      >
-                        {addingAbsences[gs.id] ? '...' : 'Salvează'}
-                      </button>
-                    </div>
-                    )}
-                  </div>
-
-                  {/* Payments Section */}
                   {(canViewPayments || canAddPayments || canDeletePayments) && (
                   <div className="bg-white/50 rounded-lg p-2 xs:p-3 space-y-2">
                     {canViewPayments && (

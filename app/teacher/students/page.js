@@ -154,10 +154,6 @@ export default function TeacherStudentsPage() {
       toast.error('Introdu o sumă validă')
       return
     }
-    if (!paymentForm.lessonsAdded || parseInt(paymentForm.lessonsAdded) <= 0) {
-      toast.error('Introdu numărul de lecții (minim 1)')
-      return
-    }
 
     setAddingPayment(true)
     try {
@@ -167,7 +163,6 @@ export default function TeacherStudentsPage() {
         body: JSON.stringify({
           groupStudentId: paymentForm.groupStudentId,
           amount: paymentForm.amount,
-          lessonsToAdd: paymentForm.lessonsAdded,
           paymentMethod: paymentForm.paymentMethod,
           notes: paymentForm.notes
         })
@@ -864,16 +859,6 @@ export default function TeacherStudentsPage() {
                     type="number"
                     value={paymentForm.amount}
                     onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-1">Lecții Adăugate *</label>
-                  <input
-                    type="number"
-                    value={paymentForm.lessonsAdded}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, lessonsAdded: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
                     required
                   />
