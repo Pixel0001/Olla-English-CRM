@@ -251,17 +251,17 @@ export default function LessonPackagePanel({ groupId }) {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 xs:gap-3">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 xs:gap-3">
                   <BigStat
                     label="De achitat"
                     value={stats.total}
-                    hint="lecții în lună"
+                    hint={`lecții în ${MONTH_NAMES[month - 1]}`}
                     tone="neutral"
                   />
                   <BigStat
-                    label="Efectuate"
+                    label={`Efectuate în ${MONTH_NAMES[month - 1]}`}
                     value={stats.held}
-                    hint="lecții ținute"
+                    hint="lecții ținute luna asta"
                     tone="indigo"
                   />
                   <BigStat
@@ -275,6 +275,13 @@ export default function LessonPackagePanel({ groupId }) {
                     value={stats.extra > 0 ? `+${stats.extra}` : `${Math.round((stats.held / stats.total) * 100)}%`}
                     hint={stats.extra > 0 ? 'lecții neachitate' : 'din pachetul lunii'}
                     tone={stats.extra > 0 ? 'amber' : 'neutral'}
+                  />
+                  {/* Cât s-a lucrat cu grupa de la început, nu doar luna asta */}
+                  <BigStat
+                    label="Total grupă"
+                    value={data.totalSessions ?? 0}
+                    hint="lecții de la început"
+                    tone="neutral"
                   />
                 </div>
               </div>
