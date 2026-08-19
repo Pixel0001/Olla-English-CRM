@@ -227,46 +227,84 @@ export default function LessonPackagePanel({ groupId }) {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-wrap items-center gap-4">
-                <Stat label="De achitat" value={stats.total} />
-                <Stat label="Efectuate" value={stats.held} color="text-indigo-600" />
-                <Stat
-                  label="Rămase"
-                  value={stats.remaining}
-                  color={stats.remaining === 0 ? 'text-gray-500' : 'text-emerald-600'}
-                />
-                {stats.extra > 0 && <Stat label="Peste plan" value={stats.extra} color="text-amber-600" />}
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-gray-900 capitalize">
+                      {MONTH_NAMES[month - 1]} {year}
+                    </h3>
+                    {isOverride && (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-medium">
+                        lună specială
+                      </span>
+                    )}
+                  </div>
 
-                {isOverride && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-medium">
-                    lună specială
-                  </span>
-                )}
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => setEditing(true)}
+                      className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
+                    >
+                      Modifică luna asta
+                    </button>
+                  )}
+                </div>
 
-                {canEdit && (
-                  <button
-                    type="button"
-                    onClick={() => setEditing(true)}
-                    className="ml-auto px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors"
-                  >
-                    Modifică luna asta
-                  </button>
-                )}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 xs:gap-3">
+                  <BigStat
+                    label="De achitat"
+                    value={stats.total}
+                    hint="lecții în lună"
+                    tone="neutral"
+                  />
+                  <BigStat
+                    label="Efectuate"
+                    value={stats.held}
+                    hint="lecții ținute"
+                    tone="indigo"
+                  />
+                  <BigStat
+                    label="Rămase"
+                    value={stats.remaining}
+                    hint={stats.remaining === 0 ? 'pachet epuizat' : 'până la finalul lunii'}
+                    tone={stats.remaining === 0 ? 'muted' : 'emerald'}
+                  />
+                  <BigStat
+                    label={stats.extra > 0 ? 'Peste plan' : 'Progres'}
+                    value={stats.extra > 0 ? `+${stats.extra}` : `${Math.round((stats.held / stats.total) * 100)}%`}
+                    hint={stats.extra > 0 ? 'lecții neachitate' : 'din pachetul lunii'}
+                    tone={stats.extra > 0 ? 'amber' : 'neutral'}
+                  />
+                </div>
               </div>
             )}
 
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full ${stats.held >= stats.total ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                style={{ width: `${Math.min((stats.held / stats.total) * 100, 100)}%` }}
-              />
+            <div>
+              <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                <span>
+                  <b className="text-gray-900">{stats.held}</b> din <b className="text-gray-900">{stats.total}</b> lecții ținute
+                </span>
+                {stats.remaining > 0 && <span>mai sunt {stats.remaining}</span>}
+              </div>
+              <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    stats.extra > 0 ? 'bg-amber-500' : stats.held >= stats.total ? 'bg-emerald-500' : 'bg-indigo-500'
+                  }`}
+                  style={{ width: `${Math.min((stats.held / stats.total) * 100, 100)}%` }}
+                />
+              </div>
             </div>
           </div>
 
           {/* Prezențele lunii */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">
-              Prezențe — {MONTH_NAMES[month - 1]} {year}
+            <h3 className="text-base font-bold text-gray-900 mb-2">
+              Prezențe
+              <span className="ml-1.5 text-sm font-normal text-gray-500 capitalize">
+                {MONTH_NAMES[month - 1]} {year}
+              </span>
             </h3>
 
             {sessions.length === 0 ? (
@@ -398,9 +436,15 @@ export default function LessonPackagePanel({ groupId }) {
               <button
                 type="button"
                 onClick={() => setShowHistory((v) => !v)}
-                className="text-sm font-semibold text-gray-900 hover:text-indigo-600 transition-colors"
+                className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors"
               >
-                Istoric lunar ({data.history.length} luni) {showHistory ? '▴' : '▾'}
+                <span className="text-sm font-semibold text-gray-900">
+                  Istoric lunar
+                  <span className="ml-1.5 font-normal text-gray-500">
+                    {data.history.length} {data.history.length === 1 ? 'lună' : 'luni'} de la începutul grupei
+                  </span>
+                </span>
+                <span className="text-gray-400 text-lg leading-none">{showHistory ? '▴' : '▾'}</span>
               </button>
 
               {showHistory && (
@@ -456,6 +500,25 @@ export default function LessonPackagePanel({ groupId }) {
           onSaved={() => { setPayingStudent(null); load() }}
         />
       )}
+    </div>
+  )
+}
+
+const TONES = {
+  neutral: 'border-gray-200 bg-white text-gray-900',
+  indigo: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+  emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  amber: 'border-amber-200 bg-amber-50 text-amber-700',
+  muted: 'border-gray-200 bg-gray-50 text-gray-500',
+}
+
+/** Cifra lunii, scrisă mare, cu explicație dedesubt. */
+function BigStat({ label, value, hint, tone = 'neutral' }) {
+  return (
+    <div className={`rounded-xl border p-3 ${TONES[tone] || TONES.neutral}`}>
+      <p className="text-[10px] xs:text-xs uppercase tracking-wide opacity-70">{label}</p>
+      <p className="text-2xl xs:text-3xl font-bold leading-tight">{value}</p>
+      {hint && <p className="text-[10px] xs:text-[11px] opacity-70">{hint}</p>}
     </div>
   )
 }
