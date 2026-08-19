@@ -27,8 +27,8 @@ export default function StudentForm({ student }) {
   })
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    const { name, value, type, checked } = e.target
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
   const handleSubmit = async (e) => {
@@ -53,11 +53,11 @@ export default function StudentForm({ student }) {
       const payload = {
         ...formData,
         age: formData.age ? parseInt(formData.age) : null,
-        isAdult: formData.isAdult,
+        isAdult: !!formData.isAdult,
         level: formData.level || null,
-        // La adulți nu are rost clasa sau datele părintelui
-        ...(formData.isAdult ? { grade: null, parentName: null } : {}),
         grade: formData.grade ? parseInt(formData.grade) : null,
+        // La adulți nu are rost clasa sau numele părintelui
+        ...(formData.isAdult ? { grade: null, parentName: null } : {}),
       }
       if (actionToken) {
         payload.actionToken = actionToken
