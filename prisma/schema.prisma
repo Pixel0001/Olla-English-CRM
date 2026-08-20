@@ -244,6 +244,11 @@ model Student {
   superStudent Boolean  @default(false) // Super elev — accesează orice lecție din orice modul, indiferent de progres
   grade        Int?     // Clasa elevului (1-9); null = nespecificată
 
+  // Luna în care începe elevul — poate fi peste luni sau ani, până atunci
+  // stă în listă fără grupă. null = începe imediat / nespecificat.
+  startYear    Int?
+  startMonth   Int?     // 1-12
+
   // Limite per-elev (override peste grupă/global; null = folosește valoarea super-setării)
   cooldownOverrideMin Int?     // în minute, null = moștenește de la grupă/global
   dailyXpCapOverride  Int?     // în puncte XP, null = moștenește

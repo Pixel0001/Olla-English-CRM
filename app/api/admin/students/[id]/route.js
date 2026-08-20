@@ -57,7 +57,8 @@ export async function PUT(request, { params }) {
       }, { status: 403 })
     }
 
-    const { fullName, age, grade, parentName, parentPhone, parentEmail, notes, isAdult, level } = body
+    const { fullName, age, grade, parentName, parentPhone, parentEmail, notes, isAdult, level,
+      startYear, startMonth } = body
 
     const student = await prisma.student.update({
       where: { id },
@@ -71,6 +72,8 @@ export async function PUT(request, { params }) {
         notes,
         ...(isAdult === undefined ? {} : { isAdult: !!isAdult }),
         ...(level === undefined ? {} : { level: level || null }),
+        ...(startYear === undefined ? {} : { startYear: startYear ?? null }),
+        ...(startMonth === undefined ? {} : { startMonth: startMonth ?? null }),
       }
     })
 

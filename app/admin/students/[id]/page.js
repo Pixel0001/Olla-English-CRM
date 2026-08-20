@@ -131,6 +131,9 @@ export default async function StudentDetailPage({ params }) {
               {student.level ? ` · ${student.level}` : ''}
               {!student.isAdult && student.grade ? ` · clasa ${student.grade}` : ''}
               {activeGroups.length > 0 ? ` · ${activeGroups.length} ${activeGroups.length === 1 ? 'grupă' : 'grupe'}` : ''}
+              {student.startYear && student.startMonth
+                ? ` · începe ${MONTH_NAMES[student.startMonth - 1]} ${student.startYear}`
+                : ''}
             </p>
           </div>
         </div>

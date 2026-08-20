@@ -8,6 +8,17 @@ import DeleteStudentButton from '@/components/admin/DeleteStudentButton'
 import AddPaymentButton from '@/components/admin/AddPaymentButton'
 import { usePermissions, PermissionGate } from '@/hooks/usePermissions'
 
+const MONTH_NAMES = [
+  'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+  'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie',
+]
+
+// „septembrie 2027" — eticheta lunii în care începe elevul
+const startLabel = (student) =>
+  student?.startYear && student?.startMonth
+    ? `${MONTH_NAMES[student.startMonth - 1]} ${student.startYear}`
+    : null
+
 export default function StudentsPage() {
   const router = useRouter()
   const { hasPermission, isSuperAdmin } = usePermissions()
@@ -26,6 +37,8 @@ export default function StudentsPage() {
   // Filtre
   const [search, setSearch] = useState('')
   const [hasGroup, setHasGroup] = useState('')
+  const [startPeriod, setStartPeriod] = useState('')
+  const [startPeriods, setStartPeriods] = useState([])
 
   // Verifică permisiunea
   useEffect(() => {
@@ -36,7 +49,7 @@ export default function StudentsPage() {
 
   useEffect(() => {
     fetchStudents()
-  }, [currentPage, hasGroup])
+  }, [currentPage, hasGroup, startPeriod])
 
   useEffect(() => {
     fetchGroups()
@@ -58,10 +71,13 @@ export default function StudentsPage() {
       params.set('page', currentPage.toString())
       if (search) params.set('search', search)
       if (hasGroup) params.set('hasGroup', hasGroup)
+      if (startPeriod) params.set('startPeriod', startPeriod)
 
       const res = await fetch(`/api/admin/students?${params.toString()}`)
       const data = await res.json()
       
+      if (data.startPeriods) setStartPeriods(data.startPeriods)
+
       if (data.students) {
         setStudents(data.students)
         setTotalPages(data.pagination.totalPages)
@@ -90,10 +106,11 @@ export default function StudentsPage() {
   const resetFilters = () => {
     setSearch('')
     setHasGroup('')
+    setStartPeriod('')
     setCurrentPage(1)
   }
 
-  const hasActiveFilters = search || hasGroup
+  const hasActiveFilters = search || hasGroup || startPeriod
 
   // Generare numere pagini
   const getPageNumbers = () => {
@@ -176,6 +193,24 @@ export default function StudentsPage() {
               </select>
             </div>
 
+            {/* Filtru după luna de început */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Începe din luna</label>
+              <select
+                value={startPeriod}
+                onChange={(e) => { setStartPeriod(e.target.value); setCurrentPage(1); }}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white min-w-[180px]"
+              >
+                <option value="">Toate lunile</option>
+                <option value="none">Fără lună de început</option>
+                {startPeriods.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {MONTH_NAMES[p.month - 1]} {p.year} ({p.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Clear Filters */}
             {hasActiveFilters && (
               <div className="flex items-end">
@@ -241,11 +276,22 @@ export default function StudentsPage() {
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-1">
                       {student.groupStudents?.length > 0 ? (
-                        student.groupStudents.map((gs) => (
-                          <span key={gs.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-indigo-100 text-indigo-800">
-                            {gs.group?.name || 'Grupă'}
-                          </span>
-                        ))
+                        <>
+                          {student.groupStudents.map((gs) => (
+                            <span key={gs.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-indigo-100 text-indigo-800">
+                              {gs.group?.name || 'Grupă'}
+                            </span>
+                          ))}
+                          {startLabel(student) && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800 capitalize">
+                              din {startLabel(student)}
+                            </span>
+                          )}
+                        </>
+                      ) : startLabel(student) ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800 capitalize">
+                          începe {startLabel(student)}
+                        </span>
                       ) : (
                         <span className="text-sm text-gray-500">-</span>
                       )}
@@ -331,15 +377,20 @@ export default function StudentsPage() {
               </div>
 
               {/* Groups */}
-              {student.groupStudents?.length > 0 && (
+              {(student.groupStudents?.length > 0 || startLabel(student)) && (
                 <div>
                   <span className="text-xs text-gray-500 block mb-1.5">Grupe:</span>
                   <div className="flex flex-wrap gap-1.5">
-                    {student.groupStudents.map((gs) => (
+                    {student.groupStudents?.map((gs) => (
                       <span key={gs.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-indigo-100 text-indigo-800">
                         {gs.group?.name || 'Grupă'}
                       </span>
                     ))}
+                    {startLabel(student) && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800 capitalize">
+                        {student.groupStudents?.length > 0 ? 'din' : 'începe'} {startLabel(student)}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}

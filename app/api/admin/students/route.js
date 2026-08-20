@@ -20,6 +20,7 @@ export async function GET(request) {
     const page = parseInt(searchParams.get('page') || '1')
     const search = searchParams.get('search') || ''
     const hasGroup = searchParams.get('hasGroup') // 'yes', 'no', or empty
+    const startPeriod = searchParams.get('startPeriod') // 'YYYY-MM', 'none' sau gol
     const all = searchParams.get('all') === 'true' // Pentru dropdown-uri
 
     // Construiește where clause
@@ -39,6 +40,17 @@ export async function GET(request) {
       where.groupStudents = { some: {} }
     } else if (hasGroup === 'no') {
       where.groupStudents = { none: {} }
+    }
+
+    // Filtru după luna de început
+    if (startPeriod === 'none') {
+      where.startMonth = null
+    } else if (startPeriod) {
+      const [y, m] = startPeriod.split('-').map((v) => parseInt(v, 10))
+      if (Number.isFinite(y) && Number.isFinite(m)) {
+        where.startYear = y
+        where.startMonth = m
+      }
     }
 
     // Dacă se cere all, returnează toți elevii (pentru dropdown-uri)
@@ -79,8 +91,29 @@ export async function GET(request) {
       }
     })
 
+    // Lunile care chiar există în date — filtrul nu inventează opțiuni goale
+    const withStart = await prisma.student.findMany({
+      where: { startMonth: { not: null } },
+      select: { startYear: true, startMonth: true },
+    })
+    const periodCounts = new Map()
+    for (const st of withStart) {
+      if (!st.startYear || !st.startMonth) continue
+      const key = `${st.startYear}-${String(st.startMonth).padStart(2, '0')}`
+      periodCounts.set(key, (periodCounts.get(key) || 0) + 1)
+    }
+    const startPeriods = [...periodCounts.entries()]
+      .map(([value, count]) => ({
+        value,
+        year: parseInt(value.slice(0, 4), 10),
+        month: parseInt(value.slice(5, 7), 10),
+        count,
+      }))
+      .sort((a, b) => a.value.localeCompare(b.value))
+
     return NextResponse.json({
       students,
+      startPeriods,
       pagination: {
         page,
         totalPages,
@@ -123,7 +156,8 @@ export async function POST(request) {
       }, { status: 403 })
     }
 
-    const { fullName, age, grade, parentName, parentPhone, parentEmail, notes, isAdult, level } = body
+    const { fullName, age, grade, parentName, parentPhone, parentEmail, notes, isAdult, level,
+      startYear, startMonth } = body
 
     const student = await prisma.student.create({
       data: {
@@ -136,6 +170,8 @@ export async function POST(request) {
         notes,
         isAdult: !!isAdult,
         level: level || null,
+        startYear: startYear ?? null,
+        startMonth: startMonth ?? null,
       }
     })
 

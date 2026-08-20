@@ -18,6 +18,9 @@ export default function StudentForm({ student }) {
     fullName: student?.fullName || '',
     age: student?.age || '',
     isAdult: student?.isAdult ?? false,
+    startPeriod: student?.startYear && student?.startMonth
+      ? `${student.startYear}-${String(student.startMonth).padStart(2, '0')}`
+      : '',
     level: student?.level || '',
     grade: student?.grade || '',
     parentName: student?.parentName || '',
@@ -56,6 +59,8 @@ export default function StudentForm({ student }) {
         isAdult: !!formData.isAdult,
         level: formData.level || null,
         grade: formData.grade ? parseInt(formData.grade) : null,
+        startYear: formData.startPeriod ? parseInt(formData.startPeriod.slice(0, 4)) : null,
+        startMonth: formData.startPeriod ? parseInt(formData.startPeriod.slice(5, 7)) : null,
         // La adulți nu are rost clasa sau numele părintelui
         ...(formData.isAdult ? { grade: null, parentName: null } : {}),
       }
@@ -123,6 +128,20 @@ export default function StudentForm({ student }) {
                 </span>
               </span>
             </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Începe din luna</label>
+            <input
+              type="month"
+              name="startPeriod"
+              value={formData.startPeriod}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Poate fi și peste ani. Până atunci elevul rămâne în listă, fără grupă.
+            </p>
           </div>
 
           <div>
