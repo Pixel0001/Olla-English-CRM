@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Fragment } from 'react'
 import Link from 'next/link'
 
 // Mapare zi săptămână JS -> română
@@ -36,6 +36,18 @@ const getTimeForDay = (scheduleTime, day) => {
   return null
 }
 
+// Culoare stabilă per grupă, ca aceeași grupă să arate la fel în toată grila
+const GROUP_COLORS = [
+  '#dbeafe', '#dcfce7', '#fef3c7', '#fee2e2', '#ede9fe',
+  '#cffafe', '#fce7f3', '#e0e7ff', '#d1fae5', '#ffedd5',
+]
+
+function groupColor(name) {
+  let hash = 0
+  for (let i = 0; i < (name || '').length; i++) hash = (hash * 31 + name.charCodeAt(i)) % 997
+  return GROUP_COLORS[hash % GROUP_COLORS.length]
+}
+
 export default function TeacherOrarPage() {
   const [groups, setGroups] = useState([])
   const [teachers, setTeachers] = useState([])
@@ -43,7 +55,8 @@ export default function TeacherOrarPage() {
   const [makeupLessons, setMakeupLessons] = useState([])
   const [currentUserId, setCurrentUserId] = useState(null)
   const [loading, setLoading] = useState(true)
-  
+  const [viewMode, setViewMode] = useState('list') // 'list' | 'grid'
+
   // Filtre
   const [selectedTeacher, setSelectedTeacher] = useState('')
   const [selectedBranch, setSelectedBranch] = useState('')
@@ -221,11 +234,40 @@ export default function TeacherOrarPage() {
 
   const totalLessons = schedule.sortedDays.reduce((sum, day) => sum + schedule.scheduleByDay[day].length, 0)
 
+  // Grila are atâtea rânduri câte lecții are ziua cea mai încărcată
+  const gridRowCount = schedule.sortedDays.reduce(
+    (max, day) => Math.max(max, schedule.scheduleByDay[day].length), 0
+  )
+
   return (
     <div className="space-y-4 xs:space-y-6">
-      <div>
-        <h1 className="text-xl xs:text-2xl font-bold text-gray-900">Orar Complet</h1>
-        <p className="text-sm xs:text-base text-gray-600">Vizualizează orarul tuturor grupelor</p>
+      <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 xs:gap-0">
+        <div>
+          <h1 className="text-xl xs:text-2xl font-bold text-gray-900">Orar Complet</h1>
+          <p className="text-sm xs:text-base text-gray-600">Vizualizează orarul tuturor grupelor</p>
+        </div>
+
+        {/* Aceleași date, două forme: listă pe zile sau tabel săptămânal */}
+        <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden self-start">
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+              viewMode === 'list' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            Listă
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('grid')}
+            className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+              viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            Tabel săptămânal
+          </button>
+        </div>
       </div>
 
       {/* Filtre */}
@@ -317,8 +359,80 @@ export default function TeacherOrarPage() {
         )}
       </div>
 
+      {/* Tabel săptămânal: TIME | ZI, pentru fiecare zi — ca orarul pe hârtie */}
+      {viewMode === 'grid' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+          <table className="min-w-full border-collapse text-sm">
+            <thead>
+              <tr>
+                {schedule.sortedDays.map((day) => (
+                  <th key={day} colSpan={2} className={`px-2 py-2 border border-gray-200 text-center text-xs font-bold uppercase tracking-wide ${
+                    day === schedule.todayName ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {day}
+                  </th>
+                ))}
+              </tr>
+              <tr>
+                {schedule.sortedDays.map((day) => (
+                  <Fragment key={`h-${day}`}>
+                    <th className="px-2 py-1 border border-gray-200 bg-gray-50 text-[10px] font-medium text-gray-500 uppercase">Ora</th>
+                    <th className="px-2 py-1 border border-gray-200 bg-gray-50 text-[10px] font-medium text-gray-500 uppercase">Grupa</th>
+                  </Fragment>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: gridRowCount }, (_, row) => (
+                <tr key={row}>
+                  {schedule.sortedDays.map((day) => {
+                    const item = schedule.scheduleByDay[day][row]
+                    if (!item) {
+                      return (
+                        <Fragment key={`${day}-${row}`}>
+                          <td className="border border-gray-200 px-2 py-1.5" />
+                          <td className="border border-gray-200 px-2 py-1.5" />
+                        </Fragment>
+                      )
+                    }
+                    return (
+                      <Fragment key={`${day}-${row}`}>
+                        <td className="border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-800 whitespace-nowrap text-center">
+                          {item.time}
+                        </td>
+                        <td
+                          className="border border-gray-200 px-2 py-1.5 text-xs font-medium text-gray-900 whitespace-nowrap"
+                          style={{ backgroundColor: groupColor(item.name) }}
+                          title={`${item.name} · ${item.teacher} · ${item.room}`}
+                        >
+                          {item.isMyGroup && <span className="mr-1 text-indigo-700">●</span>}
+                          {item.name}
+                          {item.isMakeup && <span className="ml-1 text-[10px] text-amber-700">(rec.)</span>}
+                          <span className="block text-[10px] font-normal text-gray-600">
+                            {item.teacher}
+                            {item.studentsCount ? ` · ${item.studentsCount} elevi` : ''}
+                          </span>
+                        </td>
+                      </Fragment>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {gridRowCount === 0 && (
+            <p className="p-6 text-center text-sm text-gray-500">Nicio lecție programată.</p>
+          )}
+
+          <p className="px-3 py-2 border-t border-gray-100 text-[11px] text-gray-500">
+            <span className="text-indigo-700">●</span> grupele tale
+          </p>
+        </div>
+      )}
+
       {/* Orar pe zile */}
-      <div className="space-y-6">
+      <div className={viewMode === 'grid' ? 'hidden' : 'space-y-6'}>
         {schedule.sortedDays.map((day) => {
           const daySchedule = schedule.scheduleByDay[day]
           const isToday = day === schedule.todayName
