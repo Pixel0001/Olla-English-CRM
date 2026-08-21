@@ -237,6 +237,13 @@ export const PERMISSIONS = {
     category: 'Securitate'
   },
 
+  // Reclame (Meta)
+  'ads.view': {
+    label: 'Vezi reclamele',
+    description: 'Poate vedea cheltuielile, campaniile și rezultatele din Meta Ads',
+    category: 'Reclame'
+  },
+
   // Absențe ratate
   'missed-sessions.view': {
     label: 'Vezi sesiunile ratate',
@@ -248,7 +255,7 @@ export const PERMISSIONS = {
 // Grupează permisiunile pe categorii
 export const getPermissionsByCategory = () => {
   const categories = {}
-  
+
   Object.entries(PERMISSIONS).forEach(([key, value]) => {
     if (!categories[value.category]) {
       categories[value.category] = []
@@ -258,7 +265,7 @@ export const getPermissionsByCategory = () => {
       ...value
     })
   })
-  
+
   return categories
 }
 
@@ -266,7 +273,7 @@ export const getPermissionsByCategory = () => {
 export const hasPermission = (user, permission) => {
   // SUPERADMIN are toate permisiunile
   if (user?.role === 'SUPERADMIN') return true
-  
+
   // Verifică dacă are permisiunea specifică
   return user?.permissions?.includes(permission) || false
 }
@@ -294,6 +301,7 @@ export const PERMISSION_CATEGORIES = [
   'Filiale',
   'Sesiuni',
   'Recuperări',
+  'Reclame',
   'Notificări',
   'Orar',
   'Securitate'
