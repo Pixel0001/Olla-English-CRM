@@ -18,7 +18,6 @@ import {
   ShieldCheckIcon,
   ClockIcon,
   InboxIcon,
-  PuzzlePieceIcon,
   BookOpenIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
@@ -26,23 +25,23 @@ import {
 // Spinner component for loading state
 function LoadingSpinner({ className = "w-5 h-5" }) {
   return (
-    <svg 
-      className={`animate-spin ${className}`} 
-      xmlns="http://www.w3.org/2000/svg" 
-      fill="none" 
+    <svg
+      className={`animate-spin ${className}`}
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
       viewBox="0 0 24 24"
     >
-      <circle 
-        className="opacity-25" 
-        cx="12" 
-        cy="12" 
-        r="10" 
-        stroke="currentColor" 
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
         strokeWidth="4"
       />
-      <path 
-        className="opacity-75" 
-        fill="currentColor" 
+      <path
+        className="opacity-75"
+        fill="currentColor"
         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
       />
     </svg>
@@ -50,35 +49,35 @@ function LoadingSpinner({ className = "w-5 h-5" }) {
 }
 
 const navigation = [
-  { 
-    name: 'Dashboard', 
-    href: '/teacher', 
+  {
+    name: 'Dashboard',
+    href: '/teacher',
     icon: HomeIcon,
     exact: true
   },
-  { 
-    name: 'Notificări', 
-    href: '/teacher/notifications', 
+  {
+    name: 'Notificări',
+    href: '/teacher/notifications',
     icon: BellIcon
   },
-  { 
-    name: 'Orar', 
-    href: '/teacher/orar', 
+  {
+    name: 'Orar',
+    href: '/teacher/orar',
     icon: ClockIcon
   },
-  { 
-    name: 'Grupele Mele', 
-    href: '/teacher/groups', 
+  {
+    name: 'Grupele Mele',
+    href: '/teacher/groups',
     icon: UserGroupIcon
   },
-  { 
-    name: 'Elevii Mei', 
-    href: '/teacher/students', 
+  {
+    name: 'Elevii Mei',
+    href: '/teacher/students',
     icon: AcademicCapIcon
   },
-  { 
-    name: 'Prezențe', 
-    href: '/teacher/attendance', 
+  {
+    name: 'Prezențe',
+    href: '/teacher/attendance',
     icon: ClipboardDocumentCheckIcon
   },
   {
@@ -86,19 +85,14 @@ const navigation = [
     href: '/teacher/missed-sessions',
     icon: ExclamationTriangleIcon
   },
-  { 
-    name: 'Recuperări', 
-    href: '/teacher/makeup', 
+  {
+    name: 'Recuperări',
+    href: '/teacher/makeup',
     icon: ArrowPathIcon
   },
-  { 
-    name: 'Banca Probleme', 
-    href: '/teacher/problems', 
-    icon: PuzzlePieceIcon
-  },
-  { 
-    name: 'Securitate', 
-    href: '/teacher/security', 
+  {
+    name: 'Securitate',
+    href: '/teacher/security',
     icon: ShieldCheckIcon
   }
 ]
@@ -110,17 +104,17 @@ export default function TeacherSidebar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [pendingHref, setPendingHref] = useState(null)
-  
+
   // Verifică dacă utilizatorul e admin
   const isAdmin = session?.user?.role === 'ADMIN'
 
   // Handler pentru navigare cu loading state
   const handleNavigation = (href, closeMobile = false) => {
     if (pathname === href) return // Nu naviga dacă suntem deja pe pagină
-    
+
     setPendingHref(href)
     if (closeMobile) setMobileMenuOpen(false)
-    
+
     startTransition(() => {
       router.push(href)
     })
@@ -147,11 +141,11 @@ export default function TeacherSidebar() {
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1">
             {navigation.map((item) => {
-              const isActive = item.exact 
+              const isActive = item.exact
                 ? pathname === item.href
                 : pathname === item.href || pathname.startsWith(item.href + '/')
               const isLoading = isPending && pendingHref === item.href
-              
+
               return (
                 <button
                   key={item.name}
@@ -229,7 +223,7 @@ export default function TeacherSidebar() {
 
       {/* Mobile Drawer Overlay */}
       {mobileMenuOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 bg-black/50 z-50"
           onClick={() => setMobileMenuOpen(false)}
         />
@@ -241,8 +235,8 @@ export default function TeacherSidebar() {
       }`}>
         {/* Header cu close button */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
-          <Link 
-            href="/teacher" 
+          <Link
+            href="/teacher"
             className="flex items-center gap-3"
             onClick={() => setMobileMenuOpen(false)}
           >
@@ -266,11 +260,11 @@ export default function TeacherSidebar() {
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navigation.map((item) => {
-            const isActive = item.exact 
+            const isActive = item.exact
               ? pathname === item.href
               : pathname === item.href || pathname.startsWith(item.href + '/')
             const isLoading = isPending && pendingHref === item.href
-            
+
             return (
               <button
                 key={item.name}
@@ -319,7 +313,7 @@ export default function TeacherSidebar() {
               <p className="text-xs text-gray-500 truncate">{session?.user?.email}</p>
             </div>
           </div>
-          
+
           {/* Back to Admin - doar pentru admini */}
           {isAdmin && (
             <Link

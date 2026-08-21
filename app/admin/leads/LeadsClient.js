@@ -82,6 +82,7 @@ export default function LeadsClient({ leads, staff = [] }) {
   const [status, setStatus] = useState('')
   const [source, setSource] = useState('')
   const [level, setLevel] = useState('')
+  const [audience, setAudience] = useState('') // '', 'adult', 'copil'
   const [period, setPeriod] = useState('')
   const [followUp, setFollowUp] = useState('')
   const [sort, setSort] = useState('newest')
@@ -93,13 +94,13 @@ export default function LeadsClient({ leads, staff = [] }) {
   const resetPaging = () => setDisplayCount(ITEMS_PER_PAGE)
 
   const resetAll = () => {
-    setSearch(''); setStatus(''); setSource(''); setLevel('')
+    setSearch(''); setStatus(''); setSource(''); setLevel(''); setAudience('')
     setPeriod(''); setFollowUp(''); setSort('newest'); resetPaging()
   }
 
   const activeFilterCount =
     (search ? 1 : 0) + (status ? 1 : 0) +
-    (source ? 1 : 0) + (level ? 1 : 0) + (period ? 1 : 0) + (followUp ? 1 : 0)
+    (source ? 1 : 0) + (level ? 1 : 0) + (audience ? 1 : 0) + (period ? 1 : 0) + (followUp ? 1 : 0)
 
   // Actualizează un lead în listă după o modificare din rândul extins
   const patchLead = useCallback((id, patch) => {
@@ -184,6 +185,7 @@ export default function LeadsClient({ leads, staff = [] }) {
     if (status) r = r.filter((l) => l.status === status)
     if (source) r = r.filter((l) => l.source === source)
     if (level) r = r.filter((l) => (level === 'none' ? !l.interestedIn : l.interestedIn === level))
+    if (audience) r = r.filter((l) => (audience === 'adult' ? !!l.isAdult : !l.isAdult))
 
     if (period) {
       const limit = startOfToday()
@@ -226,7 +228,7 @@ export default function LeadsClient({ leads, staff = [] }) {
     } else sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
     return sorted
-  }, [items, search, status, source, level, period, followUp, sort])
+  }, [items, search, status, source, level, audience, period, followUp, sort])
 
   // Nivelurile care chiar apar în lead-uri, cu câte unul din fiecare
   const levelOptions = useMemo(() => {
@@ -325,6 +327,12 @@ export default function LeadsClient({ leads, staff = [] }) {
         <select value={source} onChange={(e) => { setSource(e.target.value); resetPaging() }} className={selectClass} aria-label="Sursă">
           <option value="">Sursă: toate</option>
           {LEAD_SOURCES.map((s) => <option key={s.value} value={s.value}>{s.emoji} {s.label}</option>)}
+        </select>
+
+        <select value={audience} onChange={(e) => { setAudience(e.target.value); resetPaging() }} className={selectClass} aria-label="Adult sau copil">
+          <option value="">Adult/copil: toți</option>
+          <option value="adult">🧑 Adulți</option>
+          <option value="copil">🧒 Copii</option>
         </select>
 
         <select value={level} onChange={(e) => { setLevel(e.target.value); resetPaging() }} className={selectClass} aria-label="Nivel">
