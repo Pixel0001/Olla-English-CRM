@@ -41,6 +41,9 @@ async function LeadsPageContent() {
     assignedToId: l.assignedToId || null,
     assignedToName: l.assignedTo?.name || l.assignedTo?.email || null,
     notesCount: l._count.leadNotes,
+    metaConversationId: l.metaConversationId || null,
+    metaPlatform: l.metaPlatform || null,
+    metaPersonId: l.metaPersonId || null,
   }))
 
   const staff = await prisma.user.findMany({

@@ -681,6 +681,7 @@ model Lead {
   metaConversationId String?  // id-ul conversației de pe Messenger/Instagram
   metaPlatform       String?  // 'messenger' | 'instagram'
   metaPersonId       String?  // id-ul persoanei, pentru răspuns direct
+  metaLastMessageAt  DateTime? // ultimul mesaj al ei pe care l-am procesat
 
   createdById        String?  @db.ObjectId // Cine a introdus lead-ul în CRM
   assignedToId       String?  @db.ObjectId // Cine se ocupă de acest lead

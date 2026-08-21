@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/session'
 import { checkPermission } from '@/lib/permissions'
 import {
-  fetchConversations, fetchMessages, pageInfo, summarize, sendMessage, isConfigured, PAGE_ID,
+  fetchConversations, fetchMessages, pageInfo, summarize, sendMessage, markSeen,
+  isConfigured, PAGE_ID,
 } from '@/lib/meta-messages'
 
 /**
@@ -65,6 +66,11 @@ export async function GET(request) {
     // ── Un fir de discuție ──
     if (conversationId) {
       const messages = await fetchMessages(conversationId)
+
+      // Am citit-o efectiv — o marcăm și la Meta, ca să dispară „necitite"
+      const personId = searchParams.get('person')
+      if (personId) markSeen(personId).catch(() => {})
+
       return NextResponse.json({ conversationId, messages })
     }
 

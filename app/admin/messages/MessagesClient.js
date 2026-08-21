@@ -84,6 +84,37 @@ export default function MessagesClient() {
 
   useEffect(() => { load(platform) }, [platform, load])
 
+  // Venind dintr-un lead, deschidem direct conversația lui — chiar dacă nu e
+  // în prima pagină din listă. Datele persoanei vin prin URL, ca răspunsul să
+  // funcționeze fără să mai căutăm conversația.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const conversationId = params.get('conversation')
+    if (!conversationId) return
+
+    const wanted = params.get('platform') === 'instagram' ? 'instagram' : 'messenger'
+    if (wanted !== platform) { setPlatform(wanted); return }
+
+    openThread({
+      id: conversationId,
+      platform: wanted,
+      person: {
+        id: params.get('person') || null,
+        name: params.get('name') || 'Conversație',
+        username: null,
+      },
+      updatedTime: null,
+      messageCount: null,
+      unreadCount: 0,
+      snippet: '',
+    })
+
+    // Curățăm adresa, ca un refresh să nu redeschidă mereu aceeași conversație
+    window.history.replaceState({}, '', '/admin/messages')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [platform, loading])
+
   const loadMore = async () => {
     if (!data?.next) return
     setLoadingMore(true)
@@ -104,11 +135,27 @@ export default function MessagesClient() {
   }
 
   const openThread = async (conversation) => {
-    setSelected(conversation)
+    setSelected({ ...conversation, unreadCount: 0 })
     setThreadLoading(true)
     setThread([])
+
+    // Badge-ul dispare din listă în clipa în care ai deschis conversația
+    setData((prev) => prev && ({
+      ...prev,
+      conversations: prev.conversations.map((c) =>
+        c.id === conversation.id ? { ...c, unreadCount: 0 } : c
+      ),
+      stats: prev.stats && {
+        ...prev.stats,
+        unread: Math.max(0, (prev.stats.unread || 0) - (conversation.unreadCount > 0 ? 1 : 0)),
+      },
+    }))
+
     try {
-      const res = await fetch(`/api/admin/messages?conversation=${encodeURIComponent(conversation.id)}`)
+      const res = await fetch(
+        `/api/admin/messages?conversation=${encodeURIComponent(conversation.id)}` +
+        (conversation.person?.id ? `&person=${encodeURIComponent(conversation.person.id)}` : '')
+      )
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Eroare la citirea conversației')
       setThread(json.messages || [])

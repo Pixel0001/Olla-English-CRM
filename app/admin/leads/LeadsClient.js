@@ -603,6 +603,35 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
   const source = getSource(lead.source)
   const chatLink = source.link ? source.link(lead) : null
   const waLink = whatsAppLink(lead.phone)
+  const [replyOpen, setReplyOpen] = useState(false)
+  const [replyText, setReplyText] = useState('')
+  const [replySending, setReplySending] = useState(false)
+
+  // Răspuns direct în conversația din care a venit lead-ul
+  const sendReply = async (e) => {
+    e?.preventDefault()
+    const text = replyText.trim()
+    if (!text) return
+
+    setReplySending(true)
+    try {
+      const res = await fetch('/api/admin/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipientId: lead.metaPersonId, text }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Mesajul nu a putut fi trimis')
+
+      toast.success(json.humanAgent ? 'Trimis ca agent uman' : 'Mesaj trimis')
+      setReplyText('')
+      setReplyOpen(false)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setReplySending(false)
+    }
+  }
 
   const [notes, setNotes] = useState(null)
   const [noteText, setNoteText] = useState('')
@@ -824,6 +853,28 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
         )}
       </div>
 
+      {/* Răspuns direct în Messenger / Instagram */}
+      {replyOpen && lead.metaPersonId && (
+        <form onSubmit={sendReply} className="mb-2 flex items-end gap-2">
+          <textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() } }}
+            rows={2}
+            autoFocus
+            placeholder={`Răspunde pe ${lead.metaPlatform === 'instagram' ? 'Instagram' : 'Messenger'}… (Enter trimite)`}
+            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+          />
+          <button
+            type="submit"
+            disabled={replySending || !replyText.trim()}
+            className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[11px] font-medium hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {replySending ? '…' : 'Trimite'}
+          </button>
+        </form>
+      )}
+
       {/* Acțiuni rapide */}
       <div className="flex flex-wrap gap-1.5">
         {lead.phone && (
@@ -851,6 +902,27 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
           <AcademicCapIcon className="h-3 w-3" />
           {converting ? "…" : "→ elev"}
         </button>
+        {lead.metaPersonId && (
+          <button
+            type="button"
+            onClick={() => setReplyOpen((v) => !v)}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-medium hover:bg-emerald-700 transition-colors"
+          >
+            ✍️ {replyOpen ? 'Închide' : 'Răspunde'}
+          </button>
+        )}
+        {lead.metaConversationId && (
+          <Link
+            href={`/admin/messages?conversation=${encodeURIComponent(lead.metaConversationId)}` +
+              `&platform=${lead.metaPlatform || 'messenger'}` +
+              `&person=${encodeURIComponent(lead.metaPersonId || '')}` +
+              `&name=${encodeURIComponent(lead.name || '')}`}
+            title="Deschide conversația din care a venit lead-ul"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-sky-600 text-white text-[11px] font-medium hover:bg-sky-700 transition-colors"
+          >
+            💬 Vezi conversația
+          </Link>
+        )}
         <Link href={`/admin/leads/${lead.id}`} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-indigo-300 text-indigo-700 text-[11px] font-medium hover:bg-indigo-50 transition-colors">
           <ArrowTopRightOnSquareIcon className="h-3 w-3" />
           Fișa completă
