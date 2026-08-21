@@ -119,10 +119,15 @@ export default function MessagesClient() {
     }
   }
 
-  // Meta lasă un răspuns obișnuit doar 24h după ultimul mesaj al persoanei
+  // 24h pentru un răspuns obișnuit, 7 zile cu eticheta de agent uman
   const lastFromPerson = [...thread].reverse().find((m) => !m.fromPage)
-  const windowClosed = lastFromPerson
-    ? Date.now() - new Date(lastFromPerson.createdTime).getTime() > 24 * 60 * 60 * 1000
+  const sinceLast = lastFromPerson
+    ? Date.now() - new Date(lastFromPerson.createdTime).getTime()
+    : null
+  const HOUR = 60 * 60 * 1000
+  const asHumanAgent = sinceLast != null && sinceLast > 24 * HOUR && sinceLast <= 7 * 24 * HOUR
+  const windowClosed = sinceLast != null
+    ? sinceLast > 7 * 24 * HOUR
     : thread.length > 0
 
   const send = async (e) => {
@@ -147,7 +152,9 @@ export default function MessagesClient() {
         text,
         fromPage: true,
         fromName: 'noi',
+        humanAgent: json.humanAgent,
       }])
+      if (json.humanAgent) toast.success('Trimis ca răspuns de agent uman')
       setDraft('')
       setData((prev) => prev && ({
         ...prev,
@@ -354,12 +361,17 @@ export default function MessagesClient() {
 
                 {canSend ? (
                   <form onSubmit={send} className="border-t border-gray-100 p-3 space-y-2">
-                    {windowClosed && (
+                    {windowClosed ? (
                       <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
-                        Au trecut peste 24 de ore de la ultimul mesaj al persoanei. Meta blochează
-                        răspunsurile obișnuite după acest interval — încercarea poate fi refuzată.
+                        Au trecut peste 7 zile de la ultimul mesaj al persoanei. Meta nu mai permite
+                        niciun răspuns — nici ca agent uman. Trebuie să scrie ea din nou.
                       </p>
-                    )}
+                    ) : asHumanAgent ? (
+                      <p className="text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-2 py-1.5">
+                        Au trecut peste 24 de ore, deci mesajul pleacă marcat ca răspuns de agent
+                        uman — permis până la 7 zile de la ultimul mesaj al persoanei.
+                      </p>
+                    ) : null}
                     <div className="flex items-end gap-2">
                       <textarea
                         value={draft}
