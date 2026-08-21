@@ -9,6 +9,7 @@ import {
   MagnifyingGlassIcon,
   ExclamationTriangleIcon,
   ChatBubbleLeftRightIcon,
+  PaperAirplaneIcon,
 } from '@heroicons/react/24/outline'
 
 const PLATFORMS = [
@@ -51,6 +52,10 @@ export default function MessagesClient() {
   const [selected, setSelected] = useState(null)
   const [thread, setThread] = useState([])
   const [threadLoading, setThreadLoading] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [sending, setSending] = useState(false)
+
+  const canSend = hasPermission('messages.send') || isSuperAdmin
 
   useEffect(() => {
     if (!hasPermission('messages.view') && !isSuperAdmin) router.push('/admin')
@@ -66,6 +71,7 @@ export default function MessagesClient() {
       setData(json)
       setSelected(null)
       setThread([])
+      setDraft('')
       if (refresh) toast.success('Mesajele au fost actualizate')
     } catch (err) {
       setError(err.message)
@@ -110,6 +116,49 @@ export default function MessagesClient() {
       toast.error(err.message)
     } finally {
       setThreadLoading(false)
+    }
+  }
+
+  // Meta lasă un răspuns obișnuit doar 24h după ultimul mesaj al persoanei
+  const lastFromPerson = [...thread].reverse().find((m) => !m.fromPage)
+  const windowClosed = lastFromPerson
+    ? Date.now() - new Date(lastFromPerson.createdTime).getTime() > 24 * 60 * 60 * 1000
+    : thread.length > 0
+
+  const send = async (e) => {
+    e?.preventDefault()
+    const text = draft.trim()
+    if (!text || !selected?.person?.id) return
+
+    setSending(true)
+    try {
+      const res = await fetch('/api/admin/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipientId: selected.person.id, text }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Mesajul nu a putut fi trimis')
+
+      // Îl punem în fir imediat, ca într-un chat normal
+      setThread((prev) => [...prev, {
+        id: json.messageId || `local-${Date.now()}`,
+        createdTime: json.sentAt,
+        text,
+        fromPage: true,
+        fromName: 'noi',
+      }])
+      setDraft('')
+      setData((prev) => prev && ({
+        ...prev,
+        conversations: prev.conversations.map((c) =>
+          c.id === selected.id ? { ...c, snippet: text, updatedTime: json.sentAt, unreadCount: 0 } : c
+        ),
+      }))
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSending(false)
     }
   }
 
@@ -303,9 +352,43 @@ export default function MessagesClient() {
                   </div>
                 )}
 
-                <p className="px-4 py-2 border-t border-gray-100 text-[11px] text-gray-500">
-                  Doar citire — răspunsurile se dau din Messenger sau Instagram.
-                </p>
+                {canSend ? (
+                  <form onSubmit={send} className="border-t border-gray-100 p-3 space-y-2">
+                    {windowClosed && (
+                      <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
+                        Au trecut peste 24 de ore de la ultimul mesaj al persoanei. Meta blochează
+                        răspunsurile obișnuite după acest interval — încercarea poate fi refuzată.
+                      </p>
+                    )}
+                    <div className="flex items-end gap-2">
+                      <textarea
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+                        }}
+                        rows={2}
+                        placeholder="Scrie răspunsul… (Enter trimite, Shift+Enter rând nou)"
+                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                      />
+                      <button
+                        type="submit"
+                        disabled={sending || !draft.trim()}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                      >
+                        <PaperAirplaneIcon className="h-4 w-4" />
+                        {sending ? 'Se trimite…' : 'Trimite'}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-gray-500">
+                      Mesajul pleacă în numele paginii {data?.page?.name || ''}.
+                    </p>
+                  </form>
+                ) : (
+                  <p className="px-4 py-2 border-t border-gray-100 text-[11px] text-gray-500">
+                    Nu ai permisiunea de a răspunde — cere-i unui superadmin dreptul „Răspunde la mesaje".
+                  </p>
+                )}
               </>
             )}
           </div>

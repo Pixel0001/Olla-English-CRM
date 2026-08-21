@@ -244,6 +244,12 @@ export const PERMISSIONS = {
     category: 'Mesaje'
   },
 
+  'messages.send': {
+    label: 'Răspunde la mesaje',
+    description: 'Poate trimite răspunsuri pe Messenger și Instagram în numele paginii',
+    category: 'Mesaje'
+  },
+
   // Reclame (Meta)
   'ads.view': {
     label: 'Vezi reclamele',

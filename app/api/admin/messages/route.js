@@ -2,19 +2,46 @@ import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/session'
 import { checkPermission } from '@/lib/permissions'
 import {
-  fetchConversations, fetchMessages, pageInfo, summarize, isConfigured, PAGE_ID,
+  fetchConversations, fetchMessages, pageInfo, summarize, sendMessage, isConfigured, PAGE_ID,
 } from '@/lib/meta-messages'
 
 /**
  * Conversațiile paginii Olla English (Messenger + Instagram).
  *
- * GET ?platform=messenger|instagram[&after=cursor]  → lista de conversații
- * GET ?conversation=<id>                            → mesajele unei conversații
+ * GET  ?platform=messenger|instagram[&after=cursor] → lista de conversații
+ * GET  ?conversation=<id>                           → mesajele unei conversații
+ * POST { recipientId, text }                        → răspunde în numele paginii
  */
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
 export const dynamic = 'force-dynamic'
+
+export async function POST(request) {
+  try {
+    await requireAdmin()
+
+    const canSend = await checkPermission('messages.send')
+    if (!canSend.allowed) {
+      return NextResponse.json({ error: 'Nu ai permisiunea să trimiți mesaje' }, { status: 403 })
+    }
+
+    if (!isConfigured()) {
+      return NextResponse.json({ error: 'META_ACCESS_TOKEN nu este setat' }, { status: 503 })
+    }
+
+    const { recipientId, text } = await request.json()
+    const sent = await sendMessage(recipientId, text)
+
+    return NextResponse.json({ ok: true, ...sent, sentAt: new Date().toISOString() })
+  } catch (error) {
+    if (error.message === 'Unauthorized' || error.message === 'Forbidden') {
+      return NextResponse.json({ error: error.message }, { status: 401 })
+    }
+    console.error('Eroare la trimiterea mesajului Meta:', error)
+    return NextResponse.json({ error: error.message || 'Mesajul nu a putut fi trimis' }, { status: 502 })
+  }
+}
 
 export async function GET(request) {
   try {
