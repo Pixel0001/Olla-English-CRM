@@ -42,7 +42,7 @@ import toast from 'react-hot-toast'
 // Helper pentru formatarea programului
 const formatSchedule = (scheduleDays, scheduleTime) => {
   if (!scheduleDays || scheduleDays.length === 0) return ''
-  
+
   let times = {}
   try {
     if (scheduleTime && scheduleTime.startsWith('{')) {
@@ -51,15 +51,15 @@ const formatSchedule = (scheduleDays, scheduleTime) => {
   } catch {
     // E string simplu
   }
-  
+
   const isSimple = !scheduleTime || !scheduleTime.startsWith('{')
   const uniqueTimes = [...new Set(Object.values(times))]
-  
+
   if (isSimple || uniqueTimes.length <= 1) {
     const time = isSimple ? scheduleTime : (uniqueTimes[0] || '')
     return `${scheduleDays.join(', ')}${time ? ' - ' + time : ''}`
   }
-  
+
   return scheduleDays.map(day => `${day} ${times[day] || ''}`).join(', ')
 }
 
@@ -71,7 +71,7 @@ export default function TeacherStudentsPage() {
   const [expandedStudent, setExpandedStudent] = useState(null)
   const [sortBy, setSortBy] = useState('name') // name, attendance, absences
   const [updatingStatus, setUpdatingStatus] = useState(null) // groupStudentId being updated
-  
+
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
@@ -80,7 +80,7 @@ export default function TeacherStudentsPage() {
   const [creating, setCreating] = useState(false)
   const [addingPayment, setAddingPayment] = useState(false)
   const [addingToGroup, setAddingToGroup] = useState(false)
-  
+
   // Form data
   const [studentForm, setStudentForm] = useState({
     fullName: '',
@@ -283,12 +283,12 @@ export default function TeacherStudentsPage() {
   // Open payment modal for a student
   const openPaymentModal = (student) => {
     setSelectedStudent(student)
-    setPaymentForm({ 
-      groupStudentId: student.groups[0]?.groupStudentId || '', 
-      amount: '', 
-      forPeriod: currentPeriod(), 
-      paymentMethod: 'cash', 
-      notes: '' 
+    setPaymentForm({
+      groupStudentId: student.groups[0]?.groupStudentId || '',
+      amount: '',
+      forPeriod: currentPeriod(),
+      paymentMethod: 'cash',
+      notes: ''
     })
     setShowPaymentModal(true)
   }
@@ -316,13 +316,13 @@ export default function TeacherStudentsPage() {
       const matchesParentEmail = student.parentEmail?.toLowerCase().includes(searchLower)
       if (!matchesName && !matchesParent && !matchesParentPhone && !matchesParentEmail) return false
     }
-    
+
     // Group filter
     if (selectedGroup) {
       const hasGroup = student.groups.some(g => g.groupId === selectedGroup)
       if (!hasGroup) return false
     }
-    
+
     return true
   }).sort((a, b) => {
     if (sortBy === 'name') return a.name.localeCompare(b.name)
@@ -338,12 +338,15 @@ export default function TeacherStudentsPage() {
   }
 
   // Calculate students with lesson issues
-  const studentsWithZeroLessons = filteredStudents.filter(s => 
-    s.groups.some(g => g.remainingLessons === 0)
+  // Doar grupele cu plată individuală au pachet per elev; la cele lunare
+  // „lecțiile rămase" nu înseamnă nimic.
+  const individualGroups = (s) => s.groups.filter(g => g.billingType === 'INDIVIDUAL')
+  const studentsWithZeroLessons = filteredStudents.filter(s =>
+    individualGroups(s).some(g => g.remainingLessons === 0)
   )
-  const studentsWithLowLessons = filteredStudents.filter(s => 
-    s.groups.some(g => g.remainingLessons > 0 && g.remainingLessons <= 2) && 
-    !s.groups.some(g => g.remainingLessons === 0)
+  const studentsWithLowLessons = filteredStudents.filter(s =>
+    individualGroups(s).some(g => g.remainingLessons > 0 && g.remainingLessons <= 2) &&
+    !individualGroups(s).some(g => g.remainingLessons === 0)
   )
 
   if (loading) {
@@ -431,7 +434,7 @@ export default function TeacherStudentsPage() {
           </div>
         </div>
       )}
-      
+
       {studentsWithLowLessons.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg xs:rounded-xl p-2.5 xs:p-3 md:p-4 flex items-start gap-2 xs:gap-3">
           <ExclamationTriangleIcon className="w-4 h-4 xs:w-5 xs:h-5 md:w-6 md:h-6 text-amber-600 flex-shrink-0" />
@@ -441,7 +444,7 @@ export default function TeacherStudentsPage() {
             </p>
             <p className="text-[10px] xs:text-xs md:text-sm text-amber-700 mt-0.5 xs:mt-1 break-words">
               {studentsWithLowLessons.map(s => {
-                const minLessons = Math.min(...s.groups.map(g => g.remainingLessons))
+                const minLessons = Math.min(...individualGroups(s).map(g => g.remainingLessons))
                 return `${s.name} (${minLessons})`
               }).join(', ')}
             </p>
@@ -504,20 +507,20 @@ export default function TeacherStudentsPage() {
           </div>
         ) : (
           filteredStudents.map(student => {
-            const hasZeroLessons = student.groups.some(g => g.remainingLessons === 0)
-            const hasLowLessons = student.groups.some(g => g.remainingLessons > 0 && g.remainingLessons <= 2)
-            
+            const hasZeroLessons = individualGroups(student).some(g => g.remainingLessons === 0)
+            const hasLowLessons = individualGroups(student).some(g => g.remainingLessons > 0 && g.remainingLessons <= 2)
+
             return (
-            <div 
-              key={student.id} 
+            <div
+              key={student.id}
               className={`bg-white rounded-lg xs:rounded-xl border shadow-sm overflow-hidden ${
-                hasZeroLessons ? 'border-red-300 bg-red-50/30' : 
-                hasLowLessons ? 'border-amber-300 bg-amber-50/30' : 
+                hasZeroLessons ? 'border-red-300 bg-red-50/30' :
+                hasLowLessons ? 'border-amber-300 bg-amber-50/30' :
                 'border-gray-200'
               }`}
             >
               {/* Student Header - Clickable */}
-              <div 
+              <div
                 className="p-3 xs:p-4 cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => setExpandedStudent(expandedStudent === student.id ? null : student.id)}
               >
@@ -533,7 +536,7 @@ export default function TeacherStudentsPage() {
                         <UserIcon className="w-4 h-4 xs:w-5 xs:h-5 md:w-6 md:h-6 text-white" />
                       )}
                     </div>
-                    
+
                     {/* Basic Info */}
                     <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-gray-900 text-xs xs:text-sm md:text-base truncate">{student.name || 'Elev fără nume'}</h3>
@@ -563,18 +566,30 @@ export default function TeacherStudentsPage() {
                       {student.groups.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {student.groups.slice(0, 2).map(g => (
-                            <span 
-                              key={g.groupId} 
-                              className={`text-[10px] xs:text-xs px-1.5 xs:px-2 py-0.5 rounded font-medium ${
-                                g.remainingLessons === 0 
-                                  ? 'bg-red-100 text-red-700' 
-                                  : g.remainingLessons <= 2 
-                                    ? 'bg-amber-100 text-amber-700' 
-                                    : 'bg-blue-50 text-blue-700'
-                              }`}
-                            >
-                              {g.remainingLessons} ore
-                            </span>
+                            g.billingType === 'INDIVIDUAL' ? (
+                              <span
+                                key={g.groupId}
+                                className={`text-[10px] xs:text-xs px-1.5 xs:px-2 py-0.5 rounded font-medium ${
+                                  g.remainingLessons === 0
+                                    ? 'bg-red-100 text-red-700'
+                                    : g.remainingLessons <= 2
+                                      ? 'bg-amber-100 text-amber-700'
+                                      : 'bg-blue-50 text-blue-700'
+                                }`}
+                              >
+                                {g.remainingLessons} ore
+                              </span>
+                            ) : (
+                              <span
+                                key={g.groupId}
+                                className="text-[10px] xs:text-xs px-1.5 xs:px-2 py-0.5 rounded font-medium bg-gray-100 text-gray-700"
+                                title="Prezențe / absențe în luna curentă"
+                              >
+                                <span className="text-emerald-700">{g.monthPresent ?? 0}</span>
+                                <span className="text-gray-400"> / </span>
+                                <span className="text-red-700">{g.monthAbsent ?? 0}</span>
+                              </span>
+                            )
                           ))}
                           {student.groups.length > 2 && (
                             <span className="text-[10px] xs:text-xs text-gray-400">+{student.groups.length - 2}</span>
@@ -590,7 +605,7 @@ export default function TeacherStudentsPage() {
                     <div className={`px-1.5 xs:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[10px] xs:text-xs md:text-sm font-medium ${getAttendanceColor(student.attendanceRate)}`}>
                       {student.attendanceRate}%
                     </div>
-                    
+
                     {/* Absences Badge - hidden on smallest screens */}
                     {student.totalAbsences > 0 && (
                       <div className="hidden xs:flex px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[10px] xs:text-xs md:text-sm font-medium bg-red-100 text-red-700">
@@ -656,13 +671,13 @@ export default function TeacherStudentsPage() {
                       <h4 className="text-xs xs:text-sm font-semibold text-gray-700 mb-2 xs:mb-3">Grupe & Ore</h4>
                       <div className="space-y-2 xs:space-y-3">
                         {student.groups.map(group => (
-                          <div 
-                            key={group.groupId} 
+                          <div
+                            key={group.groupId}
                             className="bg-white rounded-lg border border-gray-200 p-2.5 xs:p-3"
                           >
                             <div className="flex items-start justify-between mb-1.5 xs:mb-2">
                               <div className="min-w-0 flex-1">
-                                <Link 
+                                <Link
                                   href={`/teacher/groups/${group.groupId}`}
                                   className="font-medium text-gray-900 hover:text-[#30919f] text-xs xs:text-sm truncate block"
                                 >
@@ -695,29 +710,44 @@ export default function TeacherStudentsPage() {
                                 )}
                               </select>
                             </div>
-                            
+
                             {group.scheduleDays?.length > 0 && (
                               <p className="text-[10px] xs:text-xs text-gray-500 mb-1.5 xs:mb-2">📅 {formatSchedule(group.scheduleDays, group.scheduleTime)}</p>
                             )}
 
                             <div className="grid grid-cols-2 gap-1.5 xs:gap-2 text-[10px] xs:text-xs">
-                              <div className={`rounded p-1.5 xs:p-2 text-center ${
-                                group.remainingLessons === 0 ? 'bg-red-100' :
-                                group.remainingLessons <= 2 ? 'bg-amber-100' : 'bg-blue-50'
-                              }`}>
-                                <p className={`font-medium ${
-                                  group.remainingLessons === 0 ? 'text-red-600' :
-                                  group.remainingLessons <= 2 ? 'text-amber-600' : 'text-blue-600'
-                                }`}>Ore</p>
-                                <p className={`text-base xs:text-lg font-bold ${
-                                  group.remainingLessons === 0 ? 'text-red-700' :
-                                  group.remainingLessons <= 2 ? 'text-amber-700' : 'text-blue-700'
-                                }`}>{group.remainingLessons}</p>
-                              </div>
-                              <div className="bg-red-50 rounded p-1.5 xs:p-2 text-center">
-                                <p className="text-red-600 font-medium">Absențe</p>
-                                <p className="text-base xs:text-lg font-bold text-red-700">{group.absences}</p>
-                              </div>
+                              {group.billingType === 'INDIVIDUAL' ? (
+                                <>
+                                  <div className={`rounded p-1.5 xs:p-2 text-center ${
+                                    group.remainingLessons === 0 ? 'bg-red-100' :
+                                    group.remainingLessons <= 2 ? 'bg-amber-100' : 'bg-blue-50'
+                                  }`}>
+                                    <p className={`font-medium ${
+                                      group.remainingLessons === 0 ? 'text-red-600' :
+                                      group.remainingLessons <= 2 ? 'text-amber-600' : 'text-blue-600'
+                                    }`}>Ore rămase</p>
+                                    <p className={`text-base xs:text-lg font-bold ${
+                                      group.remainingLessons === 0 ? 'text-red-700' :
+                                      group.remainingLessons <= 2 ? 'text-amber-700' : 'text-blue-700'
+                                    }`}>{group.remainingLessons}</p>
+                                  </div>
+                                  <div className="bg-red-50 rounded p-1.5 xs:p-2 text-center">
+                                    <p className="text-red-600 font-medium">Absențe</p>
+                                    <p className="text-base xs:text-lg font-bold text-red-700">{group.absentCount ?? 0}</p>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="bg-emerald-50 rounded p-1.5 xs:p-2 text-center">
+                                    <p className="text-emerald-600 font-medium">Prezențe {MONTH_NAMES[new Date().getMonth()]}</p>
+                                    <p className="text-base xs:text-lg font-bold text-emerald-700">{group.monthPresent ?? 0}</p>
+                                  </div>
+                                  <div className="bg-red-50 rounded p-1.5 xs:p-2 text-center">
+                                    <p className="text-red-600 font-medium">Absențe {MONTH_NAMES[new Date().getMonth()]}</p>
+                                    <p className="text-base xs:text-lg font-bold text-red-700">{group.monthAbsent ?? 0}</p>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -907,7 +937,8 @@ export default function TeacherStudentsPage() {
                   <option value="">Selectează grupa</option>
                   {selectedStudent.groups.map(g => (
                     <option key={g.groupStudentId} value={g.groupStudentId}>
-                      {g.groupName} ({g.remainingLessons} ore rămase)
+                      {g.groupName}
+                      {g.billingType === 'INDIVIDUAL' ? ` (${g.remainingLessons} ore rămase)` : ''}
                     </option>
                   ))}
                 </select>

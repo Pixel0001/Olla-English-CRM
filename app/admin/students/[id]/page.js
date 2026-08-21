@@ -256,13 +256,17 @@ export default async function StudentDetailPage({ params }) {
                         </b>
                       </>
                     )}
-                    {' · '}
-                    <b className={
-                      (gs.lessonsRemaining ?? 0) <= 0 ? 'text-red-600'
-                        : (gs.lessonsRemaining ?? 0) <= 2 ? 'text-amber-600' : 'text-emerald-600'
-                    }>
-                      {gs.lessonsRemaining ?? 0} lecții rămase
-                    </b>
+                    {gs.group.billingType === 'INDIVIDUAL' && (
+                      <>
+                        {' · '}
+                        <b className={
+                          (gs.lessonsRemaining ?? 0) <= 0 ? 'text-red-600'
+                            : (gs.lessonsRemaining ?? 0) <= 2 ? 'text-amber-600' : 'text-emerald-600'
+                        }>
+                          {gs.lessonsRemaining ?? 0} lecții rămase
+                        </b>
+                      </>
+                    )}
                   </p>
                 </div>
               )

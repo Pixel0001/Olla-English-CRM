@@ -64,15 +64,24 @@ export async function GET(request) {
         let presentCount = 0
         let absentCount = 0
         let totalGroupSessions = 0
+        // Luna curentă — la grupele lunare asta contează, nu un pachet per elev
+        let monthPresent = 0
+        let monthAbsent = 0
+        const now = new Date()
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
         for (const groupSession of group.lessonSessions) {
           const attendance = groupSession.attendances.find(a => a.studentId === studentId)
           if (attendance) {
             totalGroupSessions++
+            const inMonth = groupSession.date >= monthStart && groupSession.date < nextMonth
             if (attendance.status === 'PRESENT') {
               presentCount++
+              if (inMonth) monthPresent++
             } else {
               absentCount++
+              if (inMonth) monthAbsent++
             }
           }
         }
@@ -90,7 +99,10 @@ export async function GET(request) {
           groupName: group.name,
           levelName: group.level,
           schedule: scheduleText,
+          billingType: group.billingType || 'MONTHLY',
           remainingLessons: Math.max(0, gs.lessonsRemaining || 0),
+          monthPresent,
+          monthAbsent,
           absences: Math.max(0, gs.absences || 0),
           status: studentStatus,
           statusNote: gs.statusNote,

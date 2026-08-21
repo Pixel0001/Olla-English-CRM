@@ -45,7 +45,7 @@ function paidThisMonth(payments = []) {
   return total > 0 ? total : null
 }
 
-export default function GroupStudentsManager({ group, allStudents, allGroups = [], permissions = {} , attendanceStats = {}, totalSessions = 0 }) {
+export default function GroupStudentsManager({ group, allStudents, allGroups = [], permissions = {} , attendanceStats = {}, totalSessions = 0, monthLabel = '' }) {
   // Destructure permissions with defaults
   const {
     canViewStudents = false,
@@ -64,8 +64,11 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [lessonsRemaining, setLessonsRemaining] = useState(0)
 
-  // Lecțiile făcute se numără din prezențe; cele rămase stau pe înscriere
+  // La grupele lunare nu există „lecții rămase" per elev — pachetul e al grupei.
+  // Acolo arătăm prezențele lunii; pachetul individual rămâne pe elev.
+  const isIndividual = group?.billingType === 'INDIVIDUAL'
   const lessonsDone = (gs) => attendanceStats[gs.studentId]?.present ?? 0
+  const monthStats = (gs) => attendanceStats[gs.studentId] || { monthPresent: 0, monthAbsent: 0 }
   const remainingTone = (n) =>
     n <= 0 ? 'bg-red-100 text-red-700' : n <= 2 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
   const [loading, setLoading] = useState(false)
@@ -536,6 +539,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                 <Fragment key={gs.id}>
                   <tr className={`hover:bg-gray-50 ${
                     isInactive ? 'bg-gray-50 opacity-60' :
+                    !isIndividual ? '' :
                     gs.lessonsRemaining === 0 ? 'bg-red-50' : 
                     gs.lessonsRemaining <= 2 ? 'bg-amber-50' : ''
                   }`}>
@@ -583,17 +587,30 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="space-y-1">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${remainingTone(gs.lessonsRemaining ?? 0)}`}>
-                          {gs.lessonsRemaining ?? 0} rămase
-                        </span>
-                        <p className="text-xs text-gray-500">
-                          {lessonsDone(gs)} făcute
-                          {(attendanceStats[gs.studentId]?.absent ?? 0) > 0 && (
-                            <span className="text-red-500"> · {attendanceStats[gs.studentId].absent} absențe</span>
-                          )}
-                        </p>
-                      </div>
+                      {isIndividual ? (
+                        <div className="space-y-1">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${remainingTone(gs.lessonsRemaining ?? 0)}`}>
+                            {gs.lessonsRemaining ?? 0} rămase
+                          </span>
+                          <p className="text-xs text-gray-500">
+                            {lessonsDone(gs)} făcute
+                            {(attendanceStats[gs.studentId]?.absent ?? 0) > 0 && (
+                              <span className="text-red-500"> · {attendanceStats[gs.studentId].absent} absențe</span>
+                            )}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center gap-1.5 text-sm">
+                            <span className="font-semibold text-emerald-600">{monthStats(gs).monthPresent}</span>
+                            <span className="text-gray-300">/</span>
+                            <span className="font-semibold text-red-600">{monthStats(gs).monthAbsent}</span>
+                          </span>
+                          <p className="text-xs text-gray-500">
+                            prezent / absent{monthLabel ? ` în ${monthLabel}` : ' luna asta'}
+                          </p>
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       {(canViewPayments || canAddPayments || canDeletePayments) ? (
@@ -737,6 +754,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
               return (
                 <div key={gs.id} className={`p-3 xs:p-4 space-y-3 ${
                   isInactive ? 'bg-gray-50 opacity-70' :
+                  !isIndividual ? '' :
                   gs.lessonsRemaining === 0 ? 'bg-red-50' : 
                   gs.lessonsRemaining <= 2 ? 'bg-amber-50' : ''
                 }`}>
@@ -781,13 +799,23 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                   </div>
 
                   <div className="bg-white/50 rounded-lg p-2 xs:p-3 flex items-center justify-between">
-                    <span className="text-xs text-gray-500">Lecții:</span>
-                    <span className="flex items-center gap-2">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] xs:text-xs font-medium ${remainingTone(gs.lessonsRemaining ?? 0)}`}>
-                        {gs.lessonsRemaining ?? 0} rămase
-                      </span>
-                      <span className="text-[10px] xs:text-xs text-gray-500">{lessonsDone(gs)} făcute</span>
+                    <span className="text-xs text-gray-500">
+                      {isIndividual ? 'Lecții:' : `Prezențe${monthLabel ? ` (${monthLabel})` : ''}:`}
                     </span>
+                    {isIndividual ? (
+                      <span className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] xs:text-xs font-medium ${remainingTone(gs.lessonsRemaining ?? 0)}`}>
+                          {gs.lessonsRemaining ?? 0} rămase
+                        </span>
+                        <span className="text-[10px] xs:text-xs text-gray-500">{lessonsDone(gs)} făcute</span>
+                      </span>
+                    ) : (
+                      <span className="text-xs xs:text-sm">
+                        <b className="text-emerald-600">{monthStats(gs).monthPresent}</b>
+                        <span className="text-gray-300"> / </span>
+                        <b className="text-red-600">{monthStats(gs).monthAbsent}</b>
+                      </span>
+                    )}
                   </div>
 
                   {/* Plata lunii curente — lecțiile se numără per grupă, nu per elev */}

@@ -120,6 +120,7 @@ export default async function SessionDetailPage({ params }) {
         lessonsDeducted={lessonSession.lessonsDeducted}
         isExpired={isExpired}
         sessionDate={lessonSession.date}
+        billingType={group.billingType}
       />
     </div>
   )
