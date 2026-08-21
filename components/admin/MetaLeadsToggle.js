@@ -52,18 +52,24 @@ export default function MetaLeadsToggle() {
     }
   }
 
-  const syncNow = async () => {
+  const syncNow = async (dryRun = false) => {
     setSyncing(true)
     setLastRun(null)
     try {
-      const res = await fetch('/api/admin/meta-leads', { method: 'POST' })
+      const res = await fetch(`/api/admin/meta-leads${dryRun ? '?dry=1' : ''}`, { method: 'POST' })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Eroare')
-      setState((prev) => ({ ...prev, lastSyncAt: json.lastSyncAt, totalCreated: json.totalCreated }))
+      if (!json.dryRun) {
+        setState((prev) => ({ ...prev, lastSyncAt: json.lastSyncAt, totalCreated: json.totalCreated }))
+      }
       setLastRun(json)
-      toast.success(json.created > 0
-        ? `${json.created} lead-uri noi din conversații`
-        : 'Nicio conversație nouă de transformat')
+      toast.success(
+        json.dryRun
+          ? `${json.created} conversații ar deveni lead-uri`
+          : json.created > 0
+            ? `${json.created} lead-uri noi din conversații`
+            : 'Nicio conversație nouă de transformat'
+      )
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -86,8 +92,11 @@ export default function MetaLeadsToggle() {
           </h2>
           <p className="text-sm text-gray-600 mt-1 max-w-xl">
             Cât timp e pornit, fiecare conversație nouă de pe Messenger și Instagram intră
-            automat în lista de lead-uri, cu numele persoanei, sursa și primul mesaj — și
-            pleacă notificare pe Telegram, ca la orice lead nou.
+            automat în lista de lead-uri, cu numele persoanei, sursa, primul mesaj și — dacă
+            l-a scris — telefonul. Se iau cele mai recente 25 de conversații de pe fiecare
+            platformă, nu tot istoricul, iar una deja transformată nu se repetă niciodată.
+            <b className="text-gray-700"> Prima sincronizare nu trimite nimic pe Telegram</b>;
+            notificările pornesc de la conversațiile care apar după ea.
           </p>
         </div>
 
@@ -138,11 +147,25 @@ export default function MetaLeadsToggle() {
         </p>
       )}
 
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => syncNow(true)}
+          disabled={syncing}
+          className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-60"
+        >
+          👀 Vezi ce s-ar crea
+        </button>
+        <span className="text-xs text-gray-500">
+          Fără să scrie nimic — doar îți arată lista.
+        </span>
+      </div>
+
       {state.enabled && (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={syncNow}
+            onClick={() => syncNow(false)}
             disabled={syncing}
             className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-60"
           >
@@ -158,15 +181,26 @@ export default function MetaLeadsToggle() {
       {lastRun && (
         <div className="mt-3 text-sm border border-gray-100 rounded-lg p-3 bg-gray-50">
           <p className="text-gray-900 font-medium">
-            {lastRun.created} lead-uri noi
+            {lastRun.dryRun
+              ? `${lastRun.created} conversații ar deveni lead-uri`
+              : `${lastRun.created} lead-uri noi`}
             <span className="font-normal text-gray-500">
               {' '}· {lastRun.skipped?.existing || 0} conversații erau deja lead
             </span>
+            {lastRun.dryRun && (
+              <span className="ml-2 px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 text-[10px]">
+                nimic nu s-a salvat
+              </span>
+            )}
           </p>
           {lastRun.createdLeads?.length > 0 && (
-            <ul className="mt-1 text-xs text-gray-600 list-disc list-inside">
-              {lastRun.createdLeads.slice(0, 10).map((l) => (
-                <li key={l.id}>{l.name} <span className="text-gray-400">({l.platform})</span></li>
+            <ul className="mt-1 text-xs text-gray-600 space-y-0.5">
+              {lastRun.createdLeads.slice(0, 25).map((l) => (
+                <li key={l.id}>
+                  • {l.name} <span className="text-gray-400">({l.platform})</span>
+                  {l.phone && <span className="text-emerald-600"> · {l.phone}</span>}
+                  {l.status && <span className="text-gray-400"> · {l.status}</span>}
+                </li>
               ))}
             </ul>
           )}

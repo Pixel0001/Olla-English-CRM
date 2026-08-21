@@ -10,6 +10,7 @@ import { isConfigured } from '@/lib/meta-messages'
  * GET             → starea curentă
  * PUT  { enabled }→ pornește / oprește
  * POST            → sincronizează acum (manual)
+ * POST ?dry=1     → arată ce s-ar crea, fără să scrie nimic
  */
 
 export const runtime = 'nodejs'
@@ -50,17 +51,20 @@ export async function PUT(request) {
   return NextResponse.json(state(settings))
 }
 
-export async function POST() {
+export async function POST(request) {
   const auth = await requireSuperadmin()
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
+  const dryRun = new URL(request.url).searchParams.get('dry') === '1'
+
   try {
     const settings = await getMetaLeadSettings()
-    if (!settings.metaLeadsEnabled) {
+    // Repetiția uscată merge și cu funcția oprită — tocmai ca să te uiți întâi
+    if (!settings.metaLeadsEnabled && !dryRun) {
       return NextResponse.json({ error: 'Funcția e oprită — pornește-o mai întâi' }, { status: 400 })
     }
 
-    const result = await syncConversationsToLeads()
+    const result = await syncConversationsToLeads({ dryRun })
     const updated = await getMetaLeadSettings()
 
     return NextResponse.json({ ...result, ...state(updated) })
