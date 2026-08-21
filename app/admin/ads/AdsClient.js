@@ -195,6 +195,19 @@ export default function AdsClient() {
             care să promoveze această pagină. Adaugă contul de reclame al școlii la acest
             utilizator în Meta Business Manager — cifrele apar aici singure, fără altă setare.
           </p>
+
+          {/* Linkurile duc fix unde e de lucru, ca să nu se caute prin meniuri */}
+          <div className="flex flex-wrap justify-center gap-2 mt-4">
+            <MetaLink href={`https://business.facebook.com/latest/ad_center/all_ads?asset_id=${data.filteredByPages[0].id}`}>
+              Reclamele paginii
+            </MetaLink>
+            <MetaLink href="https://adsmanager.facebook.com/adsmanager/manage/accounts">
+              Conturile mele de reclame
+            </MetaLink>
+            <MetaLink href="https://business.facebook.com/settings/ad-accounts">
+              Setări → Conturi de reclame
+            </MetaLink>
+          </div>
         </div>
       )}
 
@@ -455,6 +468,20 @@ export default function AdsClient() {
         </>
       )}
     </div>
+  )
+}
+
+function MetaLink({ href, children }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-indigo-700 hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+    >
+      {children}
+      <span aria-hidden className="text-gray-400">↗</span>
+    </a>
   )
 }
 
