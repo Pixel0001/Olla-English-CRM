@@ -141,7 +141,9 @@ export default function AdsClient() {
         <div>
           <h1 className="text-xl xs:text-2xl font-bold text-gray-900">Reclame</h1>
           <p className="text-sm xs:text-base text-gray-600">
-            Tot ce s-a cheltuit și ce a ieșit din reclamele Meta (Facebook & Instagram)
+            {data?.filteredByPages?.length > 0
+              ? `Reclamele Meta pentru ${data.filteredByPages.map((p) => p.name).join(', ')}`
+              : 'Tot ce s-a cheltuit și ce a ieșit din reclamele Meta (Facebook & Instagram)'}
           </p>
         </div>
 
@@ -182,7 +184,21 @@ export default function AdsClient() {
         </div>
       )}
 
-      {data && (
+      {data && data.accounts.length === 0 && data.filteredByPages?.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 xs:p-10 text-center">
+          <p className="text-4xl mb-3">📣</p>
+          <p className="font-semibold text-gray-900">
+            Nicio campanie pentru {data.filteredByPages.map((p) => p.name).join(', ')}
+          </p>
+          <p className="text-sm text-gray-600 mt-1 max-w-xl mx-auto">
+            Contul Meta conectat ({data.user?.name || '—'}) nu are acces la niciun cont de reclame
+            care să promoveze această pagină. Adaugă contul de reclame al școlii la acest
+            utilizator în Meta Business Manager — cifrele apar aici singure, fără altă setare.
+          </p>
+        </div>
+      )}
+
+      {data && data.accounts.length > 0 && (
         <>
           {/* Totaluri */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
