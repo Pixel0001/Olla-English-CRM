@@ -308,9 +308,27 @@ export default function MessagesClient() {
           {/* Lista de conversații */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             {conversations.length === 0 ? (
-              <p className="p-6 text-sm text-gray-500 text-center">
-                {search ? 'Nicio conversație care să se potrivească.' : 'Nicio conversație încă.'}
-              </p>
+              <div className="p-6 text-sm text-gray-500 text-center space-y-3">
+                <p>{search ? 'Nicio conversație care să se potrivească.' : 'Nicio conversație încă.'}</p>
+
+                {/* Cauza obișnuită la Instagram: un comutator din aplicație */}
+                {!search && platform === 'instagram' && (
+                  <div className="text-left text-xs bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800">
+                    <p className="font-medium">Dacă știi că există mesaje pe Instagram:</p>
+                    <ol className="mt-1 space-y-1 list-decimal list-inside">
+                      <li>
+                        În aplicația Instagram, din contul paginii: <b>Settings and privacy →
+                        Messages and story replies → Connected tools → Allow access to messages</b>.
+                        Cât timp e oprit, Meta nu returnează nicio conversație și nici eroare.
+                      </li>
+                      <li>
+                        Mesajele de la persoane care n-au mai scris niciodată stau în
+                        <b> Requests</b> — acceptă-le și trec în inbox, de unde le luăm și noi.
+                      </li>
+                    </ol>
+                  </div>
+                )}
+              </div>
             ) : (
               <ul className="divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
                 {conversations.map((c) => (
