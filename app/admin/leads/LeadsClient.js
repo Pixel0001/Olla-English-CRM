@@ -81,6 +81,7 @@ export default function LeadsClient({ leads, staff = [] }) {
 
   const [status, setStatus] = useState('')
   const [source, setSource] = useState('')
+  const [level, setLevel] = useState('')
   const [period, setPeriod] = useState('')
   const [followUp, setFollowUp] = useState('')
   const [sort, setSort] = useState('newest')
@@ -92,13 +93,13 @@ export default function LeadsClient({ leads, staff = [] }) {
   const resetPaging = () => setDisplayCount(ITEMS_PER_PAGE)
 
   const resetAll = () => {
-    setSearch(''); setStatus(''); setSource('')
+    setSearch(''); setStatus(''); setSource(''); setLevel('')
     setPeriod(''); setFollowUp(''); setSort('newest'); resetPaging()
   }
 
   const activeFilterCount =
     (search ? 1 : 0) + (status ? 1 : 0) +
-    (source ? 1 : 0) + (period ? 1 : 0) + (followUp ? 1 : 0)
+    (source ? 1 : 0) + (level ? 1 : 0) + (period ? 1 : 0) + (followUp ? 1 : 0)
 
   // Actualizează un lead în listă după o modificare din rândul extins
   const patchLead = useCallback((id, patch) => {
@@ -182,6 +183,7 @@ export default function LeadsClient({ leads, staff = [] }) {
 
     if (status) r = r.filter((l) => l.status === status)
     if (source) r = r.filter((l) => l.source === source)
+    if (level) r = r.filter((l) => (level === 'none' ? !l.interestedIn : l.interestedIn === level))
 
     if (period) {
       const limit = startOfToday()
@@ -224,7 +226,23 @@ export default function LeadsClient({ leads, staff = [] }) {
     } else sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
     return sorted
-  }, [items, search, status, source, period, followUp, sort])
+  }, [items, search, status, source, level, period, followUp, sort])
+
+  // Nivelurile care chiar apar în lead-uri, cu câte unul din fiecare
+  const levelOptions = useMemo(() => {
+    const counts = new Map()
+    let without = 0
+    for (const l of items) {
+      if (l.interestedIn) counts.set(l.interestedIn, (counts.get(l.interestedIn) || 0) + 1)
+      else without++
+    }
+    return {
+      levels: [...counts.entries()]
+        .map(([value, count]) => ({ value, count }))
+        .sort((a, b) => a.value.localeCompare(b.value, 'ro')),
+      without,
+    }
+  }, [items])
 
   const displayed = filtered.slice(0, displayCount)
   const hasMore = displayCount < filtered.length
@@ -307,6 +325,16 @@ export default function LeadsClient({ leads, staff = [] }) {
         <select value={source} onChange={(e) => { setSource(e.target.value); resetPaging() }} className={selectClass} aria-label="Sursă">
           <option value="">Sursă: toate</option>
           {LEAD_SOURCES.map((s) => <option key={s.value} value={s.value}>{s.emoji} {s.label}</option>)}
+        </select>
+
+        <select value={level} onChange={(e) => { setLevel(e.target.value); resetPaging() }} className={selectClass} aria-label="Nivel">
+          <option value="">Nivel: toate</option>
+          {levelOptions.levels.map((l) => (
+            <option key={l.value} value={l.value}>{l.value} ({l.count})</option>
+          ))}
+          {levelOptions.without > 0 && (
+            <option value="none">Fără nivel ({levelOptions.without})</option>
+          )}
         </select>
 
         <select value={followUp} onChange={(e) => { setFollowUp(e.target.value); resetPaging() }} className={selectClass} aria-label="Follow-up">

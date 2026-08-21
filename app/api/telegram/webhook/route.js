@@ -12,6 +12,7 @@ const STATUS_LABELS = {
   LEAD: '🔵 New lead',
   CONTACTAT: '🟡 Contactat',
   PROGRAMAT_TESTARE: '📝 Programat testare',
+  OLD_STUDENT: '🎒 Old student',
   PROGRAMAT: '🟠 Programat',
   FINALIZAT_LECTIA: '🎓 Finalizat',
   WAITLIST: '📋 Waitlist',

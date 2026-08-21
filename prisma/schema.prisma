@@ -734,6 +734,7 @@ enum LeadStatus {
   STUDIAZA          // 🟣 Studiază (convertit)
   PLECAT            // 🔴 A plecat
   LOST_LEAD         // ❌ Lead pierdut
+  OLD_STUDENT       // 🎒 Fost elev — a mai studiat la noi
   TEST              // 🧪 Test
 }
 
