@@ -46,6 +46,7 @@ const navigation = [
   { name: 'Lecții Ratate', href: '/admin/missed-sessions', icon: 'warning', permission: 'missed-sessions.view' },
   { name: 'Recuperări', href: '/admin/makeup', icon: 'refresh', permission: 'makeup.view' },
   { name: 'Plăți', href: '/admin/payments', icon: 'banknotes', permission: 'payments.view' },
+  { name: 'Mesaje', href: '/admin/messages', icon: 'chat', permission: 'messages.view' },
   { name: 'Reclame', href: '/admin/ads', icon: 'megaphone', permission: 'ads.view' },
   { name: 'Securitate', href: '/admin/security', icon: 'shield', permission: 'security.manage' },
   { name: 'Alerte Securitate', href: '/admin/security-alerts', icon: 'exclamation', permission: 'security.view' },

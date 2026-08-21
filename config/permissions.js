@@ -237,6 +237,13 @@ export const PERMISSIONS = {
     category: 'Securitate'
   },
 
+  // Mesaje (Messenger / Instagram)
+  'messages.view': {
+    label: 'Vezi mesajele',
+    description: 'Poate citi conversațiile de pe Messenger și Instagram ale paginii',
+    category: 'Mesaje'
+  },
+
   // Reclame (Meta)
   'ads.view': {
     label: 'Vezi reclamele',
@@ -301,6 +308,7 @@ export const PERMISSION_CATEGORIES = [
   'Filiale',
   'Sesiuni',
   'Recuperări',
+  'Mesaje',
   'Reclame',
   'Notificări',
   'Orar',
