@@ -54,6 +54,43 @@ export default function MessagesClient() {
   const [threadLoading, setThreadLoading] = useState(false)
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
+  const [check, setCheck] = useState(null)
+  const [checking, setChecking] = useState(false)
+
+  // Diagnosticul spune unde se rupe lanțul: pagina → Instagram → abonare
+  const runCheck = async () => {
+    setChecking(true)
+    try {
+      const res = await fetch('/api/admin/messages?diagnose=1')
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Eroare')
+      setCheck(json)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setChecking(false)
+    }
+  }
+
+  const subscribePage = async () => {
+    setChecking(true)
+    try {
+      const res = await fetch('/api/admin/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'subscribe' }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Eroare')
+      toast.success('Aplicația a fost abonată la mesajele paginii')
+      await runCheck()
+      await load(platform, { refresh: true })
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setChecking(false)
+    }
+  }
 
   const canSend = hasPermission('messages.send') || isSuperAdmin
 
@@ -311,21 +348,68 @@ export default function MessagesClient() {
               <div className="p-6 text-sm text-gray-500 text-center space-y-3">
                 <p>{search ? 'Nicio conversație care să se potrivească.' : 'Nicio conversație încă.'}</p>
 
-                {/* Cauza obișnuită la Instagram: un comutator din aplicație */}
-                {!search && platform === 'instagram' && (
-                  <div className="text-left text-xs bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800">
-                    <p className="font-medium">Dacă știi că există mesaje pe Instagram:</p>
-                    <ol className="mt-1 space-y-1 list-decimal list-inside">
-                      <li>
-                        În aplicația Instagram, din contul paginii: <b>Settings and privacy →
-                        Messages and story replies → Connected tools → Allow access to messages</b>.
-                        Cât timp e oprit, Meta nu returnează nicio conversație și nici eroare.
-                      </li>
-                      <li>
-                        Mesajele de la persoane care n-au mai scris niciodată stau în
-                        <b> Requests</b> — acceptă-le și trec în inbox, de unde le luăm și noi.
-                      </li>
-                    </ol>
+                {/* Meta nu dă eroare când lipsește o verigă — o căutăm noi */}
+                {!search && (
+                  <div className="text-left space-y-2">
+                    <button
+                      type="button"
+                      onClick={runCheck}
+                      disabled={checking}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                    >
+                      {checking ? 'Se verifică…' : '🔎 Verifică conexiunea cu Meta'}
+                    </button>
+
+                    {check && (
+                      <div className="text-xs bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-1.5 text-gray-700">
+                        <p>
+                          <b>Pagina:</b> {check.page?.name || check.page?.error || '—'}
+                        </p>
+                        <p>
+                          <b>Instagram:</b>{' '}
+                          {check.instagram
+                            ? `@${check.instagram.username}`
+                            : 'niciun cont profesional legat de pagină'}
+                        </p>
+                        <p>
+                          <b>Aplicația abonată la mesaje:</b>{' '}
+                          {check.subscribedApps?.error
+                            ? check.subscribedApps.error
+                            : check.subscribedApps?.hasMessages
+                              ? 'da'
+                              : 'nu'}
+                        </p>
+                        <p>
+                          <b>Conversații găsite:</b> Messenger{' '}
+                          {check.platforms?.messenger?.ok
+                            ? check.platforms.messenger.count
+                            : `eroare: ${check.platforms?.messenger?.error}`}
+                          {' · '}Instagram{' '}
+                          {check.platforms?.instagram?.ok
+                            ? check.platforms.instagram.count
+                            : `eroare: ${check.platforms?.instagram?.error}`}
+                        </p>
+
+                        {check.subscribedApps && !check.subscribedApps.hasMessages && (
+                          <button
+                            type="button"
+                            onClick={subscribePage}
+                            disabled={checking}
+                            className="mt-1 w-full px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-60"
+                          >
+                            Abonează aplicația la mesajele paginii
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {platform === 'instagram' && (
+                      <p className="text-xs text-gray-500">
+                        Dacă Instagram arată 0 iar Messenger arată mesaje, verifică în
+                        Meta Business Suite → Inbox dacă discuțiile de pe Instagram apar și acolo.
+                        Dacă nici acolo nu apar, contul nu e legat de pagină pentru mesagerie.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

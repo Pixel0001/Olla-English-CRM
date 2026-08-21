@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { requireAdmin } from '@/lib/session'
 import { checkPermission } from '@/lib/permissions'
 import {
   fetchConversations, fetchMessages, pageInfo, summarize, sendMessage, markSeen,
-  isConfigured, PAGE_ID,
+  diagnose, subscribePageMessaging, isConfigured, PAGE_ID,
 } from '@/lib/meta-messages'
 
 /**
@@ -11,7 +13,9 @@ import {
  *
  * GET  ?platform=messenger|instagram[&after=cursor] → lista de conversații
  * GET  ?conversation=<id>                           → mesajele unei conversații
+ * GET  ?diagnose=1                                 → de ce nu vin conversațiile
  * POST { recipientId, text }                        → răspunde în numele paginii
+ * POST { action: 'subscribe' }                      → abonează aplicația la pagină
  */
 
 export const runtime = 'nodejs'
@@ -31,7 +35,23 @@ export async function POST(request) {
       return NextResponse.json({ error: 'META_ACCESS_TOKEN nu este setat' }, { status: 503 })
     }
 
-    const { recipientId, text } = await request.json()
+    const body = await request.json()
+
+    // Abonarea paginii schimbă o setare a paginii, nu doar citește — o lăsăm
+    // doar pe mâna superadminului.
+    if (body.action === 'subscribe') {
+      const session = await getServerSession(authOptions)
+      if (session?.user?.role !== 'SUPERADMIN') {
+        return NextResponse.json(
+          { error: 'Doar superadminul poate conecta mesageria paginii' },
+          { status: 403 }
+        )
+      }
+      const result = await subscribePageMessaging()
+      return NextResponse.json({ ok: true, ...result })
+    }
+
+    const { recipientId, text } = body
     const sent = await sendMessage(recipientId, text)
 
     return NextResponse.json({ ok: true, ...sent, sentAt: new Date().toISOString() })
@@ -61,6 +81,12 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url)
+
+    // Diagnostic: ce vede Meta și ce lipsește
+    if (searchParams.get('diagnose') === '1') {
+      return NextResponse.json(await diagnose())
+    }
+
     const conversationId = searchParams.get('conversation')
 
     // ── Un fir de discuție ──
