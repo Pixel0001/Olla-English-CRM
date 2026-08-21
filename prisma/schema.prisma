@@ -339,6 +339,12 @@ model SystemSettings {
   levelCurve          Int[]    @default([0, 100, 300, 700, 1500, 3000, 6000, 12000, 25000, 50000])
   levelNames          String[] @default(["Novice","Explorator","Practicant","Expert","Master","Legend","Mythic","Titan","Sage","Immortal"])
 
+  // Conversațiile de pe Messenger/Instagram devin lead-uri automat.
+  // Comutatorul stă în Securitate și e vizibil doar SUPERADMIN-ului.
+  metaLeadsEnabled     Boolean   @default(false)
+  metaLeadsLastSyncAt  DateTime?
+  metaLeadsCreated     Int       @default(0)
+
   updatedAt           DateTime @updatedAt
   updatedById         String?  @db.ObjectId
 
@@ -671,6 +677,11 @@ model Lead {
   nextFollowUpAt DateTime?  // Când trebuie recontactat
   notes          String?    // Legacy — notițele noi stau în LeadNote
 
+  // Lead venit dintr-o conversație Meta — ține legătura, ca să nu se dubleze
+  metaConversationId String?  // id-ul conversației de pe Messenger/Instagram
+  metaPlatform       String?  // 'messenger' | 'instagram'
+  metaPersonId       String?  // id-ul persoanei, pentru răspuns direct
+
   createdById        String?  @db.ObjectId // Cine a introdus lead-ul în CRM
   assignedToId       String?  @db.ObjectId // Cine se ocupă de acest lead
   followUpNotifiedAt DateTime? // Când s-a trimis ultima notificare de recontactare
@@ -685,6 +696,7 @@ model Lead {
   trials    TrialLesson[] @relation("LeadTrials")
 
   @@index([status])
+  @@index([metaConversationId])
   @@index([source])
   @@index([createdAt])
   @@index([nextFollowUpAt])

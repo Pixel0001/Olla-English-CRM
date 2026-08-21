@@ -1,6 +1,7 @@
 'use client'
 
 import TelegramConnect from '@/components/TelegramConnect'
+import MetaLeadsToggle from '@/components/admin/MetaLeadsToggle'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -439,6 +440,13 @@ export default function SecurityPage() {
       <div className="mt-6">
         <TelegramConnect />
       </div>
+
+      {/* Automatizări — doar superadmin le vede și le poate schimba */}
+      {isSuperAdmin && (
+        <div className="mt-6">
+          <MetaLeadsToggle />
+        </div>
+      )}
       {/* Account Info */}
       <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Informații cont</h2>
