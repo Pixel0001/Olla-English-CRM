@@ -125,9 +125,12 @@ export async function GET(request) {
 
     // Instagram cere ca un cont profesional să fie legat de pagină; spunem asta
     // pe șleau, altfel pare că e o eroare a CRM-ului.
-    const hint = /instagram/i.test(error.message)
-      ? 'Verifică dacă un cont Instagram profesional e conectat la pagină și dacă token-ul are instagram_manage_messages.'
-      : null
+    // Eroarea #3 are un singur înțeles: aplicația n-are produsul Instagram
+    const hint = /capability/i.test(error.message)
+      ? 'Aplicația Meta nu are capacitatea de Instagram Messaging. Se adaugă din App Dashboard → Add Product → Instagram, apoi se cere Advanced Access pentru instagram_manage_messages.'
+      : /instagram/i.test(error.message)
+        ? 'Verifică dacă un cont Instagram profesional e conectat la pagină și dacă token-ul are instagram_manage_messages.'
+        : null
 
     return NextResponse.json({ error: error.message || 'Eroare Meta', hint }, { status: 502 })
   }
