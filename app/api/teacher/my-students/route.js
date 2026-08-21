@@ -143,7 +143,8 @@ export async function POST(request) {
 
   try {
     const body = await request.json()
-    const { fullName, age, parentName, parentPhone, parentEmail, notes, groupId } = body
+    const { fullName, age, parentName, parentPhone, parentEmail, notes, groupId,
+      level, startYear, startMonth } = body
 
     if (!fullName || !fullName.trim()) {
       return NextResponse.json({ error: 'Numele elevului este obligatoriu' }, { status: 400 })
@@ -158,6 +159,9 @@ export async function POST(request) {
         parentPhone: parentPhone?.trim() || null,
         parentEmail: parentEmail?.trim() || null,
         notes: notes?.trim() || null,
+        level: level || null,
+        startYear: startYear ?? null,
+        startMonth: startMonth ?? null,
         createdById: session.user.id
       }
     })
@@ -186,6 +190,12 @@ export async function POST(request) {
     // Send Telegram notification - Thread 9
     let details = `👤 Elev: <b>${student.fullName}</b>`
     if (student.age) details += `\n🎂 Vârstă: ${student.age} ani`
+    if (student.level) details += `\n📘 Nivel: ${student.level}`
+    if (student.startYear && student.startMonth) {
+      const MONTHS = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+        'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie']
+      details += `\n🗓 Începe: ${MONTHS[student.startMonth - 1]} ${student.startYear}`
+    }
     if (student.parentName) details += `\n👨‍👩‍👧 Părinte: ${student.parentName}`
     if (student.parentPhone) details += `\n📱 Telefon: ${student.parentPhone}`
 

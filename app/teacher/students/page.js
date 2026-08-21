@@ -1,6 +1,18 @@
 'use client'
 
 import { monthOptions, periodLabel } from '@/lib/payments'
+import LevelSelect from '@/components/LevelSelect'
+
+const MONTH_NAMES = [
+  'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
+  'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie',
+]
+
+// „octombrie 2026" — luna din care începe elevul
+const startLabel = (student) =>
+  student?.startYear && student?.startMonth
+    ? `${MONTH_NAMES[student.startMonth - 1]} ${student.startYear}`
+    : null
 
 // Luna curentă, în formatul folosit de selectorul de plată
 const currentPeriod = () => {
@@ -73,6 +85,8 @@ export default function TeacherStudentsPage() {
   const [studentForm, setStudentForm] = useState({
     fullName: '',
     age: '',
+    level: '',
+    startPeriod: '',
     parentName: '',
     parentPhone: '',
     parentEmail: '',
@@ -133,7 +147,11 @@ export default function TeacherStudentsPage() {
       const res = await fetch('/api/teacher/my-students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(studentForm)
+        body: JSON.stringify({
+          ...studentForm,
+          startYear: studentForm.startPeriod ? parseInt(studentForm.startPeriod.slice(0, 4)) : null,
+          startMonth: studentForm.startPeriod ? parseInt(studentForm.startPeriod.slice(5, 7)) : null,
+        })
       })
 
       if (!res.ok) {
@@ -143,7 +161,7 @@ export default function TeacherStudentsPage() {
 
       toast.success('Elev creat cu succes!')
       setShowCreateModal(false)
-      setStudentForm({ fullName: '', age: '', parentName: '', parentPhone: '', parentEmail: '', notes: '' })
+      setStudentForm({ fullName: '', age: '', level: '', startPeriod: '', parentName: '', parentPhone: '', parentEmail: '', notes: '' })
       fetchData()
     } catch (error) {
       toast.error(error.message)
@@ -530,6 +548,16 @@ export default function TeacherStudentsPage() {
                           <AcademicCapIcon className="w-3 h-3 xs:w-3.5 xs:h-3.5" />
                           {student.groups.length} {student.groups.length === 1 ? 'grupă' : 'grupe'}
                         </span>
+                        {student.level && (
+                          <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium">
+                            {student.level}
+                          </span>
+                        )}
+                        {startLabel(student) && (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-medium capitalize">
+                            începe {startLabel(student)}
+                          </span>
+                        )}
                       </div>
                       {/* Remaining lessons preview */}
                       {student.groups.length > 0 && (
@@ -785,6 +813,27 @@ export default function TeacherStudentsPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900 placeholder-gray-500"
                     placeholder="Ex: Maria Popescu"
                   />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">Nivel</label>
+                  <LevelSelect
+                    value={studentForm.level}
+                    onChange={(e) => setStudentForm({ ...studentForm, level: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+                    emptyLabel="— Nespecificat —"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">Începe din luna</label>
+                  <input
+                    type="month"
+                    value={studentForm.startPeriod}
+                    onChange={(e) => setStudentForm({ ...studentForm, startPeriod: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-500">Lasă gol dacă începe acum.</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
