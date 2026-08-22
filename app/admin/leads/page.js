@@ -45,7 +45,7 @@ async function LeadsPageContent() {
     metaConversationId: l.metaConversationId || null,
     metaPlatform: l.metaPlatform || null,
     metaPersonId: l.metaPersonId || null,
-    metaInboxUrl: inboxLink(l.metaPersonId, l.metaPlatform),
+    metaInboxUrl: inboxLink(l.metaPersonId, l.metaPlatform, l.metaConversationId),
   }))
 
   const staff = await prisma.user.findMany({
