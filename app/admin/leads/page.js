@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import prisma from '@/lib/prisma'
+import { inboxLink } from '@/lib/meta-messages'
 import PermissionGuard from '@/components/admin/PermissionGuard'
 import LeadsClient from './LeadsClient'
 
@@ -44,6 +45,7 @@ async function LeadsPageContent() {
     metaConversationId: l.metaConversationId || null,
     metaPlatform: l.metaPlatform || null,
     metaPersonId: l.metaPersonId || null,
+    metaInboxUrl: inboxLink(l.metaPersonId, l.metaPlatform),
   }))
 
   const staff = await prisma.user.findMany({

@@ -911,6 +911,18 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
             ✍️ {replyOpen ? 'Închide' : 'Răspunde'}
           </button>
         )}
+        {lead.metaInboxUrl && (
+          <a
+            href={lead.metaInboxUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Deschide discuția în inboxul paginii, pe Meta"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600 text-white text-[11px] font-medium hover:bg-blue-700 transition-colors"
+          >
+            {lead.metaPlatform === 'instagram' ? '📸' : '💬'} Deschide în{' '}
+            {lead.metaPlatform === 'instagram' ? 'Instagram' : 'Messenger'}
+          </a>
+        )}
         {lead.metaConversationId && (
           <Link
             href={`/admin/messages?conversation=${encodeURIComponent(lead.metaConversationId)}` +
