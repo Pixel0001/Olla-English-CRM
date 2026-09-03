@@ -1498,3 +1498,19 @@ enum TrialStatus {
   ABSENT    // nu a venit
   ANULAT    // anulată
 }
+
+// ==================== CACHE PENTRU DATE EXTERNE ====================
+
+/// Răspunsuri de la Meta, ținute între cereri.
+///
+/// Memoria unei funcții serverless trăiește doar cât instanța ei, iar Vercel
+/// pornește mai multe — așa că fiecare deschidere de pagină nimerea deseori o
+/// instanță „rece" și aștepta din nou după Meta. Aici răspunsul e comun.
+model ExternalCache {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  key       String   @unique  // ex. "meta:inbox"
+  payload   Json
+  updatedAt DateTime @updatedAt
+
+  @@map("external_cache")
+}

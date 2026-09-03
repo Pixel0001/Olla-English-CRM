@@ -29,6 +29,28 @@ const TABS = [
 ]
 
 const POLL_MS = 25000
+const STORE_KEY = 'olla:inbox'
+const STORE_MAX_AGE = 10 * 60 * 1000
+
+/** Ultimul inbox văzut, ca pagina să apară desenată înainte de răspuns. */
+const readStored = () => {
+  try {
+    const raw = sessionStorage.getItem(STORE_KEY)
+    if (!raw) return null
+    const { at, data } = JSON.parse(raw)
+    return Date.now() - at < STORE_MAX_AGE ? data : null
+  } catch {
+    return null
+  }
+}
+
+const writeStored = (data) => {
+  try {
+    sessionStorage.setItem(STORE_KEY, JSON.stringify({ at: Date.now(), data }))
+  } catch {
+    // sessionStorage plin sau blocat — nu e nimic esențial aici
+  }
+}
 
 const timeLabel = (iso) => {
   if (!iso) return ''
@@ -104,20 +126,36 @@ export default function MessagesClient() {
   const [checking, setChecking] = useState(false)
 
   const bottomRef = useRef(null)
+  // Ținem minte dacă avem deja ceva pe ecran, fără ca load() să depindă de date
+  // (altfel intervalul de împrospătare s-ar reporni la fiecare clic)
+  const hasDataRef = useRef(false)
   const canSend = hasPermission('messages.send') || isSuperAdmin
 
   useEffect(() => {
     if (!hasPermission('messages.view') && !isSuperAdmin) router.push('/admin')
   }, [hasPermission, isSuperAdmin, router])
 
+  // Desenăm imediat ce știam, apoi înlocuim cu ce vine de la server
+  useEffect(() => {
+    const stored = readStored()
+    if (stored) {
+      setData(stored)
+      hasDataRef.current = true
+      setLoading(false)
+    }
+  }, [])
+
   // ── Lista, împrospătată singură ──────────────────────────────────────
   const load = useCallback(async ({ silent = false } = {}) => {
-    if (!silent) setLoading(true)
+    // Ecranul de încărcare doar dacă n-avem chiar nimic de arătat
+    if (!silent && !hasDataRef.current) setLoading(true)
     try {
       const res = await fetch('/api/admin/messages')
       const json = await res.json()
       if (!res.ok) throw new Error(json.hint || json.error || 'Eroare la citirea mesajelor')
       setData(json)
+      hasDataRef.current = true
+      writeStored(json)
       setError(null)
     } catch (err) {
       // La o reîmprospătare tăcută păstrăm ce era pe ecran

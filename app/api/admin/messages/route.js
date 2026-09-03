@@ -7,6 +7,7 @@ import {
   fetchInbox, fetchConversations, fetchMessages, pageInfo, summarize, sendMessage,
   markSeen, diagnose, subscribePageMessaging, isConfigured, PAGE_ID,
 } from '@/lib/meta-messages'
+import { readCache, writeCache } from '@/lib/external-cache'
 
 /**
  * Inboxul paginii Olla English — Messenger și Instagram la un loc.
@@ -28,8 +29,9 @@ export const dynamic = 'force-dynamic'
 
 const FRESH_MS = 20 * 1000        // sub asta, datele se consideră proaspete
 const THREAD_FRESH_MS = 10 * 1000
+const INBOX_KEY = 'meta:inbox'
 
-let inboxCache = null             // { data, at, refreshing }
+let refreshing = false            // o singură împrospătare odată, per instanță
 const threadCache = new Map()     // conversationId → { messages, at }
 
 async function loadInbox() {
@@ -46,12 +48,13 @@ async function loadInbox() {
 
 /** Împrospătare în fundal — cine a cerut deja a primit datele vechi. */
 function refreshInBackground() {
-  if (inboxCache?.refreshing) return
-  if (inboxCache) inboxCache.refreshing = true
+  if (refreshing) return
+  refreshing = true
 
   loadInbox()
-    .then((data) => { inboxCache = { data, at: Date.now(), refreshing: false } })
-    .catch(() => { if (inboxCache) inboxCache.refreshing = false })
+    .then((data) => writeCache(INBOX_KEY, data))
+    .catch(() => {})
+    .finally(() => { refreshing = false })
 }
 
 export async function POST(request) {
@@ -86,9 +89,9 @@ export async function POST(request) {
     const { recipientId, text, conversationId } = body
     const sent = await sendMessage(recipientId, text)
 
-    // Firul și lista se schimbă imediat după trimitere
+    // Firul se schimbă imediat; lista o împrospătăm în fundal
     if (conversationId) threadCache.delete(conversationId)
-    if (inboxCache) inboxCache.at = 0
+    refreshInBackground()
 
     return NextResponse.json({ ok: true, ...sent, sentAt: new Date().toISOString() })
   } catch (error) {
@@ -145,17 +148,25 @@ export async function GET(request) {
       return NextResponse.json({ platform, conversations, next, stats: summarize(conversations) })
     }
 
-    // ── Inboxul, cu datele ținute în memorie ──
+    // ── Inboxul, servit din cache-ul comun ──
     const force = searchParams.get('refresh') === '1'
 
-    if (inboxCache && !force) {
-      const age = Date.now() - inboxCache.at
-      if (age > FRESH_MS) refreshInBackground()
-      return NextResponse.json({ ...inboxCache.data, cached: true, ageMs: age })
+    if (!force) {
+      const cached = await readCache(INBOX_KEY)
+      if (cached) {
+        // Vechi? Îl împrospătăm în fundal — cererea de față nu așteaptă.
+        if (cached.ageMs > FRESH_MS) refreshInBackground()
+        return NextResponse.json({
+          ...cached.payload,
+          cached: true,
+          ageMs: cached.ageMs,
+          cacheFrom: cached.from,
+        })
+      }
     }
 
     const data = await loadInbox()
-    inboxCache = { data, at: Date.now(), refreshing: false }
+    await writeCache(INBOX_KEY, data)
 
     return NextResponse.json({ ...data, cached: false, ageMs: 0 })
   } catch (error) {
