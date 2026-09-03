@@ -4,23 +4,55 @@ import { authOptions } from '@/lib/auth'
 import { requireAdmin } from '@/lib/session'
 import { checkPermission } from '@/lib/permissions'
 import {
-  fetchConversations, fetchMessages, pageInfo, summarize, sendMessage, markSeen,
-  diagnose, subscribePageMessaging, isConfigured, PAGE_ID,
+  fetchInbox, fetchConversations, fetchMessages, pageInfo, summarize, sendMessage,
+  markSeen, diagnose, subscribePageMessaging, isConfigured, PAGE_ID,
 } from '@/lib/meta-messages'
 
 /**
- * Conversațiile paginii Olla English (Messenger + Instagram).
+ * Inboxul paginii Olla English — Messenger și Instagram la un loc.
  *
- * GET  ?platform=messenger|instagram[&after=cursor] → lista de conversații
- * GET  ?conversation=<id>                           → mesajele unei conversații
- * GET  ?diagnose=1                                 → de ce nu vin conversațiile
- * POST { recipientId, text }                        → răspunde în numele paginii
- * POST { action: 'subscribe' }                      → abonează aplicația la pagină
+ * GET                        → conversațiile din ambele platforme
+ * GET ?conversation=<id>     → mesajele unei conversații
+ * GET ?diagnose=1            → de ce nu vin conversațiile
+ * POST { recipientId, text } → răspunde în numele paginii
+ * POST { action:'subscribe' }→ abonează aplicația la pagină
+ *
+ * Apelurile către Meta durează secunde bune, așa că răspunsul se ține în
+ * memorie și se împrospătează în fundal: pagina se deschide instant cu ce
+ * știm deja, iar datele proaspete ajung la următoarea verificare.
  */
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
+
+const FRESH_MS = 20 * 1000        // sub asta, datele se consideră proaspete
+const THREAD_FRESH_MS = 10 * 1000
+
+let inboxCache = null             // { data, at, refreshing }
+const threadCache = new Map()     // conversationId → { messages, at }
+
+async function loadInbox() {
+  const { conversations, errors } = await fetchInbox()
+  const page = await pageInfo().catch(() => ({ id: PAGE_ID, name: 'Pagina' }))
+  return {
+    page,
+    conversations,
+    errors,
+    stats: summarize(conversations),
+    fetchedAt: new Date().toISOString(),
+  }
+}
+
+/** Împrospătare în fundal — cine a cerut deja a primit datele vechi. */
+function refreshInBackground() {
+  if (inboxCache?.refreshing) return
+  if (inboxCache) inboxCache.refreshing = true
+
+  loadInbox()
+    .then((data) => { inboxCache = { data, at: Date.now(), refreshing: false } })
+    .catch(() => { if (inboxCache) inboxCache.refreshing = false })
+}
 
 export async function POST(request) {
   try {
@@ -32,7 +64,7 @@ export async function POST(request) {
     }
 
     if (!isConfigured()) {
-      return NextResponse.json({ error: 'META_ACCESS_TOKEN nu este setat' }, { status: 503 })
+      return NextResponse.json({ error: 'Token-ul Meta nu este setat' }, { status: 503 })
     }
 
     const body = await request.json()
@@ -51,8 +83,12 @@ export async function POST(request) {
       return NextResponse.json({ ok: true, ...result })
     }
 
-    const { recipientId, text } = body
+    const { recipientId, text, conversationId } = body
     const sent = await sendMessage(recipientId, text)
+
+    // Firul și lista se schimbă imediat după trimitere
+    if (conversationId) threadCache.delete(conversationId)
+    if (inboxCache) inboxCache.at = 0
 
     return NextResponse.json({ ok: true, ...sent, sentAt: new Date().toISOString() })
   } catch (error) {
@@ -75,62 +111,62 @@ export async function GET(request) {
 
     if (!isConfigured()) {
       return NextResponse.json({
-        error: 'META_ACCESS_TOKEN nu este setat',
-        hint: 'Adaugă token-ul Meta în variabilele de mediu și redeployează.',
+        error: 'Token-ul Meta nu este setat',
+        hint: 'Adaugă META_PAGE_ACCESS_TOKEN în variabilele de mediu și redeployează.',
       }, { status: 503 })
     }
 
     const { searchParams } = new URL(request.url)
 
-    // Diagnostic: ce vede Meta și ce lipsește
     if (searchParams.get('diagnose') === '1') {
       return NextResponse.json(await diagnose())
     }
 
-    const conversationId = searchParams.get('conversation')
-
     // ── Un fir de discuție ──
+    const conversationId = searchParams.get('conversation')
     if (conversationId) {
-      const messages = await fetchMessages(conversationId)
+      const cached = threadCache.get(conversationId)
+      const fresh = cached && Date.now() - cached.at < THREAD_FRESH_MS
 
-      // Am citit-o efectiv — o marcăm și la Meta, ca să dispară „necitite"
+      const messages = fresh ? cached.messages : await fetchMessages(conversationId)
+      if (!fresh) threadCache.set(conversationId, { messages, at: Date.now() })
+
       const personId = searchParams.get('person')
       if (personId) markSeen(personId).catch(() => {})
 
-      return NextResponse.json({ conversationId, messages })
+      return NextResponse.json({ conversationId, messages, cached: !!fresh })
     }
 
-    // ── Lista de conversații ──
-    const platform = searchParams.get('platform') === 'instagram' ? 'instagram' : 'messenger'
-    const after = searchParams.get('after') || null
+    // ── O singură platformă, pentru compatibilitate ──
+    const platform = searchParams.get('platform')
+    if (platform === 'messenger' || platform === 'instagram') {
+      const after = searchParams.get('after') || null
+      const { conversations, next } = await fetchConversations(platform, after)
+      return NextResponse.json({ platform, conversations, next, stats: summarize(conversations) })
+    }
 
-    const [{ conversations, next }, page] = await Promise.all([
-      fetchConversations(platform, after),
-      after ? Promise.resolve(null) : pageInfo().catch(() => ({ id: PAGE_ID, name: 'Pagina' })),
-    ])
+    // ── Inboxul, cu datele ținute în memorie ──
+    const force = searchParams.get('refresh') === '1'
 
-    return NextResponse.json({
-      platform,
-      page,
-      conversations,
-      next,
-      stats: summarize(conversations),
-      fetchedAt: new Date().toISOString(),
-    })
+    if (inboxCache && !force) {
+      const age = Date.now() - inboxCache.at
+      if (age > FRESH_MS) refreshInBackground()
+      return NextResponse.json({ ...inboxCache.data, cached: true, ageMs: age })
+    }
+
+    const data = await loadInbox()
+    inboxCache = { data, at: Date.now(), refreshing: false }
+
+    return NextResponse.json({ ...data, cached: false, ageMs: 0 })
   } catch (error) {
     if (error.message === 'Unauthorized' || error.message === 'Forbidden') {
       return NextResponse.json({ error: error.message }, { status: 401 })
     }
     console.error('Eroare la citirea mesajelor Meta:', error)
 
-    // Instagram cere ca un cont profesional să fie legat de pagină; spunem asta
-    // pe șleau, altfel pare că e o eroare a CRM-ului.
-    // Eroarea #3 are un singur înțeles: aplicația n-are produsul Instagram
     const hint = /capability/i.test(error.message)
-      ? 'Aplicația Meta nu are capacitatea de Instagram Messaging. Se adaugă din App Dashboard → Add Product → Instagram, apoi se cere Advanced Access pentru instagram_manage_messages.'
-      : /instagram/i.test(error.message)
-        ? 'Verifică dacă un cont Instagram profesional e conectat la pagină și dacă token-ul are instagram_manage_messages.'
-        : null
+      ? 'Aplicația Meta nu are capacitatea de Instagram Messaging. Se adaugă din App Dashboard → Add Product → Instagram, apoi Advanced Access pentru instagram_manage_messages.'
+      : null
 
     return NextResponse.json({ error: error.message || 'Eroare Meta', hint }, { status: 502 })
   }
