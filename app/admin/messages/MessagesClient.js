@@ -376,17 +376,30 @@ export default function MessagesClient() {
         <h1 className="text-xl xs:text-2xl font-bold text-gray-900">Mesaje</h1>
         <p className="text-sm text-gray-600">
           {data?.page?.name ? `Messenger și Instagram · ${data.page.name}` : 'Messenger și Instagram'}
+          {data?.stats?.unread > 0 && (
+            <span className="ml-2 text-indigo-600 font-medium">
+              {data.stats.unread} {data.stats.unread === 1 ? 'necitit' : 'necitite'}
+            </span>
+          )}
         </p>
       </div>
 
+{/* Cu date pe ecran, o eroare de moment e o notă, nu un zid roșu */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-          <ExclamationTriangleIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium text-red-800">Nu s-au putut citi mesajele</p>
-            <p className="text-sm text-red-700 mt-0.5">{error}</p>
+        data ? (
+          <div className="flex items-center gap-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+            <ExclamationTriangleIcon className="h-3.5 w-3.5 flex-shrink-0" />
+            Meta răspunde greu — vezi ultimele date cunoscute. Se reîncearcă singur.
           </div>
-        </div>
+        ) : (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+            <ExclamationTriangleIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-red-800">Nu s-au putut citi mesajele</p>
+              <p className="text-sm text-red-700 mt-0.5">{error}</p>
+            </div>
+          </div>
+        )
       )}
 
       {data?.errors?.length > 0 && (
@@ -520,17 +533,21 @@ export default function MessagesClient() {
                           <span className={`text-sm truncate ${unread ? 'font-bold text-gray-900' : 'font-medium text-gray-800'}`}>
                             {c.person.name}
                           </span>
-                          <span className="text-[11px] text-gray-400 whitespace-nowrap">
+                          <span className={`text-[11px] whitespace-nowrap ${unread ? 'text-indigo-600 font-medium' : 'text-gray-400'}`}>
                             {timeLabel(c.updatedTime)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between gap-2 mt-0.5">
-                          <p className={`text-xs truncate ${unread ? 'text-gray-700' : 'text-gray-500'}`}>
-                            {c.snippet || (c.person.username ? `@${c.person.username}` : '—')}
+                          {/* La Instagram numele e chiar username-ul — nu-l repetăm dedesubt */}
+                          <p className={`text-xs truncate ${unread ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>
+                            {c.lastFromPage && c.snippet && (
+                              <span className="text-gray-400">Tu: </span>
+                            )}
+                            {c.snippet || <span className="text-gray-300">fără text</span>}
                           </p>
                           {unread && (
-                            <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded bg-indigo-600 text-white text-[10px] font-semibold flex items-center justify-center">
-                              {c.unreadCount}
+                            <span className="flex-shrink-0 px-1.5 h-[18px] rounded-full bg-indigo-600 text-white text-[10px] font-semibold flex items-center justify-center">
+                              Nou
                             </span>
                           )}
                         </div>

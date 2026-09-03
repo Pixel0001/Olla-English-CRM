@@ -7,7 +7,7 @@ import {
   fetchInbox, fetchConversations, fetchMessages, pageInfo, summarize, sendMessage,
   markSeen, diagnose, subscribePageMessaging, isConfigured, PAGE_ID,
 } from '@/lib/meta-messages'
-import { getInbox, refreshInBackground } from '@/lib/meta-inbox'
+import { getInbox, refreshInBackground, markConversationSeen } from '@/lib/meta-inbox'
 
 /**
  * Inboxul paginii Olla English — Messenger și Instagram la un loc.
@@ -108,6 +108,8 @@ export async function GET(request) {
       const messages = fresh ? cached.messages : await fetchMessages(conversationId)
       if (!fresh) threadCache.set(conversationId, { messages, at: Date.now() })
 
+      // Deschisă înseamnă citită — și la noi, și la Meta
+      markConversationSeen(conversationId).catch(() => {})
       const personId = searchParams.get('person')
       if (personId) markSeen(personId).catch(() => {})
 
