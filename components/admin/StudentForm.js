@@ -1,6 +1,7 @@
 'use client'
 
 import LevelSelect from '@/components/LevelSelect'
+import DuplicateStudentWarning from '@/components/admin/DuplicateStudentWarning'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -111,6 +112,12 @@ export default function StudentForm({ student }) {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
             />
           </div>
+
+          <DuplicateStudentWarning
+            name={formData.fullName}
+            phone={formData.parentPhone}
+            excludeId={student?.id || null}
+          />
 
           <div className="sm:col-span-2">
             <label className="flex items-start gap-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-indigo-300">

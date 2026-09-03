@@ -2,6 +2,7 @@
 
 import { monthOptions, periodLabel } from '@/lib/payments'
 import LevelSelect from '@/components/LevelSelect'
+import DuplicateStudentWarning from '@/components/admin/DuplicateStudentWarning'
 
 const MONTH_NAMES = [
   'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
@@ -823,6 +824,11 @@ export default function TeacherStudentsPage() {
                   required
                 />
               </div>
+              <DuplicateStudentWarning
+                name={studentForm.fullName}
+                phone={studentForm.parentPhone}
+              />
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-1">Vârstă</label>
