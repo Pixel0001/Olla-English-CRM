@@ -75,6 +75,7 @@ export async function GET(request) {
         month: months[i],
         monthNumber: i + 1,
         totalAmount: 0,
+        totalDebt: 0,
         totalPayments: 0,
         uniqueStudents: new Set(),
         payments: []
@@ -86,6 +87,7 @@ export async function GET(request) {
       const month = new Date(payment.paymentDate).getMonth()
       const gs = payment.groupStudent
       monthlyStats[month].totalAmount += payment.amount
+      monthlyStats[month].totalDebt += payment.debt || 0
       monthlyStats[month].totalPayments += 1
       if (gs?.studentId) monthlyStats[month].uniqueStudents.add(gs.studentId)
       monthlyStats[month].payments.push({
@@ -96,6 +98,7 @@ export async function GET(request) {
         paymentMethod: payment.paymentMethod,
         notes: payment.notes,
         lessonsAdded: payment.lessonsAdded,
+        debt: payment.debt || 0,
         studentId: gs?.studentId || null,
         studentName: gs?.student?.fullName || payment.studentNameSnapshot || 'Elev șters',
         groupName: gs?.group?.name || payment.groupNameSnapshot || 'Grupă ștearsă',
@@ -151,6 +154,7 @@ export async function GET(request) {
     // Calculate year totals
     const yearTotal = {
       totalAmount: [...payments, ...learningPayments].reduce((sum, p) => sum + p.amount, 0),
+      totalDebt: payments.reduce((sum, p) => sum + (p.debt || 0), 0),
       totalPayments: payments.length + learningPayments.length,
       uniqueStudents: new Set([
         ...payments.map(p => p.groupStudent?.studentId),

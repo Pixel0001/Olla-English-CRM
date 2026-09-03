@@ -28,6 +28,7 @@ export default function AddPaymentButton({
   const [open, setOpen] = useState(false)
   const [groupStudentId, setGroupStudentId] = useState(groups[0]?.groupStudentId || '')
   const [amount, setAmount] = useState('')
+  const [debt, setDebt] = useState('')
   const [period, setPeriod] = useState(currentPeriod())
   const [mode, setMode] = useState('MONTHLY')   // MONTHLY = lunar pe grupă, INDIVIDUAL = pe lecții
   const [lessons, setLessons] = useState('8')
@@ -72,6 +73,7 @@ export default function AddPaymentButton({
         body: JSON.stringify({
           groupStudentId,
           amount: value,
+          debt: debt === '' ? null : parseFloat(debt),
           paymentDate: new Date(date).toISOString(),
           paymentMethod: method,
           notes: notes.trim() || null,
@@ -227,6 +229,21 @@ export default function AddPaymentButton({
                     </select>
                   </>
                 )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Datorie rămasă (MDL)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={debt}
+                  onChange={(e) => setDebt(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Cât mai are de plată. Lasă gol dacă a achitat tot.
+                </p>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Metodă</label>

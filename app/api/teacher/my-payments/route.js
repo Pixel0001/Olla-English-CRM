@@ -47,7 +47,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json()
-    const { groupStudentId, amount, paymentMethod, notes, forYear, forMonth, lessonsAdded } = body
+    const { groupStudentId, amount, paymentMethod, notes, forYear, forMonth, lessonsAdded, debt } = body
 
     if (!groupStudentId) {
       return NextResponse.json({ error: 'Selectează o grupă' }, { status: 400 })
@@ -90,6 +90,7 @@ export async function POST(request) {
           paymentMethod: paymentMethod || null,
           notes: notes || null,
           lessonsAdded: lessonsAdded ? parseInt(lessonsAdded, 10) : null,
+          debt: debt === '' || debt === undefined || debt === null ? null : parseFloat(debt),
           createdById: session.user.id
         },
         include: {
@@ -119,7 +120,8 @@ export async function POST(request) {
     const details = `👤 Elev: <b>${result.groupStudent.student.fullName}</b>
 📚 Grupa: ${result.groupStudent.group.name}
 📘 Nivel: ${result.groupStudent.group.level || 'N/A'}
-💵 Sumă: <b>${amount} MDL</b>
+💵 Sumă: <b>${amount} MDL</b>${debt && parseFloat(debt) > 0 ? `
+🔴 Datorie rămasă: <b>${debt} MDL</b>` : ''}
 🗓 Pentru luna: <b>${periodLabel({ forYear, forMonth, paymentDate: new Date() })}</b>
 💳 Metodă: ${paymentMethod || 'Nespecificată'}`
 

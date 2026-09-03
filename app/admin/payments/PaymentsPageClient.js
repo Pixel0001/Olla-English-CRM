@@ -592,6 +592,11 @@ export default function PaymentsPage() {
         <div class="value">${filteredData.yearTotal.totalAmount.toLocaleString('ro-RO')} MDL</div>
         <div class="label">Total Încasat</div>
       </div>
+      ${filteredData.yearTotal.totalDebt > 0 ? `
+      <div class="stat-card">
+        <div class="value" style="color:#dc2626">${filteredData.yearTotal.totalDebt.toLocaleString('ro-RO')} MDL</div>
+        <div class="label">Datorii rămase</div>
+      </div>` : ''}
       <div class="stat-card">
         <div class="value">${filteredData.yearTotal.totalPayments}</div>
         <div class="label">Total Plăți</div>
@@ -723,6 +728,7 @@ export default function PaymentsPage() {
           ...month,
           payments: [],
           totalAmount: 0,
+          totalDebt: 0,
           totalPayments: 0,
           uniqueStudents: 0,
           filtered: true // mark as filtered out
@@ -735,6 +741,7 @@ export default function PaymentsPage() {
         ...month,
         payments: filteredPayments,
         totalAmount: filteredPayments.reduce((sum, p) => sum + p.amount, 0),
+        totalDebt: filteredPayments.reduce((sum, p) => sum + (p.debt || 0), 0),
         totalPayments: filteredPayments.length,
         uniqueStudents: new Set(filteredPayments.map(p => p.studentId)).size,
         filtered: false
@@ -746,6 +753,7 @@ export default function PaymentsPage() {
       )
       return {
         totalAmount: allFilteredPayments.reduce((sum, p) => sum + p.amount, 0),
+        totalDebt: allFilteredPayments.reduce((sum, p) => sum + (p.debt || 0), 0),
         totalPayments: allFilteredPayments.length,
         uniqueStudents: new Set(allFilteredPayments.map(p => p.studentId)).size
       }
@@ -1121,6 +1129,22 @@ export default function PaymentsPage() {
               </div>
             </div>
           </div>
+
+          {filteredData.yearTotal.totalDebt > 0 && (
+            <div className="bg-white rounded-xl xs:rounded-2xl shadow-sm border border-red-100 p-4 xs:p-5 md:p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-2 xs:gap-3 md:gap-4">
+                <div className="p-2 xs:p-2.5 md:p-3 bg-gradient-to-br from-red-400 to-rose-500 rounded-lg xs:rounded-xl shadow-lg shadow-red-500/30">
+                  <BanknotesIcon className="w-5 h-5 xs:w-6 xs:h-6 md:w-7 md:h-7 text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] xs:text-xs md:text-sm text-gray-500 font-medium">Datorii rămase</p>
+                  <p className="text-base xs:text-lg md:text-2xl font-bold text-red-600">
+                    {filteredData.yearTotal.totalDebt.toLocaleString('ro-RO')} <span className="text-xs xs:text-sm md:text-lg text-red-300">MDL</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="bg-white rounded-xl xs:rounded-2xl shadow-sm border border-gray-100 p-4 xs:p-5 md:p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-2 xs:gap-3 md:gap-4">

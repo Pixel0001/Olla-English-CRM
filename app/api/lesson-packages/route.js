@@ -124,14 +124,15 @@ export async function GET(request) {
         ],
       },
       },
-      select: { groupStudentId: true, amount: true, paymentDate: true, lessonsAdded: true },
+      select: { groupStudentId: true, amount: true, paymentDate: true, lessonsAdded: true, debt: true },
       orderBy: { paymentDate: "desc" },
     })
 
     const paidByStudent = {}
     for (const p of monthPayments) {
-      const acc = (paidByStudent[p.groupStudentId] ||= { amount: 0, count: 0, lastDate: null, lessons: 0 })
+      const acc = (paidByStudent[p.groupStudentId] ||= { amount: 0, count: 0, lastDate: null, lessons: 0, debt: 0 })
       acc.amount += p.amount || 0
+      acc.debt = p.debt || acc.debt
       acc.count += 1
       acc.lessons += p.lessonsAdded || 0
       if (!acc.lastDate) acc.lastDate = p.paymentDate.toISOString()
@@ -143,7 +144,7 @@ export async function GET(request) {
     if (isIndividual) {
       const rows = await prisma.payment.findMany({
         where: { groupStudentId: { in: groupStudents.map((gs) => gs.id) } },
-        select: { groupStudentId: true, amount: true, paymentDate: true, lessonsAdded: true },
+        select: { groupStudentId: true, amount: true, paymentDate: true, lessonsAdded: true, debt: true },
         orderBy: { paymentDate: 'desc' },
       })
       for (const r of rows) {

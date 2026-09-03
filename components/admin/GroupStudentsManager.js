@@ -89,7 +89,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
     paymentDate: new Date().toISOString().split('T')[0],
     paymentMethod: 'cash',
     notes: '',
-    forPeriod: currentPeriod(), payMode: group?.billingType || 'MONTHLY', lessons: '8'
+    forPeriod: currentPeriod(), payMode: group?.billingType || 'MONTHLY', lessons: '8', debt: ''
   })
   const [savingPayment, setSavingPayment] = useState(false)
   const [show2FAModal, setShow2FAModal] = useState(false)
@@ -227,7 +227,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
       paymentDate: new Date().toISOString().split('T')[0],
       paymentMethod: 'cash',
       notes: '',
-      forPeriod: currentPeriod(), payMode: group?.billingType || 'MONTHLY', lessons: '8'
+      forPeriod: currentPeriod(), payMode: group?.billingType || 'MONTHLY', lessons: '8', debt: ''
     })
   }
 
@@ -243,6 +243,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
       paymentDate: paymentForm.paymentDate,
       paymentMethod: paymentForm.paymentMethod,
       notes: paymentForm.notes,
+      debt: paymentForm.debt === '' ? null : parseFloat(paymentForm.debt),
       lessonsAdded: null,
       ...(paymentForm.payMode === 'INDIVIDUAL'
         ? { lessonsAdded: parseInt(paymentForm.lessons, 10) || 0 }
@@ -284,7 +285,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
           paymentDate: new Date().toISOString().split('T')[0],
           paymentMethod: 'cash',
           notes: '',
-          forPeriod: currentPeriod(), payMode: group?.billingType || 'MONTHLY', lessons: '8'
+          forPeriod: currentPeriod(), payMode: group?.billingType || 'MONTHLY', lessons: '8', debt: ''
         })
         setShowPaymentModal(null)
         setShow2FAModal(false)
@@ -695,6 +696,11 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                                 <div className="flex items-center gap-4">
                                   <div>
                                     <span className="font-semibold text-green-600">{payment.amount.toLocaleString('ro-RO')} MDL</span>
+                                    {payment.debt > 0 && (
+                                      <span className="ml-2 text-xs font-medium text-red-600">
+                                        datorie {payment.debt.toLocaleString('ro-RO')} MDL
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="text-sm text-gray-500">
                                     {new Date(payment.paymentDate).toLocaleDateString('ro-RO', {
@@ -872,6 +878,9 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                           <div key={payment.id} className="flex items-center justify-between bg-white rounded p-2 text-xs">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-semibold text-green-600">{payment.amount} MDL</span>
+                              {payment.debt > 0 && (
+                                <span className="text-red-600">datorie {payment.debt} MDL</span>
+                              )}
                               <span className="text-gray-500">
                                 {new Date(payment.paymentDate).toLocaleDateString('ro-RO')}
                               </span>
@@ -1070,6 +1079,21 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                 </div>
               )}
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Datorie rămasă (MDL)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={paymentForm.debt}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, debt: e.target.value })}
+                  placeholder="0"
+                  className="w-full px-3 xs:px-4 py-2 xs:py-3 border border-gray-300 rounded-lg xs:rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Cât mai are de plată. Lasă gol dacă a achitat tot.
+                </p>
+              </div>
               {/* Payment Method - Visual Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

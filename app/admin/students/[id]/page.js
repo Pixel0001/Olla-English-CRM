@@ -343,6 +343,7 @@ export default async function StudentDetailPage({ params }) {
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pentru luna</th>
                   <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Lecții</th>
                   <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Sumă</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Datorie</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Metodă</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Înregistrat de</th>
                 </tr>
@@ -364,6 +365,15 @@ export default async function StudentDetailPage({ params }) {
                       </td>
                       <td className="px-3 py-2 text-right font-semibold text-emerald-700 whitespace-nowrap">
                         {(p.amount || 0).toLocaleString('ro-RO')} MDL
+                      </td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap">
+                        {p.debt > 0 ? (
+                          <span className="font-semibold text-red-600">
+                            {p.debt.toLocaleString('ro-RO')} MDL
+                          </span>
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-gray-600">{p.paymentMethod || '—'}</td>
                       <td className="px-3 py-2 text-gray-600">{p.createdBy?.name || '—'}</td>

@@ -96,6 +96,7 @@ export default function TeacherStudentsPage() {
   const [paymentForm, setPaymentForm] = useState({
     groupStudentId: '',
     amount: '',
+    debt: '',
     forPeriod: currentPeriod(),
     mode: 'MONTHLY',
     lessons: '8',
@@ -198,7 +199,8 @@ export default function TeacherStudentsPage() {
                 forMonth: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[1], 10) : null,
               }),
           paymentMethod: paymentForm.paymentMethod,
-          notes: paymentForm.notes
+          notes: paymentForm.notes,
+          debt: paymentForm.debt === '' ? null : parseFloat(paymentForm.debt),
         })
       })
 
@@ -209,7 +211,7 @@ export default function TeacherStudentsPage() {
 
       toast.success('Plată înregistrată cu succes!')
       setShowPaymentModal(false)
-      setPaymentForm({ groupStudentId: '', amount: '', forPeriod: currentPeriod(), paymentMethod: 'cash', notes: '' })
+      setPaymentForm({ groupStudentId: '', amount: '', debt: '', forPeriod: currentPeriod(), paymentMethod: 'cash', notes: '' })
       setSelectedStudent(null)
       fetchData()
     } catch (error) {
@@ -287,6 +289,7 @@ export default function TeacherStudentsPage() {
     setPaymentForm({
       groupStudentId: student.groups[0]?.groupStudentId || '',
       amount: '',
+      debt: '',
       forPeriod: currentPeriod(),
       paymentMethod: 'cash',
       notes: ''
@@ -1010,6 +1013,21 @@ export default function TeacherStudentsPage() {
                   </select>
                 </div>
               )}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Datorie rămasă (MDL)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={paymentForm.debt}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, debt: e.target.value })}
+                  placeholder="0"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-teal-500"
+                />
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Cât mai are de plată. Lasă gol dacă a achitat tot.
+                </p>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">Metodă Plată</label>
                 <select

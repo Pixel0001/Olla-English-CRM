@@ -640,6 +640,8 @@ model Payment {
   paymentMethod  String?       // "cash", "card", "transfer"
   notes          String?       // Notițe adiționale
   lessonsAdded   Int?          // Câte lecții s-au adăugat pentru această plată
+  // Cât a rămas de plată după această tranșă. 0 sau null = achitat integral.
+  debt           Float?
   createdById    String?       @db.ObjectId // Cine a înregistrat plata (profesor sau admin)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt

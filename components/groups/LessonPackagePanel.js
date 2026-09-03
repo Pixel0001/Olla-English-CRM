@@ -516,6 +516,11 @@ export default function LessonPackagePanel({ groupId }) {
                             ) : st.payment ? (
                               <span className="text-emerald-700 font-semibold">
                                 {st.payment.amount.toLocaleString("ro-RO")} lei
+                                {st.payment.debt > 0 && (
+                                  <span className="block text-[10px] font-medium text-red-600">
+                                    datorie {st.payment.debt.toLocaleString('ro-RO')} lei
+                                  </span>
+                                )}
                               </span>
                             ) : (
                               <span className="text-red-500 text-xs">neachitat</span>
@@ -719,6 +724,7 @@ function AttendanceCell({ value, locked, onClick }) {
 
 function PaymentModal({ student, monthLabel, defaultLessons, year, month, billingType, onClose, onSaved }) {
   const [amount, setAmount] = useState('')
+  const [debt, setDebt] = useState('')
   const [method, setMethod] = useState('cash')
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [period, setPeriod] = useState(`${year}-${month}`)
@@ -746,6 +752,7 @@ function PaymentModal({ student, monthLabel, defaultLessons, year, month, billin
         body: JSON.stringify({
           groupStudentId: student.groupStudentId,
           amount: value,
+          debt: debt === '' ? null : parseFloat(debt),
           paymentDate: new Date(date).toISOString(),
           paymentMethod: method,
           ...(payMode === 'INDIVIDUAL'
@@ -795,6 +802,21 @@ function PaymentModal({ student, monthLabel, defaultLessons, year, month, billin
                 onChange={(e) => setAmount(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Datorie rămasă (MDL)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={debt}
+                onChange={(e) => setDebt(e.target.value)}
+                placeholder="0"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <p className="mt-1 text-[11px] text-gray-500">
+                Cât mai are de plată. Lasă gol dacă a achitat tot.
+              </p>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Metodă</label>
