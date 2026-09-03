@@ -24,6 +24,7 @@ export default function TeacherForm({ teacher }) {
     active: teacher?.active ?? true,
     twoFactorAllowed: teacher?.twoFactorAllowed ?? false,
     superTeacher: teacher?.superTeacher ?? false,
+    canViewAllSchedules: teacher?.canViewAllSchedules ?? false,
     permissions: teacher?.permissions || []
   })
 
@@ -275,6 +276,27 @@ export default function TeacherForm({ teacher }) {
               <label className="flex items-center gap-3">
                 <input
                   type="checkbox"
+                  name="canViewAllSchedules"
+                  checked={formData.canViewAllSchedules}
+                  onChange={handleChange}
+                  className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-700">📅 Vede orarul întregii școli</span>
+                  <p className="text-xs text-gray-500">
+                    Fără bifă, în <strong>Orar</strong> își vede doar propriile grupe și recuperări.
+                    Cu bifă, vede și grupele celorlalți profesori.
+                  </p>
+                </div>
+              </label>
+            </div>
+          )}
+
+          {formData.role === 'TEACHER' && (
+            <div className="flex items-center md:col-span-2">
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
                   name="superTeacher"
                   checked={formData.superTeacher}
                   onChange={handleChange}
@@ -317,7 +339,7 @@ export default function TeacherForm({ teacher }) {
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
               <p className="text-sm text-amber-800">
-                <strong>Atenție:</strong> Dacă nu selectezi nicio permisiune, acest utilizator va avea acces la panoul admin 
+                <strong>Atenție:</strong> Dacă nu selectezi nicio permisiune, acest utilizator va avea acces la panoul admin
                 dar nu va putea vedea sau face nimic.
               </p>
             </div>
@@ -341,10 +363,10 @@ export default function TeacherForm({ teacher }) {
                       <div className="flex items-center gap-3">
                         <span className="font-medium text-gray-900">{category}</span>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          selectedCount === 0 
-                            ? 'bg-gray-200 text-gray-600' 
-                            : allSelected 
-                              ? 'bg-green-100 text-green-700' 
+                          selectedCount === 0
+                            ? 'bg-gray-200 text-gray-600'
+                            : allSelected
+                              ? 'bg-green-100 text-green-700'
                               : 'bg-indigo-100 text-indigo-700'
                         }`}>
                           {selectedCount}/{categoryPerms.length}
@@ -426,7 +448,7 @@ export default function TeacherForm({ teacher }) {
             type="submit"
             disabled={loading}
             className={`px-6 py-2 text-white rounded-lg font-medium disabled:opacity-50 ${
-              formData.role === 'ADMIN' 
+              formData.role === 'ADMIN'
                 ? 'bg-red-600 hover:bg-red-700'
                 : 'bg-indigo-600 hover:bg-indigo-700'
             }`}

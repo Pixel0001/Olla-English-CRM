@@ -27,6 +27,7 @@ model User {
   emailVerified     DateTime?
   active            Boolean   @default(true)
   superTeacher      Boolean   @default(false) // Profesor "super" - poate porni lecții la orice dată/oră, fără restricții de program
+  canViewAllSchedules Boolean @default(false) // Profesorul vede orarul intregii scoli, nu doar grupele lui
   
   // 2FA fields
   twoFactorEnabled  Boolean   @default(false)
