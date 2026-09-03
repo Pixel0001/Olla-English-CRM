@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getMetaLeadSettings, syncConversationsToLeads } from '@/lib/meta-leads'
+import { warmInbox } from '@/lib/meta-inbox'
 import { isConfigured } from '@/lib/meta-messages'
 
 /**
@@ -28,17 +29,22 @@ export async function GET(request) {
   }
 
   try {
+    if (!isConfigured()) {
+      return NextResponse.json({ skipped: true, reason: 'Token-ul Meta lipsește' })
+    }
+
+    // Inboxul se împrospătează indiferent de comutatorul de lead-uri: e doar
+    // o citire, și face ca pagina de mesaje să se deschidă deja gata.
+    const warmed = await warmInbox().catch((e) => ({ error: e.message }))
+
     const settings = await getMetaLeadSettings()
 
     if (!settings.metaLeadsEnabled) {
-      return NextResponse.json({ skipped: true, reason: 'Funcția e oprită din Securitate' })
-    }
-    if (!isConfigured()) {
-      return NextResponse.json({ skipped: true, reason: 'META_ACCESS_TOKEN lipsește' })
+      return NextResponse.json({ warmed, skipped: true, reason: 'Lead-urile automate sunt oprite' })
     }
 
     const result = await syncConversationsToLeads()
-    return NextResponse.json({ success: true, ...result, trigger: fromCron ? 'cron' : 'manual' })
+    return NextResponse.json({ success: true, warmed, ...result, trigger: fromCron ? 'cron' : 'manual' })
   } catch (error) {
     console.error('Cron meta-leads:', error)
     return NextResponse.json({ error: error.message || 'Eroare' }, { status: 500 })

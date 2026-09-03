@@ -15,6 +15,7 @@ import LeadForm from '@/components/admin/LeadForm'
 import FollowUpPicker from '@/components/admin/FollowUpPicker'
 import { zonedDateInDays } from '@/lib/timezone'
 import { whatsAppLink } from '@/lib/phone'
+import { PlatformIcon } from '@/components/icons/BrandIcons'
 
 const ITEMS_PER_PAGE = 30
 
@@ -917,10 +918,14 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
             target="_blank"
             rel="noopener noreferrer"
             title="Deschide discuția în inboxul paginii, pe Meta"
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600 text-white text-[11px] font-medium hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-gray-300 bg-white text-gray-700 text-[11px] font-medium hover:border-blue-400 hover:text-blue-700 transition-colors"
           >
-            {lead.metaPlatform === 'instagram' ? '📸' : '💬'} Deschide în{' '}
-            {lead.metaPlatform === 'instagram' ? 'Instagram' : 'Messenger'}
+            <PlatformIcon
+              platform={lead.metaPlatform}
+              className="h-3.5 w-3.5"
+              id={`lead-${lead.id}`}
+            />
+            Deschide în {lead.metaPlatform === 'instagram' ? 'Instagram' : 'Messenger'}
           </a>
         )}
         {lead.metaConversationId && (

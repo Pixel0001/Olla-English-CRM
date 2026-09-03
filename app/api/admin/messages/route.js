@@ -7,7 +7,7 @@ import {
   fetchInbox, fetchConversations, fetchMessages, pageInfo, summarize, sendMessage,
   markSeen, diagnose, subscribePageMessaging, isConfigured, PAGE_ID,
 } from '@/lib/meta-messages'
-import { readCache, writeCache } from '@/lib/external-cache'
+import { getInbox, refreshInBackground } from '@/lib/meta-inbox'
 
 /**
  * Inboxul paginii Olla English — Messenger și Instagram la un loc.
@@ -27,35 +27,9 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
 
-const FRESH_MS = 20 * 1000        // sub asta, datele se consideră proaspete
 const THREAD_FRESH_MS = 10 * 1000
-const INBOX_KEY = 'meta:inbox'
 
-let refreshing = false            // o singură împrospătare odată, per instanță
 const threadCache = new Map()     // conversationId → { messages, at }
-
-async function loadInbox() {
-  const { conversations, errors } = await fetchInbox()
-  const page = await pageInfo().catch(() => ({ id: PAGE_ID, name: 'Pagina' }))
-  return {
-    page,
-    conversations,
-    errors,
-    stats: summarize(conversations),
-    fetchedAt: new Date().toISOString(),
-  }
-}
-
-/** Împrospătare în fundal — cine a cerut deja a primit datele vechi. */
-function refreshInBackground() {
-  if (refreshing) return
-  refreshing = true
-
-  loadInbox()
-    .then((data) => writeCache(INBOX_KEY, data))
-    .catch(() => {})
-    .finally(() => { refreshing = false })
-}
 
 export async function POST(request) {
   try {
@@ -148,27 +122,9 @@ export async function GET(request) {
       return NextResponse.json({ platform, conversations, next, stats: summarize(conversations) })
     }
 
-    // ── Inboxul, servit din cache-ul comun ──
+    // ── Inboxul ──
     const force = searchParams.get('refresh') === '1'
-
-    if (!force) {
-      const cached = await readCache(INBOX_KEY)
-      if (cached) {
-        // Vechi? Îl împrospătăm în fundal — cererea de față nu așteaptă.
-        if (cached.ageMs > FRESH_MS) refreshInBackground()
-        return NextResponse.json({
-          ...cached.payload,
-          cached: true,
-          ageMs: cached.ageMs,
-          cacheFrom: cached.from,
-        })
-      }
-    }
-
-    const data = await loadInbox()
-    await writeCache(INBOX_KEY, data)
-
-    return NextResponse.json({ ...data, cached: false, ageMs: 0 })
+    return NextResponse.json(await getInbox({ force }))
   } catch (error) {
     if (error.message === 'Unauthorized' || error.message === 'Forbidden') {
       return NextResponse.json({ error: error.message }, { status: 401 })

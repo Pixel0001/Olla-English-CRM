@@ -13,6 +13,7 @@ import {
   InboxIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline'
+import { PlatformIcon } from '@/components/icons/BrandIcons'
 
 /**
  * Inboxul paginii: Messenger și Instagram într-o singură listă.
@@ -41,6 +42,27 @@ const readStored = () => {
     return Date.now() - at < STORE_MAX_AGE ? data : null
   } catch {
     return null
+  }
+}
+
+const THREADS_KEY = 'olla:threads'
+
+const readStoredThreads = () => {
+  try {
+    const raw = sessionStorage.getItem(THREADS_KEY)
+    if (!raw) return {}
+    const { at, threads } = JSON.parse(raw)
+    return Date.now() - at < STORE_MAX_AGE ? threads : {}
+  } catch {
+    return {}
+  }
+}
+
+const writeStoredThreads = (threads) => {
+  try {
+    sessionStorage.setItem(THREADS_KEY, JSON.stringify({ at: Date.now(), threads }))
+  } catch {
+    // sessionStorage plin — firele se vor reciti de la server
   }
 }
 
@@ -84,23 +106,21 @@ const initials = (name) =>
     .join('')
     .toUpperCase()
 
-/** Cerc cu inițiale și insigna platformei, ca în inboxul Meta. */
-function Avatar({ name, platform }) {
+/** Cerc cu inițiale și sigla platformei, ca în inboxul Meta. */
+function Avatar({ name, platform, id }) {
   const isIg = platform === 'instagram'
   return (
     <div className="relative flex-shrink-0">
       <div className={`h-9 w-9 rounded-full flex items-center justify-center text-xs font-semibold ${
-        isIg ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'
+        isIg ? 'bg-pink-50 text-pink-700' : 'bg-blue-50 text-blue-700'
       }`}>
         {initials(name)}
       </div>
       <span
-        className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full flex items-center justify-center text-[9px] ring-2 ring-white ${
-          isIg ? 'bg-gradient-to-br from-fuchsia-500 to-amber-400' : 'bg-blue-600'
-        }`}
+        className="absolute -bottom-0.5 -right-0.5 h-[18px] w-[18px] rounded-full bg-white ring-2 ring-white flex items-center justify-center"
         title={isIg ? 'Instagram' : 'Messenger'}
       >
-        {isIg ? '📸' : '💬'}
+        <PlatformIcon platform={platform} className="h-[15px] w-[15px]" id={id} />
       </span>
     </div>
   )
@@ -143,6 +163,8 @@ export default function MessagesClient() {
       hasDataRef.current = true
       setLoading(false)
     }
+    const storedThreads = readStoredThreads()
+    if (Object.keys(storedThreads).length > 0) setThreads(storedThreads)
   }, [])
 
   // ── Lista, împrospătată singură ──────────────────────────────────────
@@ -221,7 +243,11 @@ export default function MessagesClient() {
       )
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Eroare la citirea conversației')
-      setThreads((prev) => ({ ...prev, [conversation.id]: json.messages || [] }))
+      setThreads((prev) => {
+        const next = { ...prev, [conversation.id]: json.messages || [] }
+        writeStoredThreads(next)
+        return next
+      })
     } catch (err) {
       if (!known) toast.error(err.message)
     } finally {
@@ -487,7 +513,7 @@ export default function MessagesClient() {
                         active ? 'bg-indigo-50' : unread ? 'bg-blue-50/40 hover:bg-gray-50' : 'hover:bg-gray-50'
                       }`}
                     >
-                      <Avatar name={c.person.name} platform={c.platform} />
+                      <Avatar name={c.person.name} platform={c.platform} id={`av-${c.id}`} />
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
@@ -527,7 +553,7 @@ export default function MessagesClient() {
           ) : (
             <>
               <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
-                <Avatar name={selected.person.name} platform={selected.platform} />
+                <Avatar name={selected.person.name} platform={selected.platform} id="av-open" />
                 <div className="min-w-0">
                   <p className="font-semibold text-gray-900 truncate">{selected.person.name}</p>
                   <p className="text-xs text-gray-500">
