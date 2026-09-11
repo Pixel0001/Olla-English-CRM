@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { syncLeadForStudent } from '@/lib/student-leads'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -7,7 +8,7 @@ import { notifyTeacherActivity } from '@/lib/telegram'
 // GET - Fetch students that belong to this teacher (created by them or assigned to their groups)
 export async function GET(request) {
   const session = await getServerSession(authOptions)
-  
+
   if (!session || !['TEACHER', 'ADMIN', 'SUPERADMIN'].includes(session.user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -136,7 +137,7 @@ export async function GET(request) {
 // POST - Create a new student (teacher can create students)
 export async function POST(request) {
   const session = await getServerSession(authOptions)
-  
+
   if (!session || !['TEACHER', 'ADMIN', 'SUPERADMIN'].includes(session.user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -201,6 +202,9 @@ export async function POST(request) {
 
     notifyTeacherActivity('student', session.user.name || session.user.email, details)
       .catch(err => console.error('Telegram notification error:', err))
+
+    // Elevul își are lead-ul lui; statusul urmează grupele (Studiază / Waitlist)
+    syncLeadForStudent(student.id).catch(() => {})
 
     return NextResponse.json(student, { status: 201 })
   } catch (error) {

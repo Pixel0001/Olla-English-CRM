@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { syncLeadForStudent } from '@/lib/student-leads'
 import prisma from '@/lib/prisma'
 import { requireAdmin, getCurrentUser } from '@/lib/session'
 import { require2FAToken } from '@/lib/security/action-tokens'
@@ -9,7 +10,7 @@ const ITEMS_PER_PAGE = 20
 export async function GET(request) {
   try {
     await requireAdmin()
-    
+
     // Verifică permisiunea de vizualizare elevi
     const canView = await checkPermission('students.view')
     if (!canView.allowed) {
@@ -25,7 +26,7 @@ export async function GET(request) {
 
     // Construiește where clause
     const where = {}
-    
+
     if (search) {
       where.OR = [
         { fullName: { contains: search, mode: 'insensitive' } },
@@ -132,13 +133,13 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await requireAdmin()
-    
+
     // Verifică permisiunea de creare elevi
     const canCreate = await checkPermission('students.create')
     if (!canCreate.allowed) {
       return NextResponse.json({ error: 'Nu ai permisiunea de a crea elevi' }, { status: 403 })
     }
-    
+
     const sessionUser = await getCurrentUser()
     const body = await request.json()
 
@@ -147,12 +148,12 @@ export async function POST(request) {
       where: { email: sessionUser.email },
       select: { twoFactorEnabled: true }
     })
-    
+
     const twoFACheck = require2FAToken(body.actionToken, sessionUser.email, user?.twoFactorEnabled)
     if (!twoFACheck.valid && !twoFACheck.skip) {
-      return NextResponse.json({ 
-        error: twoFACheck.error, 
-        requires2FA: true 
+      return NextResponse.json({
+        error: twoFACheck.error,
+        requires2FA: true
       }, { status: 403 })
     }
 
@@ -174,6 +175,9 @@ export async function POST(request) {
         startMonth: startMonth ?? null,
       }
     })
+
+    // Elevul își are lead-ul lui; statusul urmează grupele (Studiază / Waitlist)
+    syncLeadForStudent(student.id).catch(() => {})
 
     return NextResponse.json(student, { status: 201 })
   } catch (error) {

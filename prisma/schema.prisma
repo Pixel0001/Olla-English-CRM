@@ -732,6 +732,7 @@ enum LeadSource {
   RECOMANDARE
   WALK_IN
   SITE
+  ELEV      // Creat automat din pagina Elevi
   ALTA
 }
 

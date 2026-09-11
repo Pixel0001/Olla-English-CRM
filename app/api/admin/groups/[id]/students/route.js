@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { syncLeadForStudent } from '@/lib/student-leads'
 import prisma from '@/lib/prisma'
 import { requireAdmin } from '@/lib/session'
 import { checkPermission } from '@/lib/permissions'
@@ -7,12 +8,12 @@ import { notifyTeacherNewStudent } from '@/lib/telegram'
 export async function POST(request, { params }) {
   try {
     await requireAdmin()
-    
+
     const canAdd = await checkPermission('groups.students.add')
     if (!canAdd.allowed) {
       return NextResponse.json({ error: 'Nu ai permisiunea de a adăuga elevi în grupe' }, { status: 403 })
     }
-    
+
     const { id } = await params
     const body = await request.json()
 
@@ -62,7 +63,7 @@ export async function POST(request, { params }) {
           scheduleTime = Object.entries(times).map(([day, time]) => `${day} ${time}`).join(', ')
         } catch {}
       }
-      
+
       await notifyTeacherNewStudent({
         teacherChatId: group.teacher.telegramChatId,
         studentName: student.fullName,
@@ -76,6 +77,9 @@ export async function POST(request, { params }) {
         action: 'adăugat'
       })
     }
+
+    // Elevul își are lead-ul lui; statusul urmează grupele (Studiază / Waitlist)
+    syncLeadForStudent(groupStudent.studentId).catch(() => {})
 
     return NextResponse.json(groupStudent, { status: 201 })
   } catch (error) {

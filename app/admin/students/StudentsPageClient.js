@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AddStudentButton from '@/components/admin/AddStudentButton'
+import StudentLeadsSync from '@/components/admin/StudentLeadsSync'
 import DeleteStudentButton from '@/components/admin/DeleteStudentButton'
 import AddPaymentButton from '@/components/admin/AddPaymentButton'
 import { usePermissions, PermissionGate } from '@/hooks/usePermissions'
@@ -157,7 +158,10 @@ export default function StudentsPage() {
           <h1 className="text-xl xs:text-2xl font-bold text-gray-900">Elevi</h1>
           <p className="text-sm xs:text-base text-gray-600">Gestionează elevii înregistrați</p>
         </div>
-        <AddStudentButton />
+        <div className="flex flex-wrap gap-2">
+          {isSuperAdmin && <StudentLeadsSync />}
+          <AddStudentButton />
+        </div>
       </div>
 
       {/* Filtre */}
