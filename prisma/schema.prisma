@@ -739,6 +739,9 @@ enum LeadStatus {
   LEAD              // 🔵 Lead nou
   FARA_RASPUNS      // 🔘 Fără răspuns
   CONTACTAT         // 🟡 Contactat
+  FOLLOW_UP_1       // 📞 Prima revenire după contact
+  FOLLOW_UP_2       // 📲 A doua revenire
+  FOLLOW_UP_2_PLUS  // 🔁 Mai mult de două reveniri
   PROGRAMAT_TESTARE // 📝 Programat la testare
   PROGRAMAT         // 🟠 Programat la lecție
   PRIMA_LECTIE      // 🟢 A venit la prima lecție

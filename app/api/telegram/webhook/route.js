@@ -11,6 +11,9 @@ const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET
 const STATUS_LABELS = {
   LEAD: '🔵 New lead',
   CONTACTAT: '🟡 Contactat',
+  FOLLOW_UP_1: '📞 Follow up 1',
+  FOLLOW_UP_2: '📲 Follow up 2',
+  FOLLOW_UP_2_PLUS: '🔁 Follow up 2+',
   PROGRAMAT_TESTARE: '📝 Programat testare',
   OLD_STUDENT: '🎒 Old student',
   PROGRAMAT: '🟠 Programat',
