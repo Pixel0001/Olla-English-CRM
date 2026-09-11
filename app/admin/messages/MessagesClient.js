@@ -14,6 +14,8 @@ import {
   ClockIcon,
 } from '@heroicons/react/24/outline'
 import { PlatformIcon } from '@/components/icons/BrandIcons'
+import ConversationLeadControl from '@/components/admin/ConversationLeadControl'
+import { getStatus } from '@/lib/leads-config'
 
 /**
  * Inboxul paginii: Messenger și Instagram într-o singură listă.
@@ -150,6 +152,8 @@ export default function MessagesClient() {
   // (altfel intervalul de împrospătare s-ar reporni la fiecare clic)
   const hasDataRef = useRef(false)
   const canSend = hasPermission('messages.send') || isSuperAdmin
+  // Statusul se schimbă din conversație doar de cine are voie să lucreze lead-urile
+  const canEditLeads = hasPermission('leads.edit') || isSuperAdmin
 
   useEffect(() => {
     if (!hasPermission('messages.view') && !isSuperAdmin) router.push('/admin')
@@ -310,6 +314,20 @@ export default function MessagesClient() {
     } finally {
       setSending(false)
     }
+  }
+
+  // Lead-ul s-a schimbat din conversație: îl actualizăm peste tot pe ecran
+  const updateLead = (conversationId, lead) => {
+    setSelected((prev) => (prev?.id === conversationId ? { ...prev, lead } : prev))
+    setData((prev) => {
+      if (!prev) return prev
+      const next = {
+        ...prev,
+        conversations: prev.conversations.map((c) => (c.id === conversationId ? { ...c, lead } : c)),
+      }
+      writeStored(next)
+      return next
+    })
   }
 
   // ── Filtrare ─────────────────────────────────────────────────────────
@@ -532,6 +550,13 @@ export default function MessagesClient() {
                         <div className="flex items-center justify-between gap-2">
                           <span className={`text-sm truncate ${unread ? 'font-bold text-gray-900' : 'font-medium text-gray-800'}`}>
                             {c.person.name}
+                            {c.lead && (
+                              <span
+                                className={`ml-1.5 align-middle px-1.5 py-0.5 rounded border text-[9px] font-medium ${getStatus(c.lead.status).color}`}
+                              >
+                                {getStatus(c.lead.status).label}
+                              </span>
+                            )}
                           </span>
                           <span className={`text-[11px] whitespace-nowrap ${unread ? 'text-indigo-600 font-medium' : 'text-gray-400'}`}>
                             {timeLabel(c.updatedTime)}
@@ -569,9 +594,9 @@ export default function MessagesClient() {
             </div>
           ) : (
             <>
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+              <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center gap-3">
                 <Avatar name={selected.person.name} platform={selected.platform} id="av-open" />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="font-semibold text-gray-900 truncate">{selected.person.name}</p>
                   <p className="text-xs text-gray-500">
                     {selected.platform === 'instagram' ? 'Instagram' : 'Messenger'}
@@ -579,6 +604,13 @@ export default function MessagesClient() {
                     {selected.updatedTime ? ` · ${fullTime(selected.updatedTime)}` : ''}
                   </p>
                 </div>
+
+                {canEditLeads && (
+                  <ConversationLeadControl
+                    conversation={selected}
+                    onChange={(lead) => updateLead(selected.id, lead)}
+                  />
+                )}
               </div>
 
               {threadLoading ? (

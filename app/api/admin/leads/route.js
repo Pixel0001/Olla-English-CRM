@@ -117,7 +117,10 @@ export async function POST(request) {
     if (!data.name?.trim()) {
       return NextResponse.json({ error: 'Numele este obligatoriu' }, { status: 400 })
     }
-    if (!data.phone?.trim() && !data.email?.trim()) {
+    // Un lead venit din Messenger/Instagram are deja canalul lui de contact:
+    // conversația. Telefonul poate veni mai târziu.
+    const fromConversation = !!data.metaConversationId
+    if (!fromConversation && !data.phone?.trim() && !data.email?.trim()) {
       return NextResponse.json(
         { error: 'Ai nevoie de cel puțin un mod de contact: telefon sau email' },
         { status: 400 }
@@ -146,6 +149,12 @@ export async function POST(request) {
         nextFollowUpAt: parseSchoolDate(data.nextFollowUpAt),
         assignedToId: data.assignedToId || null,
         createdById: session.user.id,
+        ...(fromConversation ? {
+          metaConversationId: data.metaConversationId,
+          metaPlatform: data.metaPlatform === 'instagram' ? 'instagram' : 'messenger',
+          metaPersonId: data.metaPersonId || null,
+          metaLastMessageAt: new Date(),
+        } : {}),
       },
     })
 
