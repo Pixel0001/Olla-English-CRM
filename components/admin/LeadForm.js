@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { LEAD_STATUSES, LEAD_SOURCES, getSource } from '@/lib/leads-config'
 import LevelSelect from '@/components/LevelSelect'
 import FollowUpPicker from '@/components/admin/FollowUpPicker'
+import DuplicateLeadWarning from '@/components/admin/DuplicateLeadWarning'
 
 const input =
   'w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
@@ -112,6 +113,8 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
           </div>
         </div>
         <p className="text-xs text-gray-500">Cel puțin telefon sau email trebuie completat.</p>
+
+        <DuplicateLeadWarning name={form.name} phone={form.phone} excludeId={lead?.id || null} />
       </section>
 
       {/* Sursa */}
