@@ -175,7 +175,7 @@ export default function AttendanceHistoryClient({ initialSessions = [], pageSize
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Grupă sau nivel..."
-                  className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 />
               </div>
             </div>
@@ -186,7 +186,7 @@ export default function AttendanceHistoryClient({ initialSessions = [], pageSize
               <select
                 value={groupId}
                 onChange={e => setGroupId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
               >
                 <option value="all">Toate grupele ({groups.length})</option>
                 {groups.map(g => (
@@ -201,7 +201,7 @@ export default function AttendanceHistoryClient({ initialSessions = [], pageSize
               <select
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
               >
                 {STATUS_OPTIONS.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -217,7 +217,7 @@ export default function AttendanceHistoryClient({ initialSessions = [], pageSize
                   type="date"
                   value={dateFrom}
                   onChange={e => setDateFrom(e.target.value)}
-                  className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 />
               </div>
               <div>
@@ -226,7 +226,7 @@ export default function AttendanceHistoryClient({ initialSessions = [], pageSize
                   type="date"
                   value={dateTo}
                   onChange={e => setDateTo(e.target.value)}
-                  className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 />
               </div>
             </div>

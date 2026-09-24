@@ -55,12 +55,24 @@ const relativeTime = (iso) => {
   return new Date(iso).toLocaleString('ro-RO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
+const ADS_CACHE_KEY = 'olla:ads:v1'
+
 export default function AdsClient() {
   const router = useRouter()
   const { hasPermission, isSuperAdmin } = usePermissions()
 
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
+  // Ultimele date citite rămân în browser: la o revenire pe pagină apar
+  // instant, fără ecran de încărcare, chiar dacă nu s-a dat actualizare.
+  const cached = (() => {
+    if (typeof window === 'undefined') return null
+    try {
+      const raw = sessionStorage.getItem(ADS_CACHE_KEY)
+      return raw ? JSON.parse(raw) : null
+    } catch { return null }
+  })()
+
+  const [data, setData] = useState(cached)
+  const [loading, setLoading] = useState(!cached)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
   const [openAccount, setOpenAccount] = useState(null)
@@ -78,6 +90,7 @@ export default function AdsClient() {
       if (!res.ok) throw new Error(json.hint || json.error || 'Eroare la citirea datelor')
       setData(json)
       setError(null)
+      try { sessionStorage.setItem(ADS_CACHE_KEY, JSON.stringify(json)) } catch {}
       if (refresh) toast.success('Datele au fost actualizate din Meta')
     } catch (err) {
       setError(err.message)
@@ -88,9 +101,11 @@ export default function AdsClient() {
     }
   }, [])
 
+  // Cu ceva deja pe ecran, cererea din fundal doar completează —
+  // altfel arătăm ecranul de încărcare până vine primul răspuns.
   useEffect(() => { load(false) }, [load])
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
