@@ -7,6 +7,7 @@ import { checkPermission } from '@/lib/permissions'
 import { ageRange } from '@/lib/age-groups'
 
 const ITEMS_PER_PAGE = 20
+const PAGE_SIZES = [20, 50, 100]
 
 export async function GET(request) {
   try {
@@ -20,6 +21,13 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
+
+    // Câți elevi pe pagină: una din valorile permise, sau toți
+    const askedSize = searchParams.get('pageSize')
+    const showAll = askedSize === 'all'
+    const perPage = PAGE_SIZES.includes(parseInt(askedSize, 10))
+      ? parseInt(askedSize, 10)
+      : ITEMS_PER_PAGE
     const search = searchParams.get('search') || ''
     const hasGroup = searchParams.get('hasGroup') // 'yes', 'no', or empty
     const startPeriod = searchParams.get('startPeriod') // 'YYYY-MM', 'none' sau gol
@@ -88,13 +96,12 @@ export async function GET(request) {
 
     // Calculează totalul pentru paginare
     const totalCount = await prisma.student.count({ where })
-    const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
+    const totalPages = showAll ? 1 : Math.max(1, Math.ceil(totalCount / perPage))
 
     const students = await prisma.student.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * ITEMS_PER_PAGE,
-      take: ITEMS_PER_PAGE,
+      ...(showAll ? {} : { skip: (page - 1) * perPage, take: perPage }),
       include: {
         groupStudents: {
           include: {
@@ -130,10 +137,11 @@ export async function GET(request) {
       students,
       startPeriods,
       pagination: {
-        page,
+        page: showAll ? 1 : page,
+        pageSize: showAll ? 'all' : perPage,
         totalPages,
         totalCount,
-        hasMore: page < totalPages
+        hasMore: !showAll && page < totalPages
       }
     })
   } catch (error) {

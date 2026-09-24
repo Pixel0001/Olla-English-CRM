@@ -36,6 +36,7 @@ export default function StudentsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
+  const [pageSize, setPageSize] = useState(20)
   
   // Filtre
   const [search, setSearch] = useState('')
@@ -53,7 +54,11 @@ export default function StudentsPage() {
 
   useEffect(() => {
     fetchStudents()
-  }, [currentPage, hasGroup, startPeriod, ageGroup])
+  }, [currentPage, pageSize, hasGroup, startPeriod, ageGroup])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [pageSize])
 
   useEffect(() => {
     fetchGroups()
@@ -73,6 +78,7 @@ export default function StudentsPage() {
     try {
       const params = new URLSearchParams()
       params.set('page', currentPage.toString())
+      params.set('pageSize', String(pageSize))
       if (search) params.set('search', search)
       if (hasGroup) params.set('hasGroup', hasGroup)
       if (startPeriod) params.set('startPeriod', startPeriod)
@@ -457,6 +463,27 @@ export default function StudentsPage() {
           ))
         )}
       </div>
+
+      {/* Câți elevi pe pagină */}
+      {totalCount > 20 && (
+        <div className="flex items-center justify-end gap-2 text-sm text-[#a0b8bc]">
+          <span>Pe pagină:</span>
+          <select
+            value={String(pageSize)}
+            onChange={(e) => setPageSize(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10))}
+            className="px-3 py-1.5 rounded-lg border border-[#30919f]/30 bg-[#0f2127] text-[#e8f5f7] text-sm focus:ring-2 focus:ring-[#30919f]"
+            aria-label="Câți elevi se afișează pe pagină"
+          >
+            {[20, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
+            <option value="all">Toți ({totalCount})</option>
+          </select>
+          <span className="text-[#a0b8bc]/70">
+            {pageSize === 'all'
+              ? `toți cei ${totalCount}`
+              : `${Math.min((currentPage - 1) * pageSize + 1, totalCount)}–${Math.min(currentPage * pageSize, totalCount)} din ${totalCount}`}
+          </span>
+        </div>
+      )}
 
       {/* Paginare */}
       {totalPages > 1 && (
