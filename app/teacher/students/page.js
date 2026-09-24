@@ -2,6 +2,10 @@
 
 import { monthOptions, periodLabel } from '@/lib/payments'
 import LevelSelect from '@/components/LevelSelect'
+import { usePermissions } from '@/hooks/usePermissions'
+
+// Cât timp poate profesorul să-și corecteze singur greșeala (ca pe server)
+const ACTION_WINDOW_HOURS = 24
 import DuplicateStudentWarning from '@/components/admin/DuplicateStudentWarning'
 
 const MONTH_NAMES = [
@@ -34,6 +38,8 @@ import {
   ExclamationTriangleIcon,
   PlusIcon,
   XMarkIcon,
+  PencilSquareIcon,
+  TrashIcon,
   BanknotesIcon,
   UserPlusIcon,
   StarIcon,
@@ -65,6 +71,7 @@ const formatSchedule = (scheduleDays, scheduleTime) => {
 }
 
 export default function TeacherStudentsPage() {
+  const { user, hasPermission, isSuperAdmin } = usePermissions()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -106,6 +113,95 @@ export default function TeacherStudentsPage() {
   const [addToGroupForm, setAddToGroupForm] = useState({
     groupId: ''
   })
+  const [editingStudent, setEditingStudent] = useState(null)
+  const [editForm, setEditForm] = useState(null)
+  const [savingEdit, setSavingEdit] = useState(false)
+
+  /**
+   * Corectarea merge doar pe elevii pe care i-a adăugat el și doar cât timp
+   * greșeala e proaspătă — exact regula pe care o aplică și serverul, ca
+   * butonul să nu promită ceva ce va fi refuzat.
+   */
+  const canCorrect = (student, permission) => {
+    if (isSuperAdmin) return true
+    if (!hasPermission(permission)) return false
+    if (['SUPERADMIN', 'ADMIN'].includes(user?.role)) return true
+    if (student.createdById && student.createdById !== user?.id) return false
+    if (hasPermission('teacher.noTimeLimit')) return true
+    if (!student.createdAt) return false
+    const hours = (Date.now() - new Date(student.createdAt).getTime()) / 3600000
+    return hours < ACTION_WINDOW_HOURS
+  }
+
+  const openEditModal = (student) => {
+    setEditingStudent(student)
+    setEditForm({
+      fullName: student.name || '',
+      age: student.age ?? '',
+      isAdult: !!student.isAdult,
+      level: student.level || '',
+      startPeriod: student.startYear && student.startMonth
+        ? `${student.startYear}-${student.startMonth}`
+        : '',
+      parentName: student.parentName || '',
+      parentPhone: student.parentPhone || '',
+      parentEmail: student.parentEmail || '',
+      notes: student.notes || '',
+    })
+  }
+
+  const handleEditStudent = async (e) => {
+    e.preventDefault()
+    if (!editForm.fullName.trim()) {
+      toast.error('Numele elevului este obligatoriu')
+      return
+    }
+
+    setSavingEdit(true)
+    try {
+      const res = await fetch(`/api/teacher/my-students/${editingStudent.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: editForm.fullName,
+          age: editForm.isAdult ? null : editForm.age,
+          isAdult: editForm.isAdult,
+          level: editForm.level,
+          parentName: editForm.parentName,
+          parentPhone: editForm.parentPhone,
+          parentEmail: editForm.parentEmail,
+          notes: editForm.notes,
+          startYear: editForm.startPeriod ? parseInt(editForm.startPeriod.split('-')[0], 10) : null,
+          startMonth: editForm.startPeriod ? parseInt(editForm.startPeriod.split('-')[1], 10) : null,
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Eroare la salvare')
+
+      toast.success('Datele elevului au fost schimbate')
+      setEditingStudent(null)
+      setEditForm(null)
+      fetchData()
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  const handleDeleteStudent = async (student) => {
+    if (!confirm(`Ștergi elevul „${student.name}"? Dacă are plăți sau prezențe, ștergerea rămâne pe mâna administrației.`)) return
+
+    try {
+      const res = await fetch(`/api/teacher/my-students/${student.id}`, { method: 'DELETE' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || 'Eroare la ștergere')
+      toast.success('Elevul a fost șters')
+      fetchData()
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
 
   // Status options for students
   const STATUS_OPTIONS = [
@@ -794,6 +890,24 @@ export default function TeacherStudentsPage() {
                             Adaugă în Grupă
                           </button>
                         )}
+                        {canCorrect(student, 'teacher.student.edit') && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openEditModal(student); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-xs xs:text-sm font-medium transition-colors"
+                          >
+                            <PencilSquareIcon className="w-4 h-4" />
+                            Editează
+                          </button>
+                        )}
+                        {canCorrect(student, 'teacher.student.delete') && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteStudent(student); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-xs xs:text-sm font-medium transition-colors"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                            Șterge
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -804,6 +918,150 @@ export default function TeacherStudentsPage() {
           )})
         )}
       </div>
+
+      {/* Editare elev — aceleași câmpuri ca la creare */}
+      {editingStudent && editForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Editează elevul</h2>
+                <p className="text-xs text-gray-500">{editingStudent.name}</p>
+              </div>
+              <button
+                onClick={() => { setEditingStudent(null); setEditForm(null) }}
+                className="p-1 hover:bg-gray-100 rounded text-gray-700"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleEditStudent} className="p-4 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Nume Complet *</label>
+                <input
+                  type="text"
+                  value={editForm.fullName}
+                  onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">Vârstă</label>
+                  {editForm.isAdult ? (
+                    <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 text-sm">
+                      Adult
+                    </div>
+                  ) : (
+                    <input
+                      type="number" min="1" max="99"
+                      value={editForm.age}
+                      onChange={(e) => setEditForm({ ...editForm, age: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+                    />
+                  )}
+                  <label className="mt-1 flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editForm.isAdult}
+                      onChange={(e) => setEditForm({
+                        ...editForm,
+                        isAdult: e.target.checked,
+                        age: e.target.checked ? '' : editForm.age,
+                      })}
+                      className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                    />
+                    Adult
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">Nivel</label>
+                  <LevelSelect
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+                    value={editForm.level}
+                    onChange={(e) => setEditForm({ ...editForm, level: e.target.value })}
+                    emptyLabel="Nespecificat"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Începe din</label>
+                <select
+                  value={editForm.startPeriod}
+                  onChange={(e) => setEditForm({ ...editForm, startPeriod: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+                >
+                  <option value="">Nespecificat</option>
+                  {monthOptions().map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">Părinte</label>
+                  <input
+                    type="text"
+                    value={editForm.parentName}
+                    onChange={(e) => setEditForm({ ...editForm, parentName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">Telefon</label>
+                  <input
+                    type="tel"
+                    value={editForm.parentPhone}
+                    onChange={(e) => setEditForm({ ...editForm, parentPhone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editForm.parentEmail}
+                  onChange={(e) => setEditForm({ ...editForm, parentEmail: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Notițe</label>
+                <textarea
+                  rows={3}
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900 resize-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => { setEditingStudent(null); setEditForm(null) }}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                >
+                  Anulează
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="px-4 py-2 bg-[#30919f] text-white rounded-lg hover:bg-[#2a7d89] disabled:opacity-50"
+                >
+                  {savingEdit ? 'Se salvează…' : 'Salvează'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Create Student Modal */}
       {showCreateModal && (

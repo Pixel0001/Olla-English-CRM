@@ -10,8 +10,8 @@ import FollowUpPicker from '@/components/admin/FollowUpPicker'
 import DuplicateLeadWarning from '@/components/admin/DuplicateLeadWarning'
 
 const input =
-  'w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
-const label = 'block text-xs xs:text-sm font-medium text-gray-700 mb-1'
+  'w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
+const label = 'block text-xs font-medium text-gray-600 mb-0.5'
 
 // Recontactările se verifică din 10 în 10 minute, deci ora se aliniază
 const roundToStep = (value) => {
@@ -88,11 +88,11 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
   }
 
   return (
-    <form onSubmit={submit} className="space-y-5">
+    <form onSubmit={submit} className="space-y-3">
       {/* Persoana de contact */}
-      <section className="space-y-3">
+      <section className="space-y-2">
         <h2 className="text-sm font-semibold text-gray-900">Persoana de contact</h2>
-        <div className="grid sm:grid-cols-3 gap-3">
+        <div className="grid xs:grid-cols-2 sm:grid-cols-3 gap-2">
           <div>
             <label className={label}>Nume *</label>
             <input
@@ -115,13 +115,13 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
             />
           </div>
         </div>
-        <p className="text-xs text-gray-500">Cel puțin telefon sau email trebuie completat.</p>
+        <p className="text-[11px] text-gray-500">Cel puțin telefon sau email trebuie completat.</p>
 
         <DuplicateLeadWarning name={form.name} phone={form.phone} excludeId={lead?.id || null} />
       </section>
 
       {/* Sursa */}
-      <section className="space-y-3 pt-4 border-t border-gray-100">
+      <section className="space-y-2 pt-3 border-t border-gray-100">
         <h2 className="text-sm font-semibold text-gray-900">De unde a venit</h2>
         <div className="flex flex-wrap gap-1.5">
           {LEAD_SOURCES.map((s) => (
@@ -147,9 +147,9 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
       </section>
 
       {/* Cine învață */}
-      <section className="space-y-3 pt-4 border-t border-gray-100">
+      <section className="space-y-2 pt-3 border-t border-gray-100">
         <h2 className="text-sm font-semibold text-gray-900">Cine învață</h2>
-        <div className="grid sm:grid-cols-3 gap-3">
+        <div className="grid xs:grid-cols-2 sm:grid-cols-3 gap-2">
           <div>
             <label className={label}>Nume elev</label>
             <input
@@ -212,9 +212,9 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
       </section>
 
       {/* Pipeline */}
-      <section className="space-y-3 pt-4 border-t border-gray-100">
+      <section className="space-y-2 pt-3 border-t border-gray-100">
         <h2 className="text-sm font-semibold text-gray-900">Stadiu</h2>
-        <div className="grid sm:grid-cols-3 gap-3">
+        <div className="grid xs:grid-cols-2 sm:grid-cols-3 gap-2">
           <div>
             <label className={label}>Status</label>
             <select className={input} value={form.status} onChange={(e) => set('status', e.target.value)}>
@@ -234,8 +234,8 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
                 <option key={u.id} value={u.id}>{u.name || u.email}</option>
               ))}
             </select>
-            <p className="text-[11px] text-gray-500 mt-1">
-              Primește pe Telegram notificarea de recontactare
+            <p className="text-[11px] text-gray-500 mt-0.5">
+              Primește notificarea de recontactare pe Telegram
             </p>
           </div>
           <div>
@@ -250,14 +250,14 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
         <div>
           <label className={label}>Mesaj / context</label>
           <textarea
-            className={`${input} resize-none`} rows={4} value={form.message}
+            className={`${input} resize-none`} rows={3} value={form.message}
             onChange={(e) => set('message', e.target.value)}
             placeholder="Ce a scris sau ce ați discutat…"
           />
         </div>
       </section>
 
-      <div className="flex gap-3 pt-2">
+      <div className="flex gap-2 pt-1">
         <button
           type="submit" disabled={saving}
           className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"

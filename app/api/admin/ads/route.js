@@ -2,21 +2,65 @@ import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/session'
 import { checkPermission } from '@/lib/permissions'
 import { fetchAdsOverview, fetchTokenInfo, isConfigured } from '@/lib/meta-ads'
+import { readCache, writeCache } from '@/lib/external-cache'
+import { rateCampaigns, summarizeRatings } from '@/lib/ads-rating'
 
 /**
  * Datele de reclame din Meta, pentru pagina /admin/ads.
  *
- * Apelurile către Meta sunt lente (zeci de secunde la conturi vechi), așa că
- * răspunsul se ține în memorie 15 minute. Butonul „Actualizează" trimite
- * ?refresh=1 și forțează o citire nouă.
+ * Citirea de la Meta durează secunde bune (conturi, campanii, luni), așa că
+ * răspunsul se ține în baza de date, comun pentru toate instanțele, și se
+ * împrospătează în fundal. Pagina se deschide cu ce știm deja; butonul
+ * „Actualizează" cere date noi și așteaptă.
  */
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
 
-const CACHE_MS = 15 * 60 * 1000
-let cache = null // { data, at }
+const ADS_KEY = 'meta:ads'
+const FRESH_MS = 30 * 60 * 1000   // sub o jumătate de oră, datele sunt bune
+
+let refreshing = false
+
+/** Citește de la Meta și pune nota fiecărei campanii. */
+async function loadAds() {
+  const [data, token] = await Promise.all([
+    fetchAdsOverview(),
+    fetchTokenInfo().catch(() => null),
+  ])
+
+  // Evaluarea se face pe toate campaniile la un loc: comparația are sens doar
+  // între campaniile aceleiași școli.
+  const allCampaigns = data.accounts.flatMap((a) =>
+    a.campaigns.map((c) => ({ ...c, currency: a.currency, accountName: a.name }))
+  )
+  const rated = rateCampaigns(allCampaigns)
+  const ratingById = new Map(rated.map((c) => [c.id, c.rating]))
+
+  const accounts = data.accounts.map((a) => ({
+    ...a,
+    campaigns: a.campaigns.map((c) => ({ ...c, rating: ratingById.get(c.id) || null })),
+  }))
+
+  return {
+    ...data,
+    accounts,
+    token,
+    rating: summarizeRatings(rated),
+    fetchedAt: new Date().toISOString(),
+  }
+}
+
+function refreshInBackground() {
+  if (refreshing) return
+  refreshing = true
+
+  loadAds()
+    .then((data) => writeCache(ADS_KEY, data))
+    .catch((e) => console.error('[ads] împrospătare eșuată:', e?.message))
+    .finally(() => { refreshing = false })
+}
 
 export async function GET(request) {
   try {
@@ -35,21 +79,24 @@ export async function GET(request) {
     }
 
     const refresh = new URL(request.url).searchParams.get('refresh') === '1'
-    const fresh = cache && Date.now() - cache.at < CACHE_MS
 
-    if (!refresh && fresh) {
-      return NextResponse.json({ ...cache.data, cached: true, cachedAt: new Date(cache.at).toISOString() })
+    if (!refresh) {
+      const cached = await readCache(ADS_KEY)
+      if (cached?.payload?.accounts) {
+        if (cached.ageMs > FRESH_MS) refreshInBackground()
+        return NextResponse.json({
+          ...cached.payload,
+          cached: true,
+          ageMs: cached.ageMs,
+          cachedAt: new Date(Date.now() - cached.ageMs).toISOString(),
+        })
+      }
     }
 
-    const [data, token] = await Promise.all([
-      fetchAdsOverview(),
-      fetchTokenInfo().catch(() => null),
-    ])
+    const data = await loadAds()
+    await writeCache(ADS_KEY, data)
 
-    const payload = { ...data, token }
-    cache = { data: payload, at: Date.now() }
-
-    return NextResponse.json({ ...payload, cached: false })
+    return NextResponse.json({ ...data, cached: false, ageMs: 0 })
   } catch (error) {
     if (error.message === 'Unauthorized' || error.message === 'Forbidden') {
       return NextResponse.json({ error: error.message }, { status: 401 })

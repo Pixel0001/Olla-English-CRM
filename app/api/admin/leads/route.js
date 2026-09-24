@@ -128,9 +128,6 @@ export async function GET(request) {
       } else if (period === 'prev-month') {
         range.gte = new Date(today.getFullYear(), today.getMonth() - 1, 1)
         range.lt = new Date(today.getFullYear(), today.getMonth(), 1)
-      } else if (period === 'prev-months') {
-        // Tot ce a fost înainte de luna curentă
-        range.lt = new Date(today.getFullYear(), today.getMonth(), 1)
       } else if (/^[0-9]+$/.test(period)) {
         const limit = new Date(today)
         limit.setDate(limit.getDate() - parseInt(period, 10))

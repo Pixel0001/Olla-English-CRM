@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { usePermissions } from '@/hooks/usePermissions'
 import { BarChart, AreaChart, DonutChart, RankBars, Funnel, CHART_COLORS } from '@/components/admin/ads/AdCharts'
+import { RATINGS } from '@/lib/ads-rating'
 import {
   ArrowPathIcon,
   ExclamationTriangleIcon,
@@ -228,6 +229,58 @@ export default function AdsClient() {
             <Stat label="Conturi de reclame" value={int(data.accounts.length)} hint={data.currencies?.length > 1 ? `monede: ${data.currencies.join(', ')}` : null} tone="neutral" />
           </div>
 
+          {/* Cât de bine merg reclamele */}
+          {data.rating?.rated > 0 && (
+            <Card title="Cât de bine merg campaniile">
+              <div className="flex flex-wrap gap-2 mb-3">
+                {['excellent', 'good', 'average', 'poor'].map((level) => (
+                  data.rating.counts[level] > 0 && (
+                    <span
+                      key={level}
+                      className={`px-2.5 py-1 rounded-lg border text-xs font-medium ${RATINGS[level].color}`}
+                    >
+                      {data.rating.counts[level]} {RATINGS[level].label.toLowerCase()}
+                    </span>
+                  )
+                ))}
+                {data.rating.counts.unknown > 0 && (
+                  <span className="px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-500">
+                    {data.rating.counts.unknown} fără destule date
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-1.5 text-sm text-gray-700">
+                {data.rating.bestCampaign && (
+                  <p>
+                    🥇 Cel mai bine merge <b>{data.rating.bestCampaign.name}</b>:{' '}
+                    {money(data.rating.bestCampaign.cost, currency)} pe rezultat,{' '}
+                    {int(data.rating.bestCampaign.results)} rezultate.
+                  </p>
+                )}
+                {data.rating.worstCampaign &&
+                  data.rating.worstCampaign.name !== data.rating.bestCampaign?.name && (
+                  <p>
+                    🐌 Cel mai scump: <b>{data.rating.worstCampaign.name}</b>,{' '}
+                    {money(data.rating.worstCampaign.cost, currency)} pe rezultat.
+                  </p>
+                )}
+                {data.rating.wastedSpend > 0 && (
+                  <p className="text-red-700">
+                    ⚠️ Campaniile slabe au consumat {money(data.rating.wastedSpend, currency)}.
+                  </p>
+                )}
+              </div>
+
+              <p className="text-[11px] text-gray-500 mt-3">
+                „Rezultat" înseamnă o conversație pornită sau un lead — ce aduce oameni, nu
+                afișări. Fiecare campanie se compară cu mediana campaniilor voastre, nu cu un
+                prag inventat: jumătate ies mai bune, jumătate mai slabe. Sub 5 {currency} cheltuiți
+                nu tragem concluzii.
+              </p>
+            </Card>
+          )}
+
           {/* Grafice */}
           <div className="grid lg:grid-cols-3 gap-3">
             <Card title="Cheltuieli lună de lună" className="lg:col-span-2">
@@ -358,9 +411,16 @@ export default function AdsClient() {
                                     return (
                                       <tr key={c.id} className="hover:bg-gray-50">
                                         <td className="px-3 py-2">
-                                          <p className="font-medium text-gray-900">{c.name}</p>
+                                          <p className="font-medium text-gray-900 flex flex-wrap items-center gap-1.5">
+                                            {c.name}
+                                            {c.rating && (
+                                              <span className={`px-1.5 py-0.5 rounded border text-[10px] font-medium ${c.rating.color}`}>
+                                                {c.rating.label}
+                                              </span>
+                                            )}
+                                          </p>
                                           <p className="text-[11px] text-gray-500">
-                                            {c.objective || '—'}
+                                            {c.rating?.reason || c.objective || '—'}
                                             {c.createdTime ? ` · ${new Date(c.createdTime).toLocaleDateString('ro-RO')}` : ''}
                                           </p>
                                         </td>
@@ -445,23 +505,27 @@ export default function AdsClient() {
             <h2 className="text-sm font-bold text-gray-900 mb-2">Conexiunea cu Meta</h2>
             <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
               <Row label="Cont Meta" value={data.user?.name || '—'} />
-              <Row label="Aplicație" value={data.token?.appName || '—'} />
+              {data.pages?.length > 0 && (
+                <Row label="Pagina" value={data.pages.map((p) => p.name).join(', ')} />
+              )}
               <Row
-                label="Pagini accesibile"
-                value={data.pages.length > 0 ? data.pages.map((p) => p.name).join(', ') : '—'}
-              />
-              <Row
-                label="Acces la date până la"
+                label="Meta cere reînnoirea accesului până la"
                 value={data.token?.dataAccessExpiresAt
                   ? new Date(data.token.dataAccessExpiresAt).toLocaleDateString('ro-RO')
                   : '—'}
               />
             </div>
             <p className="text-[11px] text-gray-500 mt-3">
-              Datele se citesc direct din Meta și se păstrează 15 minute; butonul „Actualizează" le cere din nou.
+              Datele se păstrează în CRM și se împrospătează singure în fundal, ca pagina să
+              se deschidă imediat; butonul „Actualizează" le cere de la Meta pe loc.
               {data.windowSince && (
                 <> Meta nu dă statistici mai vechi de 37 de luni, așa că cifrele pornesc din{' '}
                   <b>{new Date(data.windowSince).toLocaleDateString('ro-RO')}</b>.</>
+              )}
+              {data.token?.dataAccessExpiresAt && (
+                <> Data de mai sus e regula Meta de 90 de zile pentru token-uri de utilizator:
+                  atunci trebuie regenerat. Un token de „system user" din Business Manager nu
+                  expiră și scapă de grija asta.</>
               )}
             </p>
           </div>

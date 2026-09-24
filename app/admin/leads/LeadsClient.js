@@ -41,6 +41,16 @@ const SORTS = [
 const selectClass =
   'px-2 py-1.5 text-xs text-gray-900 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
 
+// Un filtru pus se colorează, ca să nu te întrebi de ce lipsesc lead-uri
+// din listă.
+const activeSelectClass =
+  'px-2 py-1.5 text-xs font-semibold text-indigo-800 border border-indigo-400 rounded-lg bg-indigo-50 ring-1 ring-indigo-200 focus:ring-2 focus:ring-indigo-500'
+
+const pick = (active) => (active ? activeSelectClass : selectClass)
+
+// Filtrele rămân puse și după ce închizi pagina
+const FILTERS_KEY = 'olla:leads:filters'
+
 const startOfToday = () => {
   const d = new Date()
   d.setHours(0, 0, 0, 0)
@@ -95,7 +105,8 @@ export default function LeadsClient({ leads = [], staff = [] }) {
   const [expandedId, setExpandedId] = useState(null)
   const [search, setSearch] = useState('')
 
-  const [status, setStatus] = useState('')
+  // Mai multe status-uri în același timp; a doua apăsare pe același îl scoate
+  const [statuses, setStatuses] = useState([])
   const [source, setSource] = useState('')
   const [level, setLevel] = useState('')
   const [audience, setAudience] = useState('') // '', 'adult', 'copil'
@@ -103,11 +114,14 @@ export default function LeadsClient({ leads = [], staff = [] }) {
   const [period, setPeriod] = useState('')
   const [followUp, setFollowUp] = useState('')
   const [sort, setSort] = useState('newest')
+  // Până citim filtrele salvate, nu cerem nimic de la server: altfel prima
+  // listă ar fi cea nefiltrată și ar clipi.
+  const [restored, setRestored] = useState(false)
   // Lead-urile se cer de la server, filtrate și paginate acolo: altfel
   // pagina ar trage toată baza la fiecare deschidere.
   const query = useMemo(() => {
     const params = new URLSearchParams()
-    if (status) params.set('status', status)
+    if (statuses.length) params.set('status', statuses.join(','))
     if (source) params.set('source', source)
     if (level) params.set('level', level)
     if (audience) params.set('audience', audience)
@@ -123,7 +137,7 @@ export default function LeadsClient({ leads = [], staff = [] }) {
     params.set('page', String(page))
     params.set('pageSize', String(pageSize))
     return params
-  }, [status, source, level, audience, ageGroup, followUp, sort, period, from, to, page, pageSize])
+  }, [statuses, source, level, audience, ageGroup, followUp, sort, period, from, to, page, pageSize])
 
   const fetchLeads = useCallback(async (searchTerm) => {
     setLoading(true)
@@ -150,26 +164,64 @@ export default function LeadsClient({ leads = [], staff = [] }) {
     }
   }, [query])
 
+  // Filtrele puse rămân puse: le luăm din browser la deschidere
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(FILTERS_KEY) || 'null')
+      if (saved) {
+        if (Array.isArray(saved.statuses)) setStatuses(saved.statuses)
+        if (saved.source) setSource(saved.source)
+        if (saved.level) setLevel(saved.level)
+        if (saved.audience) setAudience(saved.audience)
+        if (saved.ageGroup) setAgeGroup(saved.ageGroup)
+        if (saved.followUp) setFollowUp(saved.followUp)
+        if (PERIODS.some((p) => p.value === saved.period)) setPeriod(saved.period)
+        if (saved.from) setFrom(saved.from)
+        if (saved.to) setTo(saved.to)
+        if (saved.sort) setSort(saved.sort)
+        if (saved.pageSize) setPageSize(saved.pageSize)
+      }
+    } catch {}
+    setRestored(true)
+  }, [])
+
+  // …și se scriu înapoi la fiecare schimbare
+  useEffect(() => {
+    if (!restored) return
+    try {
+      localStorage.setItem(FILTERS_KEY, JSON.stringify({
+        statuses, source, level, audience, ageGroup, followUp, period, from, to, sort, pageSize,
+      }))
+    } catch {}
+  }, [restored, statuses, source, level, audience, ageGroup, followUp, period, from, to, sort, pageSize])
+
   // Filtrele se aplică imediat; scrisul în căutare, după o pauză
   useEffect(() => {
+    if (!restored) return
     const timer = setTimeout(() => fetchLeads(search), search ? 350 : 0)
     return () => clearTimeout(timer)
-  }, [fetchLeads, search])
+  }, [restored, fetchLeads, search])
 
   // Orice filtru nou readuce lista la prima pagină
   useEffect(() => {
     setPage(1)
-  }, [status, source, level, audience, ageGroup, followUp, period, from, to, search, pageSize])
+  }, [statuses, source, level, audience, ageGroup, followUp, period, from, to, search, pageSize])
 
   const resetPaging = () => setPage(1)
 
+  const toggleStatus = (value) => {
+    setStatuses((prev) => (prev.includes(value) ? prev.filter((s) => s !== value) : [...prev, value]))
+    resetPaging()
+  }
+
   const resetAll = () => {
-    setSearch(''); setStatus(''); setSource(''); setLevel(''); setAudience(''); setAgeGroup('')
+    setSearch(''); setStatuses([]); setSource(''); setLevel(''); setAudience(''); setAgeGroup('')
     setPeriod(''); setFrom(''); setTo(''); setFollowUp(''); setSort('newest'); resetPaging()
+    try { localStorage.removeItem(FILTERS_KEY) } catch {}
   }
 
   const activeFilterCount =
-    (search ? 1 : 0) + (status ? 1 : 0) +
+    (search ? 1 : 0) + statuses.length +
     (source ? 1 : 0) + (level ? 1 : 0) + (audience ? 1 : 0) + (ageGroup ? 1 : 0) +
     (period ? 1 : 0) + (followUp ? 1 : 0)
 
@@ -287,31 +339,41 @@ export default function LeadsClient({ leads = [], staff = [] }) {
       </div>
 
       {/* Bară unică: preset-uri + căutare îngustă + filtre */}
-      <div className="bg-white rounded-lg border border-gray-200 px-2 py-2 flex flex-wrap items-center gap-1.5">
+      <div
+        className={`rounded-lg border px-2 py-2 flex flex-wrap items-center gap-1.5 transition-colors ${
+          activeFilterCount > 0
+            ? 'bg-indigo-50/60 border-indigo-300'
+            : 'bg-white border-gray-200'
+        }`}
+      >
         <button
-          onClick={() => { setStatus(""); resetPaging() }}
+          onClick={() => { setStatuses([]); resetPaging() }}
           className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-            status === ""
+            statuses.length === 0
               ? "bg-indigo-600 text-white"
               : "bg-gray-50 text-gray-700 border border-gray-200 hover:border-indigo-400"
           }`}
         >
           Toate
         </button>
-        {LEAD_STATUSES.map((s) => (
-          <button
-            key={s.value}
-            onClick={() => { setStatus(s.value); resetPaging() }}
-            title={s.label}
-            className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
-              status === s.value
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-50 text-gray-700 border border-gray-200 hover:border-indigo-400"
-            }`}
-          >
-            {s.emoji} {s.label}
-          </button>
-        ))}
+        {LEAD_STATUSES.map((s) => {
+          const on = statuses.includes(s.value)
+          return (
+            <button
+              key={s.value}
+              onClick={() => toggleStatus(s.value)}
+              title={on ? `${s.label} — apasă din nou ca să scoți filtrul` : s.label}
+              className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                on
+                  ? "bg-indigo-600 text-white ring-2 ring-indigo-200"
+                  : "bg-gray-50 text-gray-700 border border-gray-200 hover:border-indigo-400"
+              }`}
+            >
+              {s.emoji} {s.label}
+              {on && <span className="ml-1 opacity-80">×</span>}
+            </button>
+          )
+        })}
 
         <div className="relative w-44">
           <MagnifyingGlassIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
@@ -323,25 +385,25 @@ export default function LeadsClient({ leads = [], staff = [] }) {
             className="w-full pl-7 pr-2 py-1.5 text-xs text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
-        <select value={source} onChange={(e) => { setSource(e.target.value); resetPaging() }} className={selectClass} aria-label="Sursă">
+        <select value={source} onChange={(e) => { setSource(e.target.value); resetPaging() }} className={pick(source)} aria-label="Sursă">
           <option value="">Sursă: toate</option>
           {LEAD_SOURCES.map((s) => <option key={s.value} value={s.value}>{s.emoji} {s.label}</option>)}
         </select>
 
-        <select value={audience} onChange={(e) => { setAudience(e.target.value); resetPaging() }} className={selectClass} aria-label="Adult sau copil">
+        <select value={audience} onChange={(e) => { setAudience(e.target.value); resetPaging() }} className={pick(audience)} aria-label="Adult sau copil">
           <option value="">Adult/copil: toți</option>
           <option value="adult">🧑 Adulți</option>
           <option value="copil">🧒 Copii</option>
         </select>
 
-        <select value={ageGroup} onChange={(e) => { setAgeGroup(e.target.value); resetPaging() }} className={selectClass} aria-label="Categorie de vârstă">
+        <select value={ageGroup} onChange={(e) => { setAgeGroup(e.target.value); resetPaging() }} className={pick(ageGroup)} aria-label="Categorie de vârstă">
           <option value="">Vârstă: toate</option>
           {AGE_GROUPS.map((g) => (
             <option key={g.value} value={g.value}>{g.label}</option>
           ))}
         </select>
 
-        <select value={level} onChange={(e) => { setLevel(e.target.value); resetPaging() }} className={selectClass} aria-label="Nivel">
+        <select value={level} onChange={(e) => { setLevel(e.target.value); resetPaging() }} className={pick(level)} aria-label="Nivel">
           <option value="">Nivel: toate</option>
           {levelOptions.levels.map((l) => (
             <option key={l.value} value={l.value}>{l.value} ({l.count})</option>
@@ -351,11 +413,11 @@ export default function LeadsClient({ leads = [], staff = [] }) {
           )}
         </select>
 
-        <select value={followUp} onChange={(e) => { setFollowUp(e.target.value); resetPaging() }} className={selectClass} aria-label="Follow-up">
+        <select value={followUp} onChange={(e) => { setFollowUp(e.target.value); resetPaging() }} className={pick(followUp)} aria-label="Follow-up">
           {FOLLOWUPS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
 
-        <select value={period} onChange={(e) => { setPeriod(e.target.value); resetPaging() }} className={selectClass} aria-label="Perioadă">
+        <select value={period} onChange={(e) => { setPeriod(e.target.value); resetPaging() }} className={pick(period)} aria-label="Perioadă">
           {PERIODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
         </select>
 
@@ -365,7 +427,7 @@ export default function LeadsClient({ leads = [], staff = [] }) {
               type="date"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
-              className={selectClass}
+              className={pick(from)}
               aria-label="De la data"
             />
             <span className="text-gray-400 text-xs">→</span>
@@ -373,13 +435,13 @@ export default function LeadsClient({ leads = [], staff = [] }) {
               type="date"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              className={selectClass}
+              className={pick(to)}
               aria-label="Până la data"
             />
           </span>
         )}
 
-        <select value={sort} onChange={(e) => setSort(e.target.value)} className={selectClass} aria-label="Sortare">
+        <select value={sort} onChange={(e) => setSort(e.target.value)} className={pick(sort !== 'newest')} aria-label="Sortare">
           {SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
 
@@ -390,10 +452,15 @@ export default function LeadsClient({ leads = [], staff = [] }) {
               ? `${totalCount} lead-uri`
               : `${totalCount} din ${stats.total}`}
           {activeFilterCount > 0 && (
-            <button onClick={resetAll} className="inline-flex items-center gap-0.5 text-indigo-600 hover:text-indigo-800 font-medium">
-              <XMarkIcon className="h-3 w-3" />
-              Resetează
-            </button>
+            <>
+              <span className="px-1.5 py-0.5 rounded-full bg-indigo-600 text-white font-semibold">
+                {activeFilterCount} {activeFilterCount === 1 ? 'filtru' : 'filtre'}
+              </span>
+              <button onClick={resetAll} className="inline-flex items-center gap-0.5 text-indigo-600 hover:text-indigo-800 font-medium">
+                <XMarkIcon className="h-3 w-3" />
+                Resetează
+              </button>
+            </>
           )}
         </span>
       </div>
