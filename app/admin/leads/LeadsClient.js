@@ -84,7 +84,6 @@ const PERIODS = [
   { value: 'week', label: 'Săptămâna aceasta' },
   { value: 'month', label: 'Luna aceasta' },
   { value: 'prev-month', label: 'Luna trecută' },
-  { value: 'prev-months', label: 'Lunile trecute' },
   { value: 'interval', label: 'Interval…' },
 ]
 
