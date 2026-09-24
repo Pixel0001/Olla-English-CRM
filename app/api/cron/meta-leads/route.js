@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getMetaLeadSettings, syncConversationsToLeads } from '@/lib/meta-leads'
 import { warmInbox } from '@/lib/meta-inbox'
+import { warmAds } from '@/lib/ads-cache'
 import { isConfigured } from '@/lib/meta-messages'
 
 /**
@@ -37,14 +38,18 @@ export async function GET(request) {
     // o citire, și face ca pagina de mesaje să se deschidă deja gata.
     const warmed = await warmInbox().catch((e) => ({ error: e.message }))
 
+    // Și reclamele: citirea lor de la Meta durează, iar pagina trebuie să se
+    // deschidă gata, nu să aștepte.
+    const ads = await warmAds().catch((e) => ({ error: e.message }))
+
     const settings = await getMetaLeadSettings()
 
     if (!settings.metaLeadsEnabled) {
-      return NextResponse.json({ warmed, skipped: true, reason: 'Lead-urile automate sunt oprite' })
+      return NextResponse.json({ warmed, ads, skipped: true, reason: 'Lead-urile automate sunt oprite' })
     }
 
     const result = await syncConversationsToLeads()
-    return NextResponse.json({ success: true, warmed, ...result, trigger: fromCron ? 'cron' : 'manual' })
+    return NextResponse.json({ success: true, warmed, ads, ...result, trigger: fromCron ? 'cron' : 'manual' })
   } catch (error) {
     console.error('Cron meta-leads:', error)
     return NextResponse.json({ error: error.message || 'Eroare' }, { status: 500 })

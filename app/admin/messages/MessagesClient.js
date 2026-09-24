@@ -12,6 +12,7 @@ import {
   EnvelopeOpenIcon,
   InboxIcon,
   ClockIcon,
+  ArrowLeftIcon,
 } from '@heroicons/react/24/outline'
 import { PlatformIcon } from '@/components/icons/BrandIcons'
 import ConversationLeadControl from '@/components/admin/ConversationLeadControl'
@@ -426,9 +427,15 @@ export default function MessagesClient() {
         </div>
       )}
 
+      {/* Pe ecran mic nu încap două coloane una sub alta: ori inboxul, ori
+          conversația deschisă — exact ca în aplicația Meta. */}
       <div className="grid lg:grid-cols-[23rem_1fr] gap-3 items-start">
         {/* Lista */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div
+          className={`bg-white rounded-xl border border-gray-200 overflow-hidden ${
+            selected ? 'hidden lg:block' : ''
+          }`}
+        >
           <div className="px-3 pt-3">
             <h2 className="text-sm font-bold text-gray-900 mb-2">Inbox</h2>
 
@@ -441,7 +448,7 @@ export default function MessagesClient() {
                     key={t.value}
                     type="button"
                     onClick={() => setTab(t.value)}
-                    className={`relative flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium transition-colors border-b-2 -mb-px ${
+                    className={`relative flex flex-1 lg:flex-none items-center justify-center lg:justify-start gap-1.5 px-2 lg:px-2.5 py-2 text-xs font-medium transition-colors border-b-2 -mb-px ${
                       active
                         ? 'border-indigo-600 text-indigo-700'
                         : 'border-transparent text-gray-500 hover:text-gray-800'
@@ -531,7 +538,7 @@ export default function MessagesClient() {
               )}
             </div>
           ) : (
-            <ul className="divide-y divide-gray-50 max-h-[68vh] overflow-y-auto">
+            <ul className="divide-y divide-gray-50 max-h-[calc(100vh-17rem)] lg:max-h-[68vh] overflow-y-auto">
               {conversations.map((c) => {
                 const active = selected?.id === c.id
                 const unread = c.unreadCount > 0
@@ -586,7 +593,11 @@ export default function MessagesClient() {
         </div>
 
         {/* Firul */}
-        <div className="bg-white rounded-xl border border-gray-200 min-h-[26rem] flex flex-col">
+        <div
+          className={`bg-white rounded-xl border border-gray-200 min-h-[26rem] flex-col ${
+            selected ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
           {!selected ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-10 text-gray-500">
               <ChatBubbleLeftRightIcon className="h-10 w-10 text-gray-300 mb-2" />
@@ -594,7 +605,15 @@ export default function MessagesClient() {
             </div>
           ) : (
             <>
-              <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center gap-3">
+              <div className="px-3 lg:px-4 py-2.5 lg:py-3 border-b border-gray-100 flex flex-wrap items-center gap-2 lg:gap-3 sticky top-0 bg-white z-10 rounded-t-xl">
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  className="lg:hidden -ml-1 p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
+                  aria-label="Înapoi la inbox"
+                >
+                  <ArrowLeftIcon className="h-5 w-5" />
+                </button>
                 <Avatar name={selected.person.name} platform={selected.platform} id="av-open" />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-gray-900 truncate">{selected.person.name}</p>
@@ -620,10 +639,10 @@ export default function MessagesClient() {
               ) : thread.length === 0 ? (
                 <p className="flex-1 p-6 text-sm text-gray-500 text-center">Fără mesaje de afișat.</p>
               ) : (
-                <div className="flex-1 p-4 space-y-2 max-h-[56vh] overflow-y-auto">
+                <div className="flex-1 p-3 lg:p-4 space-y-2 max-h-[calc(100vh-22rem)] min-h-[45vh] lg:max-h-[56vh] lg:min-h-0 overflow-y-auto">
                   {thread.map((m) => (
                     <div key={m.id} className={`flex ${m.fromPage ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] rounded-2xl px-3 py-2 ${
+                      <div className={`max-w-[85%] lg:max-w-[80%] rounded-2xl px-3 py-2 ${
                         m.fromPage
                           ? 'bg-indigo-600 text-white rounded-br-sm'
                           : 'bg-gray-100 text-gray-900 rounded-bl-sm'
@@ -644,7 +663,7 @@ export default function MessagesClient() {
               )}
 
               {canSend ? (
-                <form onSubmit={send} className="border-t border-gray-100 p-3 space-y-2">
+                <form onSubmit={send} className="border-t border-gray-100 p-2.5 lg:p-3 space-y-2 sticky bottom-0 bg-white rounded-b-xl">
                   {windowClosed ? (
                     <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
                       Peste 7 zile de la ultimul mesaj al persoanei — Meta nu mai permite niciun răspuns.
@@ -669,10 +688,10 @@ export default function MessagesClient() {
                     <button
                       type="submit"
                       disabled={sending || !draft.trim()}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3 xs:px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
                     >
                       <PaperAirplaneIcon className="h-4 w-4" />
-                      {sending ? '…' : 'Trimite'}
+                      <span className="hidden xs:inline">{sending ? '…' : 'Trimite'}</span>
                     </button>
                   </div>
                 </form>
