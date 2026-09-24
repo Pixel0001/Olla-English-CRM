@@ -33,7 +33,7 @@ export default function TeacherForm({ teacher }) {
 
   // Adminul vede toate categoriile; profesorul, doar acțiunile lui.
   // Restul permisiunilor n-ar avea ce face într-un cont de profesor.
-  const TEACHER_CATEGORY = 'Profesori — acțiuni'
+  const TEACHER_CATEGORY = 'Corectări'
   const isTeacherRole = formData.role === 'TEACHER'
   const showPermissions = isSuperAdmin && (formData.role === 'ADMIN' || isTeacherRole)
   const visibleCategories = isTeacherRole

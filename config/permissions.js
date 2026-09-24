@@ -241,44 +241,44 @@ export const PERMISSIONS = {
   // Toate, în afară de ultima, funcționează doar 24 de ore de la creare —
   // cât timp greșeala e proaspătă și nimeni nu s-a bazat încă pe cifre.
   'teacher.session.edit': {
-    label: 'Editează sesiunea (24h)',
+    label: 'Editează sesiunea',
     description: 'Poate schimba notițele și prezența unei lecții, 24h de la crearea ei',
-    category: 'Profesori — acțiuni'
+    category: 'Corectări'
   },
   'teacher.session.cancel': {
-    label: 'Anulează sesiunea (24h)',
+    label: 'Anulează sesiunea',
     description: 'Poate marca lecția ca neefectuată, 24h de la crearea ei',
-    category: 'Profesori — acțiuni'
+    category: 'Corectări'
   },
   'teacher.session.delete': {
-    label: 'Șterge sesiunea (24h)',
+    label: 'Șterge sesiunea',
     description: 'Poate șterge lecția, 24h de la crearea ei',
-    category: 'Profesori — acțiuni'
+    category: 'Corectări'
   },
   'teacher.payment.edit': {
-    label: 'Editează plata (24h)',
+    label: 'Editează plata',
     description: 'Poate corecta o plată pe care a înregistrat-o, 24h de la înregistrare',
-    category: 'Profesori — acțiuni'
+    category: 'Corectări'
   },
   'teacher.payment.delete': {
-    label: 'Șterge plata (24h)',
+    label: 'Șterge plata',
     description: 'Poate șterge o plată pe care a înregistrat-o, 24h de la înregistrare',
-    category: 'Profesori — acțiuni'
+    category: 'Corectări'
   },
   'teacher.student.edit': {
-    label: 'Editează elevul (24h)',
+    label: 'Editează elevul',
     description: 'Poate corecta datele unui elev pe care l-a adăugat, 24h de la adăugare',
-    category: 'Profesori — acțiuni'
+    category: 'Corectări'
   },
   'teacher.student.delete': {
-    label: 'Șterge elevul (24h)',
+    label: 'Șterge elevul',
     description: 'Poate șterge un elev pe care l-a adăugat, 24h de la adăugare',
-    category: 'Profesori — acțiuni'
+    category: 'Corectări'
   },
   'teacher.noTimeLimit': {
     label: '⏳ Fără limita de 24 de ore',
-    description: 'Acțiunile de mai sus merg oricând, inclusiv pe sesiuni și plăți vechi',
-    category: 'Profesori — acțiuni'
+    description: 'Pentru profesori: acțiunile de mai sus merg oricând, nu doar 24h. Adminii nu au oricum limită de timp',
+    category: 'Corectări'
   },
 
   // Mesaje (Messenger / Instagram)
@@ -358,7 +358,7 @@ export const PERMISSION_CATEGORIES = [
   'Filiale',
   'Sesiuni',
   'Recuperări',
-  'Profesori — acțiuni',
+  'Corectări',
   'Mesaje',
   'Reclame',
   'Notificări',
