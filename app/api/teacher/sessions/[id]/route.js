@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { guardTeacherAction } from '@/lib/teacher-actions'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -7,7 +8,7 @@ import { notifyCancelledLesson } from '@/lib/telegram'
 // GET - Fetch a specific session
 export async function GET(request, { params }) {
   const session = await getServerSession(authOptions)
-  
+
   if (!session || !['TEACHER', 'ADMIN'].includes(session.user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -45,7 +46,7 @@ export async function GET(request, { params }) {
 // PATCH - Update session notes
 export async function PATCH(request, { params }) {
   const session = await getServerSession(authOptions)
-  
+
   if (!session || !['TEACHER', 'ADMIN'].includes(session.user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -67,15 +68,10 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if 24 hours have passed (teachers can't modify after 24h, admins can)
-    const hoursElapsed = (Date.now() - new Date(lessonSession.date).getTime()) / (1000 * 60 * 60)
-    const isExpired = hoursElapsed >= 24
-    
-    if (isExpired && !['SUPERADMIN', 'ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ 
-        error: 'Nu poți modifica sesiunea după 24 de ore. Contactează un administrator.' 
-      }, { status: 403 })
-    }
+    // Fereastra se numără de la crearea sesiunii, nu de la data lecției:
+    // o lecție înregistrată retroactiv trebuie să poată fi corectată imediat.
+    const denied = await guardTeacherAction(NextResponse, 'teacher.session.edit', lessonSession.createdAt)
+    if (denied) return denied
 
     const updatedSession = await prisma.lessonSession.update({
       where: { id },
@@ -89,13 +85,13 @@ export async function PATCH(request, { params }) {
   }
 }
 
-// DELETE - Delete a session (ADMIN ONLY - teachers cannot cancel group lessons)
+// DELETE - anulează lecția: administrația oricând, profesorul doar cu dreptul
+// „Șterge sesiunea" și în fereastra lui de timp.
 export async function DELETE(request, { params }) {
   const session = await getServerSession(authOptions)
-  
-  // Doar adminii pot șterge lecții de grup
-  if (!session || session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Doar administratorii pot anula lecțiile de grup' }, { status: 403 })
+
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Neautentificat' }, { status: 401 })
   }
 
   try {
@@ -103,7 +99,7 @@ export async function DELETE(request, { params }) {
 
     const lessonSession = await prisma.lessonSession.findUnique({
       where: { id },
-      include: { 
+      include: {
         group: {
           include: { teacher: true }
         }
@@ -117,6 +113,17 @@ export async function DELETE(request, { params }) {
     if (lessonSession.lessonsDeducted) {
       return NextResponse.json({ error: 'Nu se poate șterge o sesiune care a fost deja procesată' }, { status: 400 })
     }
+
+    // Profesorul poate anula doar lecțiile grupei lui
+    if (
+      !['SUPERADMIN', 'ADMIN'].includes(session.user.role) &&
+      lessonSession.group.teacherId !== session.user.id
+    ) {
+      return NextResponse.json({ error: 'Nu ai acces la această grupă' }, { status: 403 })
+    }
+
+    const denied = await guardTeacherAction(NextResponse, 'teacher.session.delete', lessonSession.createdAt)
+    if (denied) return denied
 
     // Notificare Telegram despre anulare
     await notifyCancelledLesson(

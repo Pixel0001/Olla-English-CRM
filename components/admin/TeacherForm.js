@@ -30,7 +30,15 @@ export default function TeacherForm({ teacher }) {
 
   const isSuperAdmin = session?.user?.role === 'SUPERADMIN'
   const canChangeRole = isSuperAdmin
-  const showPermissions = isSuperAdmin && formData.role === 'ADMIN'
+
+  // Adminul vede toate categoriile; profesorul, doar acțiunile lui.
+  // Restul permisiunilor n-ar avea ce face într-un cont de profesor.
+  const TEACHER_CATEGORY = 'Profesori — acțiuni'
+  const isTeacherRole = formData.role === 'TEACHER'
+  const showPermissions = isSuperAdmin && (formData.role === 'ADMIN' || isTeacherRole)
+  const visibleCategories = isTeacherRole
+    ? [TEACHER_CATEGORY]
+    : PERMISSION_CATEGORIES
 
   const permissionsByCategory = useMemo(() => getPermissionsByCategory(), [])
 
@@ -48,7 +56,10 @@ export default function TeacherForm({ teacher }) {
       ...prev,
       role: newRole,
       // Reset permissions when changing to TEACHER
-      permissions: newRole === 'TEACHER' ? [] : prev.permissions
+      // La trecerea spre profesor rămân doar drepturile care au sens acolo
+      permissions: newRole === 'TEACHER'
+        ? prev.permissions.filter((k) => k.startsWith('teacher.'))
+        : prev.permissions
     }))
   }
 
@@ -87,11 +98,20 @@ export default function TeacherForm({ teacher }) {
   }
 
   const selectAll = () => {
-    const allPerms = Object.keys(PERMISSIONS)
-    setFormData(prev => ({
-      ...prev,
-      permissions: prev.permissions.length === allPerms.length ? [] : allPerms
-    }))
+    // La profesor, „tot" înseamnă doar drepturile lui, nu toată aplicația
+    const allPerms = isTeacherRole
+      ? Object.keys(PERMISSIONS).filter((k) => k.startsWith('teacher.'))
+      : Object.keys(PERMISSIONS)
+
+    setFormData(prev => {
+      const hasAll = allPerms.every((k) => prev.permissions.includes(k))
+      return {
+        ...prev,
+        permissions: hasAll
+          ? prev.permissions.filter((k) => !allPerms.includes(k))
+          : [...new Set([...prev.permissions, ...allPerms])],
+      }
+    })
   }
 
   const handleSubmit = async (e) => {
@@ -324,7 +344,9 @@ export default function TeacherForm({ teacher }) {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Permisiuni</h3>
                   <p className="text-sm text-gray-500">
-                    Selectează ce poate face acest administrator în sistem
+                    {isTeacherRole
+                      ? 'Ce poate corecta singur, fără să ceară administrației'
+                      : 'Selectează ce poate face acest administrator în sistem'}
                   </p>
                 </div>
               </div>
@@ -333,19 +355,33 @@ export default function TeacherForm({ teacher }) {
                 onClick={selectAll}
                 className="px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
               >
-                {formData.permissions.length === Object.keys(PERMISSIONS).length ? 'Deselectează tot' : 'Selectează tot'}
+                {isTeacherRole
+                  ? 'Selectează toate'
+                  : formData.permissions.length === Object.keys(PERMISSIONS).length
+                    ? 'Deselectează tot'
+                    : 'Selectează tot'}
               </button>
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
               <p className="text-sm text-amber-800">
-                <strong>Atenție:</strong> Dacă nu selectezi nicio permisiune, acest utilizator va avea acces la panoul admin
-                dar nu va putea vedea sau face nimic.
+                {isTeacherRole ? (
+                  <>
+                    <strong>Cum funcționează:</strong> fiecare drept merge <strong>24 de ore</strong> de la
+                    crearea înregistrării — cât timp greșeala e proaspătă. Peste acest interval, doar cu
+                    „Fără limita de 24 de ore". Administrația poate oricând orice.
+                  </>
+                ) : (
+                  <>
+                    <strong>Atenție:</strong> Dacă nu selectezi nicio permisiune, acest utilizator va avea acces
+                    la panoul admin dar nu va putea vedea sau face nimic.
+                  </>
+                )}
               </p>
             </div>
 
             <div className="space-y-2">
-              {PERMISSION_CATEGORIES.map(category => {
+              {visibleCategories.map(category => {
                 const categoryPerms = permissionsByCategory[category] || []
                 if (categoryPerms.length === 0) return null
 

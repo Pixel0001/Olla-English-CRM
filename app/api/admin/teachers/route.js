@@ -66,8 +66,11 @@ export async function POST(request) {
 
     const hashedPassword = password ? await hashPassword(password) : null
 
-    // Only store permissions for ADMIN
-    const finalPermissions = (finalRole === 'TEACHER') ? [] : (Array.isArray(permissions) ? permissions : [])
+    // Profesorii pot avea și ei drepturi, dar numai pe acțiunile lor
+    const requested = Array.isArray(permissions) ? permissions : []
+    const finalPermissions = finalRole === 'TEACHER'
+      ? requested.filter((k) => k.startsWith('teacher.'))
+      : requested
 
     const teacher = await prisma.user.create({
       data: {

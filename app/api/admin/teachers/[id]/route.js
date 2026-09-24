@@ -62,8 +62,11 @@ export async function PUT(request, { params }) {
         updateData.role = role
       }
       if (Array.isArray(permissions)) {
-        // Only store permissions for ADMIN
-        updateData.permissions = (role === 'TEACHER') ? [] : permissions
+        // La profesor păstrăm doar drepturile lui; restul n-au unde fi folosite
+        const finalRole = role || targetUser?.role
+        updateData.permissions = finalRole === 'TEACHER'
+          ? permissions.filter((k) => k.startsWith('teacher.'))
+          : permissions
       }
     }
 

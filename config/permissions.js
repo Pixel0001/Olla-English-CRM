@@ -237,6 +237,50 @@ export const PERMISSIONS = {
     category: 'Securitate'
   },
 
+  // Ce poate face un profesor peste treaba lui obișnuită.
+  // Toate, în afară de ultima, funcționează doar 24 de ore de la creare —
+  // cât timp greșeala e proaspătă și nimeni nu s-a bazat încă pe cifre.
+  'teacher.session.edit': {
+    label: 'Editează sesiunea (24h)',
+    description: 'Poate schimba notițele și prezența unei lecții, 24h de la crearea ei',
+    category: 'Profesori — acțiuni'
+  },
+  'teacher.session.cancel': {
+    label: 'Anulează sesiunea (24h)',
+    description: 'Poate marca lecția ca neefectuată, 24h de la crearea ei',
+    category: 'Profesori — acțiuni'
+  },
+  'teacher.session.delete': {
+    label: 'Șterge sesiunea (24h)',
+    description: 'Poate șterge lecția, 24h de la crearea ei',
+    category: 'Profesori — acțiuni'
+  },
+  'teacher.payment.edit': {
+    label: 'Editează plata (24h)',
+    description: 'Poate corecta o plată pe care a înregistrat-o, 24h de la înregistrare',
+    category: 'Profesori — acțiuni'
+  },
+  'teacher.payment.delete': {
+    label: 'Șterge plata (24h)',
+    description: 'Poate șterge o plată pe care a înregistrat-o, 24h de la înregistrare',
+    category: 'Profesori — acțiuni'
+  },
+  'teacher.student.edit': {
+    label: 'Editează elevul (24h)',
+    description: 'Poate corecta datele unui elev pe care l-a adăugat, 24h de la adăugare',
+    category: 'Profesori — acțiuni'
+  },
+  'teacher.student.delete': {
+    label: 'Șterge elevul (24h)',
+    description: 'Poate șterge un elev pe care l-a adăugat, 24h de la adăugare',
+    category: 'Profesori — acțiuni'
+  },
+  'teacher.noTimeLimit': {
+    label: '⏳ Fără limita de 24 de ore',
+    description: 'Acțiunile de mai sus merg oricând, inclusiv pe sesiuni și plăți vechi',
+    category: 'Profesori — acțiuni'
+  },
+
   // Mesaje (Messenger / Instagram)
   'messages.view': {
     label: 'Vezi mesajele',
@@ -314,6 +358,7 @@ export const PERMISSION_CATEGORIES = [
   'Filiale',
   'Sesiuni',
   'Recuperări',
+  'Profesori — acțiuni',
   'Mesaje',
   'Reclame',
   'Notificări',
