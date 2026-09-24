@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { usePermissions } from '@/hooks/usePermissions'
 import { monthOptions, paidForMonth, periodLabel } from '@/lib/payments'
@@ -20,7 +21,7 @@ const MONTH_NAMES = [
  * un elev vine sau nu. O lună anume poate avea alt număr, fără să schimbe
  * implicitul. Prezențele sunt informative.
  */
-export default function LessonPackagePanel({ groupId }) {
+export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teacher/groups' }) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -433,8 +434,14 @@ export default function LessonPackagePanel({ groupId }) {
                       </th>
                       {sessions.map((s, i) => (
                         <th key={s.id} className="px-2 py-2 text-center text-xs font-medium text-gray-500 whitespace-nowrap">
-                          <span className="block text-[10px] text-gray-400">{i + 1}</span>
-                          {new Date(s.date).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit' })}
+                          <Link
+                            href={`${sessionHrefBase}/${groupId}/session/${s.id}`}
+                            className="block hover:text-indigo-600 hover:underline"
+                            title="Deschide sesiunea — editează sau șterge"
+                          >
+                            <span className="block text-[10px] text-gray-400">{i + 1}</span>
+                            {new Date(s.date).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit' })}
+                          </Link>
                           {s.locked && <LockClosedIcon className="h-3 w-3 inline ml-0.5 text-gray-400" />}
                         </th>
                       ))}

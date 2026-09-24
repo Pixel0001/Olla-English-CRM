@@ -9,6 +9,7 @@ const EditGroupDetailsButton = dynamic(() => import('@/components/teacher/EditGr
 import CopyStudentsButton from '@/components/CopyStudentsButton'
 import LessonPackagePanel from '@/components/groups/LessonPackagePanel'
 import AddPaymentButton from '@/components/admin/AddPaymentButton'
+import PaymentCorrectionControls from '@/components/teacher/PaymentCorrectionControls'
 import { paidForMonth } from '@/lib/payments'
 import TrialLessonsPanel from '@/components/groups/TrialLessonsPanel'
 import { 
@@ -344,6 +345,13 @@ export default async function TeacherGroupDetailPage({ params }) {
                         studentName={gs.student?.fullName}
                         groups={[{ groupStudentId: gs.id, groupName: group.name, billingType: group.billingType }]}
                       />
+
+                      {gs.payments?.[0] && (
+                        <PaymentCorrectionControls
+                          payment={gs.payments[0]}
+                          billingType={group.billingType}
+                        />
+                      )}
                     </div>
                   </div>
 

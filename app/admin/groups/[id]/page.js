@@ -106,7 +106,7 @@ export default async function EditGroupPage({ params }) {
       {group.isTrial ? (
         <TrialLessonsPanel groupId={group.id} />
       ) : (
-        <LessonPackagePanel groupId={group.id} />
+        <LessonPackagePanel groupId={group.id} sessionHrefBase="/admin/groups" />
       )}
     </div>
   )
