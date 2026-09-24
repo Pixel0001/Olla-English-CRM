@@ -1,7 +1,6 @@
 export const dynamic = 'force-dynamic'
 
 import prisma from '@/lib/prisma'
-import { inboxLink } from '@/lib/meta-messages'
 import PermissionGuard from '@/components/admin/PermissionGuard'
 import LeadsClient from './LeadsClient'
 
@@ -14,47 +13,13 @@ export default async function LeadsPage() {
 }
 
 async function LeadsPageContent() {
-  const leads = await prisma.lead.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: {
-      createdBy: { select: { name: true, email: true } },
-      assignedTo: { select: { id: true, name: true, email: true } },
-      _count: { select: { leadNotes: true } },
-    },
-  })
-
-  const formatted = leads.map((l) => ({
-    id: l.id,
-    name: l.name,
-    phone: l.phone,
-    email: l.email,
-    source: l.source,
-    sourceDetail: l.sourceDetail,
-    message: l.message,
-    studentName: l.studentName,
-    studentAge: l.studentAge,
-    isAdult: l.isAdult,
-    interestedIn: l.interestedIn,
-    lessonType: l.lessonType || null,
-    locationType: l.locationType || null,
-    status: l.status,
-    nextFollowUpAt: l.nextFollowUpAt ? l.nextFollowUpAt.toISOString() : null,
-    createdAt: l.createdAt.toISOString(),
-    createdByName: l.createdBy?.name || l.createdBy?.email || null,
-    assignedToId: l.assignedToId || null,
-    assignedToName: l.assignedTo?.name || l.assignedTo?.email || null,
-    notesCount: l._count.leadNotes,
-    metaConversationId: l.metaConversationId || null,
-    metaPlatform: l.metaPlatform || null,
-    metaPersonId: l.metaPersonId || null,
-    metaInboxUrl: inboxLink(l.metaPersonId, l.metaPlatform, l.metaConversationId),
-  }))
-
+  // Lead-urile nu se mai aduc aici: pagina ar fi tras toată baza la fiecare
+  // deschidere. Lista le cere paginat din /api/admin/leads, cu filtrele puse.
   const staff = await prisma.user.findMany({
-    where: { active: true, role: { in: ["SUPERADMIN", "ADMIN", "TEACHER"] } },
+    where: { active: true, role: { in: ['SUPERADMIN', 'ADMIN', 'TEACHER'] } },
     select: { id: true, name: true, email: true },
-    orderBy: { name: "asc" },
+    orderBy: { name: 'asc' },
   })
 
-  return <LeadsClient leads={formatted} staff={JSON.parse(JSON.stringify(staff))} />
+  return <LeadsClient staff={JSON.parse(JSON.stringify(staff))} />
 }

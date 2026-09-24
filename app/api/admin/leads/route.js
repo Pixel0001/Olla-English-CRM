@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { checkPermission } from '@/lib/permissions'
+import { ageRange } from '@/lib/age-groups'
+import { inboxLink } from '@/lib/meta-messages'
 import { LEAD_STATUS_VALUES, LEAD_SOURCE_VALUES } from '@/lib/leads-config'
 import { notifyNewLead, notifyLeadAssigned } from '@/lib/telegram'
 import { parseSchoolDate } from '@/lib/timezone'
@@ -57,7 +59,17 @@ export async function GET(request) {
 
     // Follow-up: „due" = programat până azi inclusiv; „none" = fără follow-up
     const followUp = searchParams.get('followUp')
-    if (followUp === 'due') {
+    if (followUp === 'overdue') {
+      const start = new Date()
+      start.setHours(0, 0, 0, 0)
+      where.nextFollowUpAt = { not: null, lt: start }
+    } else if (followUp === 'today') {
+      const start = new Date()
+      start.setHours(0, 0, 0, 0)
+      const end = new Date(start)
+      end.setDate(end.getDate() + 1)
+      where.nextFollowUpAt = { gte: start, lt: end }
+    } else if (followUp === 'due') {
       const end = new Date()
       end.setHours(23, 59, 59, 999)
       where.nextFollowUpAt = { not: null, lte: end }
@@ -67,6 +79,67 @@ export async function GET(request) {
       where.nextFollowUpAt = { gt: end }
     } else if (followUp === 'none') {
       where.nextFollowUpAt = null
+    }
+
+    // Nivel: „none" = lead-urile fără nivel completat
+    const level = searchParams.get('level')
+    if (level === 'none') where.interestedIn = null
+    else if (level) where.interestedIn = level
+
+    // Adult sau copil
+    const audience = searchParams.get('audience')
+    if (audience === 'adult') where.isAdult = true
+    else if (audience === 'copil') where.isAdult = false
+
+    // Categorie de vârstă, din vârsta elevului
+    const ageGroup = searchParams.get('ageGroup')
+    if (ageGroup === 'adulti') {
+      where.OR = [...(where.OR || []), { isAdult: true }, { studentAge: ageRange('adulti') }]
+    } else if (ageGroup) {
+      const range = ageRange(ageGroup)
+      if (range) {
+        where.studentAge = range
+        where.isAdult = false
+      }
+    }
+
+    // Perioadă, cu denumiri, nu cu numere de zile: „ieri" înseamnă chiar
+    // ziua de ieri, nu ultimele 24 de ore.
+    const period = searchParams.get('period')
+    if (period) {
+      const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x }
+      const today = startOfDay(new Date())
+      const range = {}
+
+      if (period === 'today') {
+        range.gte = today
+      } else if (period === 'yesterday') {
+        const y = new Date(today); y.setDate(y.getDate() - 1)
+        range.gte = y
+        range.lt = today
+      } else if (period === 'week') {
+        // Săptămâna începe luni, ca în orar
+        const monday = new Date(today)
+        const shift = (monday.getDay() + 6) % 7
+        monday.setDate(monday.getDate() - shift)
+        range.gte = monday
+      } else if (period === 'month') {
+        range.gte = new Date(today.getFullYear(), today.getMonth(), 1)
+      } else if (period === 'prev-month') {
+        range.gte = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+        range.lt = new Date(today.getFullYear(), today.getMonth(), 1)
+      } else if (period === 'prev-months') {
+        // Tot ce a fost înainte de luna curentă
+        range.lt = new Date(today.getFullYear(), today.getMonth(), 1)
+      } else if (/^[0-9]+$/.test(period)) {
+        const limit = new Date(today)
+        limit.setDate(limit.getDate() - parseInt(period, 10))
+        range.gte = limit
+      }
+
+      if (Object.keys(range).length > 0) {
+        where.createdAt = { ...(where.createdAt || {}), ...range }
+      }
     }
 
     // Căutare liberă
@@ -89,17 +162,86 @@ export async function GET(request) {
       : sort === 'name' ? { name: 'asc' }
       : { createdAt: 'desc' }
 
-    const leads = await prisma.lead.findMany({
-      where,
-      orderBy,
-      take: Math.min(parseInt(searchParams.get('limit')) || 500, 1000),
-      include: {
-        createdBy: { select: { name: true, email: true } },
-        _count: { select: { leadNotes: true } },
-      },
-    })
+    // „all" aduce tot ce trece de filtre; altfel, o pagină
+    const rawSize = searchParams.get('pageSize') || '50'
+    const all = rawSize === 'all'
+    const pageSize = all ? null : Math.min(Math.max(parseInt(rawSize, 10) || 50, 5), 500)
+    const page = Math.max(parseInt(searchParams.get('page'), 10) || 1, 1)
 
-    return NextResponse.json({ leads })
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+
+    const [leads, totalCount, byStatusRaw, byLevelRaw, overdue, total] = await Promise.all([
+      prisma.lead.findMany({
+        where,
+        orderBy,
+        ...(all ? {} : { skip: (page - 1) * pageSize, take: pageSize }),
+        include: {
+          createdBy: { select: { name: true, email: true } },
+          assignedTo: { select: { id: true, name: true, email: true } },
+          _count: { select: { leadNotes: true } },
+        },
+      }),
+      prisma.lead.count({ where }),
+      // Cifrele de sus se numără pe toate lead-urile, nu pe pagina curentă
+      prisma.lead.groupBy({ by: ['status'], _count: { _all: true } }),
+      prisma.lead.groupBy({ by: ['interestedIn'], _count: { _all: true } }),
+      prisma.lead.count({
+        where: {
+          nextFollowUpAt: { not: null, lt: startOfToday },
+          status: { notIn: ['PLATIT', 'STUDIAZA', 'PLECAT', 'LOST_LEAD'] },
+        },
+      }),
+      prisma.lead.count(),
+    ])
+
+    const byStatus = {}
+    for (const row of byStatusRaw) byStatus[row.status] = row._count._all
+
+    const levelOptions = byLevelRaw
+      .filter((row) => row.interestedIn)
+      .map((row) => ({ value: row.interestedIn, count: row._count._all }))
+      .sort((a, b) => a.value.localeCompare(b.value, 'ro'))
+    const withoutLevel = byLevelRaw.find((row) => !row.interestedIn)?._count._all || 0
+
+    // Aceeași formă pe care o aștepta pagina când datele veneau din server
+    const formatted = leads.map((l) => ({
+      id: l.id,
+      name: l.name,
+      phone: l.phone,
+      email: l.email,
+      source: l.source,
+      sourceDetail: l.sourceDetail,
+      message: l.message,
+      studentName: l.studentName,
+      studentAge: l.studentAge,
+      isAdult: l.isAdult,
+      interestedIn: l.interestedIn,
+      lessonType: l.lessonType || null,
+      locationType: l.locationType || null,
+      status: l.status,
+      nextFollowUpAt: l.nextFollowUpAt ? l.nextFollowUpAt.toISOString() : null,
+      createdAt: l.createdAt.toISOString(),
+      createdByName: l.createdBy?.name || l.createdBy?.email || null,
+      assignedToId: l.assignedToId || null,
+      assignedToName: l.assignedTo?.name || l.assignedTo?.email || null,
+      notesCount: l._count.leadNotes,
+      metaConversationId: l.metaConversationId || null,
+      metaPlatform: l.metaPlatform || null,
+      metaPersonId: l.metaPersonId || null,
+      metaInboxUrl: inboxLink(l.metaPersonId, l.metaPlatform, l.metaConversationId),
+    }))
+
+    return NextResponse.json({
+      leads: formatted,
+      page: all ? 1 : page,
+      pageSize: all ? totalCount : pageSize,
+      totalCount,
+      totalPages: all ? 1 : Math.max(Math.ceil(totalCount / pageSize), 1),
+      stats: { total, byStatus, overdue },
+      levelOptions,
+      withoutLevel,
+    })
   } catch (e) {
     console.error('Leads GET error:', e)
     return NextResponse.json({ error: 'Eroare server' }, { status: 500 })

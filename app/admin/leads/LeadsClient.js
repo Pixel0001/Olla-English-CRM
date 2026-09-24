@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
@@ -19,16 +19,9 @@ import { PlatformIcon } from '@/components/icons/BrandIcons'
 import { AGE_GROUPS, getAgeGroup } from '@/lib/age-groups'
 import { preferenceLabel } from '@/lib/lesson-preferences'
 
-const ITEMS_PER_PAGE = 30
 
 
-const PERIODS = [
-  { value: '', label: 'Oricând' },
-  { value: 'today', label: 'Azi' },
-  { value: '7', label: '7 zile' },
-  { value: '30', label: '30 zile' },
-  { value: '90', label: '3 luni' },
-]
+const PAGE_SIZES = [25, 50, 100, 'all']
 
 const FOLLOWUPS = [
   { value: '', label: 'Follow-up: toate' },
@@ -74,9 +67,29 @@ const toDateInput = (iso) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-export default function LeadsClient({ leads, staff = [] }) {
+const PERIODS = [
+  { value: '', label: 'Perioadă: toate' },
+  { value: 'today', label: 'Azi' },
+  { value: 'yesterday', label: 'Ieri' },
+  { value: 'week', label: 'Săptămâna aceasta' },
+  { value: 'month', label: 'Luna aceasta' },
+  { value: 'prev-month', label: 'Luna trecută' },
+  { value: 'prev-months', label: 'Lunile trecute' },
+  { value: 'interval', label: 'Interval…' },
+]
+
+export default function LeadsClient({ leads = [], staff = [] }) {
   const router = useRouter()
   const [items, setItems] = useState(leads)
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [serverStats, setServerStats] = useState(null)
+  const [serverLevels, setServerLevels] = useState({ levelOptions: [], withoutLevel: 0 })
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
   const [showNewModal, setShowNewModal] = useState(false)
   const [editingLead, setEditingLead] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
@@ -90,16 +103,69 @@ export default function LeadsClient({ leads, staff = [] }) {
   const [period, setPeriod] = useState('')
   const [followUp, setFollowUp] = useState('')
   const [sort, setSort] = useState('newest')
-  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE)
-  const loadMoreRef = useRef(null)
+  // Lead-urile se cer de la server, filtrate și paginate acolo: altfel
+  // pagina ar trage toată baza la fiecare deschidere.
+  const query = useMemo(() => {
+    const params = new URLSearchParams()
+    if (status) params.set('status', status)
+    if (source) params.set('source', source)
+    if (level) params.set('level', level)
+    if (audience) params.set('audience', audience)
+    if (ageGroup) params.set('ageGroup', ageGroup)
+    if (followUp) params.set('followUp', followUp)
+    if (sort) params.set('sort', sort)
+    if (period === 'interval') {
+      if (from) params.set('from', from)
+      if (to) params.set('to', to)
+    } else if (period) {
+      params.set('period', period)
+    }
+    params.set('page', String(page))
+    params.set('pageSize', String(pageSize))
+    return params
+  }, [status, source, level, audience, ageGroup, followUp, sort, period, from, to, page, pageSize])
 
-  useEffect(() => { setItems(leads) }, [leads])
+  const fetchLeads = useCallback(async (searchTerm) => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams(query)
+      if (searchTerm?.trim()) params.set('q', searchTerm.trim())
 
-  const resetPaging = () => setDisplayCount(ITEMS_PER_PAGE)
+      const res = await fetch(`/api/admin/leads?${params}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Eroare la citirea lead-urilor')
+
+      setItems(data.leads || [])
+      setTotalCount(data.totalCount ?? 0)
+      setTotalPages(data.totalPages ?? 1)
+      setServerStats(data.stats || null)
+      setServerLevels({
+        levelOptions: data.levelOptions || [],
+        withoutLevel: data.withoutLevel || 0,
+      })
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [query])
+
+  // Filtrele se aplică imediat; scrisul în căutare, după o pauză
+  useEffect(() => {
+    const timer = setTimeout(() => fetchLeads(search), search ? 350 : 0)
+    return () => clearTimeout(timer)
+  }, [fetchLeads, search])
+
+  // Orice filtru nou readuce lista la prima pagină
+  useEffect(() => {
+    setPage(1)
+  }, [status, source, level, audience, ageGroup, followUp, period, from, to, search, pageSize])
+
+  const resetPaging = () => setPage(1)
 
   const resetAll = () => {
     setSearch(''); setStatus(''); setSource(''); setLevel(''); setAudience(''); setAgeGroup('')
-    setPeriod(''); setFollowUp(''); setSort('newest'); resetPaging()
+    setPeriod(''); setFrom(''); setTo(''); setFollowUp(''); setSort('newest'); resetPaging()
   }
 
   const activeFilterCount =
@@ -167,108 +233,33 @@ export default function LeadsClient({ leads, staff = [] }) {
     }
   }, [])
 
-  // ── Statistici (pe toate lead-urile, nu pe cele filtrate) ───────────────
-  const stats = useMemo(() => {
-    const today = startOfToday()
+  // Cifrele de sus vin de la server: se numără pe toate lead-urile, nu doar
+  // pe pagina de față.
+  const stats = serverStats || { total: 0, byStatus: {}, overdue: 0 }
 
-    // Numărăm pe statusuri reale, nu pe grupuri inventate
-    const byStatus = {}
-    for (const l of items) byStatus[l.status] = (byStatus[l.status] || 0) + 1
+  // Lista vine gata filtrată și sortată de la server
+  const displayed = items
 
-    const overdue = items.filter(
-      (l) => l.nextFollowUpAt && new Date(l.nextFollowUpAt) < today &&
-        !["castigat", "pierdut"].includes(getStatus(l.status).group)
-    ).length
+  // 1 … 4 5 [6] 7 8 … 20 — numai atâtea butoane câte încap cu ochiul
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const out = [1]
+    const start = Math.max(2, page - 1)
+    const end = Math.min(totalPages - 1, page + 1)
+    if (start > 2) out.push('…')
+    for (let i = start; i <= end; i++) out.push(i)
+    if (end < totalPages - 1) out.push('…')
+    out.push(totalPages)
+    return out
+  }, [page, totalPages])
 
-    return { total: items.length, byStatus, overdue }
-  }, [items])
+  // Nivelurile care chiar apar în lead-uri, numărate pe toată baza
+  const levelOptions = useMemo(() => ({
+    levels: serverLevels.levelOptions,
+    without: serverLevels.withoutLevel,
+  }), [serverLevels])
 
-  // ── Filtrare + sortare ─────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    let r = items
 
-    if (status) r = r.filter((l) => l.status === status)
-    if (source) r = r.filter((l) => l.source === source)
-    if (level) r = r.filter((l) => (level === 'none' ? !l.interestedIn : l.interestedIn === level))
-    if (audience) r = r.filter((l) => (audience === 'adult' ? !!l.isAdult : !l.isAdult))
-    if (ageGroup) {
-      r = r.filter((l) => getAgeGroup(l.studentAge, l.isAdult)?.value === ageGroup)
-    }
-
-    if (period) {
-      const limit = startOfToday()
-      if (period !== 'today') limit.setDate(limit.getDate() - parseInt(period))
-      r = r.filter((l) => new Date(l.createdAt) >= limit)
-    }
-
-    if (followUp) {
-      const today = startOfToday()
-      const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      r = r.filter((l) => {
-        if (followUp === 'none') return !l.nextFollowUpAt
-        if (!l.nextFollowUpAt) return false
-        const d = new Date(l.nextFollowUpAt)
-        if (followUp === 'overdue') return d < today
-        if (followUp === 'today') return d >= today && d < tomorrow
-        if (followUp === 'upcoming') return d >= tomorrow
-        return true
-      })
-    }
-
-    if (search.trim()) {
-      const q = search.toLowerCase().trim()
-      r = r.filter((l) =>
-        [l.name, l.phone, l.email, l.message, l.studentName, l.sourceDetail, l.interestedIn]
-          .some((v) => v?.toLowerCase().includes(q))
-      )
-    }
-
-    const sorted = [...r]
-    if (sort === 'oldest') sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-    else if (sort === 'name') sorted.sort((a, b) => a.name.localeCompare(b.name, 'ro'))
-    else if (sort === 'followup') {
-      sorted.sort((a, b) => {
-        if (!a.nextFollowUpAt) return 1
-        if (!b.nextFollowUpAt) return -1
-        return new Date(a.nextFollowUpAt) - new Date(b.nextFollowUpAt)
-      })
-    } else sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-
-    return sorted
-  }, [items, search, status, source, level, audience, ageGroup, period, followUp, sort])
-
-  // Nivelurile care chiar apar în lead-uri, cu câte unul din fiecare
-  const levelOptions = useMemo(() => {
-    const counts = new Map()
-    let without = 0
-    for (const l of items) {
-      if (l.interestedIn) counts.set(l.interestedIn, (counts.get(l.interestedIn) || 0) + 1)
-      else without++
-    }
-    return {
-      levels: [...counts.entries()]
-        .map(([value, count]) => ({ value, count }))
-        .sort((a, b) => a.value.localeCompare(b.value, 'ro')),
-      without,
-    }
-  }, [items])
-
-  const displayed = filtered.slice(0, displayCount)
-  const hasMore = displayCount < filtered.length
-
-  const loadMore = useCallback(() => {
-    if (hasMore) setDisplayCount((p) => p + ITEMS_PER_PAGE)
-  }, [hasMore])
-
-  useEffect(() => {
-    const obs = new IntersectionObserver(
-      (e) => { if (e[0].isIntersecting && hasMore) loadMore() },
-      { threshold: 0.1 }
-    )
-    if (loadMoreRef.current) obs.observe(loadMoreRef.current)
-    return () => obs.disconnect()
-  }, [hasMore, loadMore])
 
   return (
     <div className="space-y-2.5">
@@ -368,14 +359,36 @@ export default function LeadsClient({ leads, staff = [] }) {
           {PERIODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
         </select>
 
+        {period === 'interval' && (
+          <span className="flex items-center gap-1">
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className={selectClass}
+              aria-label="De la data"
+            />
+            <span className="text-gray-400 text-xs">→</span>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className={selectClass}
+              aria-label="Până la data"
+            />
+          </span>
+        )}
+
         <select value={sort} onChange={(e) => setSort(e.target.value)} className={selectClass} aria-label="Sortare">
           {SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
 
         <span className="ml-auto flex items-center gap-2 text-[11px] text-gray-500">
-          {filtered.length === items.length
-            ? `${items.length} lead-uri`
-            : `${filtered.length}/${items.length}`}
+          {loading
+            ? 'se încarcă…'
+            : totalCount === stats.total
+              ? `${totalCount} lead-uri`
+              : `${totalCount} din ${stats.total}`}
           {activeFilterCount > 0 && (
             <button onClick={resetAll} className="inline-flex items-center gap-0.5 text-indigo-600 hover:text-indigo-800 font-medium">
               <XMarkIcon className="h-3 w-3" />
@@ -386,7 +399,18 @@ export default function LeadsClient({ leads, staff = [] }) {
       </div>
 
       {/* Listă */}
-      {displayed.length === 0 ? (
+      {loading && displayed.length === 0 ? (
+        <div className="space-y-1">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="bg-white border border-gray-100 rounded-lg px-3 py-3 animate-pulse flex items-center gap-3">
+              <div className="h-4 w-4 rounded bg-gray-100" />
+              <div className="h-3 bg-gray-100 rounded w-40" />
+              <div className="h-3 bg-gray-100 rounded w-24" />
+              <div className="h-3 bg-gray-100 rounded w-16 ml-auto" />
+            </div>
+          ))}
+        </div>
+      ) : displayed.length === 0 ? (
         <div className="bg-white rounded-lg p-6 text-center border border-gray-200">
           <InboxIcon className="h-8 w-8 text-gray-300 mx-auto mb-2" />
           <p className="text-sm text-gray-500">
@@ -411,9 +435,69 @@ export default function LeadsClient({ leads, staff = [] }) {
               onAssign={(userId) => assignLead(lead, userId)}
             />
           ))}
-          {hasMore && (
-            <div ref={loadMoreRef} className="flex justify-center py-3">
-              <div className="animate-pulse text-gray-400 text-xs">Se încarcă…</div>
+        </div>
+      )}
+
+      {/* Paginare */}
+      {!loading && totalCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span>Pe pagină:</span>
+            <select
+              value={String(pageSize)}
+              onChange={(e) => setPageSize(e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10))}
+              className={selectClass}
+              aria-label="Lead-uri pe pagină"
+            >
+              {PAGE_SIZES.map((n) => (
+                <option key={n} value={n}>{n === 'all' ? 'Toate' : n}</option>
+              ))}
+            </select>
+            <span>
+              {pageSize === 'all'
+                ? `toate cele ${totalCount}`
+                : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, totalCount)} din ${totalCount}`}
+            </span>
+          </div>
+
+          {pageSize !== 'all' && totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                disabled={page === 1}
+                className="px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+              >
+                ‹ Înapoi
+              </button>
+
+              {pageNumbers.map((n, i) => (
+                n === '…' ? (
+                  <span key={`gap-${i}`} className="px-1 text-gray-400 text-xs">…</span>
+                ) : (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setPage(n)}
+                    className={`min-w-[2rem] px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      n === page
+                        ? 'bg-indigo-600 text-white'
+                        : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                )
+              ))}
+
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+                disabled={page === totalPages}
+                className="px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+              >
+                Înainte ›
+              </button>
             </div>
           )}
         </div>
@@ -423,7 +507,7 @@ export default function LeadsClient({ leads, staff = [] }) {
         <NewLeadModal
           staff={staff}
           onClose={() => setShowNewModal(false)}
-          onSaved={() => { setShowNewModal(false); router.refresh() }}
+          onSaved={() => { setShowNewModal(false); fetchLeads(search) }}
         />
       )}
 
@@ -432,7 +516,7 @@ export default function LeadsClient({ leads, staff = [] }) {
           lead={editingLead}
           staff={staff}
           onClose={() => setEditingLead(null)}
-          onSaved={() => { setEditingLead(null); router.refresh() }}
+          onSaved={() => { setEditingLead(null); fetchLeads(search) }}
         />
       )}
     </div>
