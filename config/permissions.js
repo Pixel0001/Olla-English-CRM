@@ -301,6 +301,13 @@ export const PERMISSIONS = {
     category: 'Reclame'
   },
 
+  // Statistică
+  'statistics.view': {
+    label: 'Vezi statistica',
+    description: 'Poate vedea conversia lead-urilor, clasamentele și cifrele pe profesori',
+    category: 'Statistică'
+  },
+
   // Absențe ratate
   'missed-sessions.view': {
     label: 'Vezi sesiunile ratate',
@@ -361,6 +368,7 @@ export const PERMISSION_CATEGORIES = [
   'Corectări',
   'Mesaje',
   'Reclame',
+  'Statistică',
   'Notificări',
   'Orar',
   'Securitate'

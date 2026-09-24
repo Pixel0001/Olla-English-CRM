@@ -49,3 +49,4 @@ next-env.d.ts
 # Material sursa (metodicile profesorului)
 metodici/
 
+scripts/_statistics-fixture.mjs
