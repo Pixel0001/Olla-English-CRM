@@ -189,7 +189,7 @@ export default function StatisticsClient() {
               hint={
                 leads.prevConversionRate != null
                   ? `înainte ${percent(leads.prevConversionRate)}`
-                  : `${leads.converted} au devenit elevi`
+                  : `${leads.converted} câștigate`
               }
             />
             <Kpi label="Elevi activi" value={int(school.studentsActive)} hint={`${school.groupsActive} grupe active`} />
@@ -264,10 +264,11 @@ export default function StatisticsClient() {
               </div>
 
               <p className="text-[11px] text-gray-500 mt-3">
-                Procentele sunt raportate la toate lead-urile intrate. Un lead marcat „pierdut" nu-și
-                mai ține minte etapa la care s-a oprit, așa că apare doar la intrare — pâlnia arată
-                deci minimul sigur, nu o cifră umflată. Lead-urile create automat din pagina Elevi
-                nu intră în calcul.
+                „Câștigat" înseamnă lead ajuns pe listă de așteptare, la plată sau la studiu — a spus
+                da, chiar dacă încă nu are loc în grupă. Procentele sunt raportate la toate lead-urile
+                intrate. Un lead marcat „pierdut" nu-și mai ține minte etapa la care s-a oprit, așa că
+                apare doar la intrare — pâlnia arată deci minimul sigur, nu o cifră umflată. Lead-urile
+                create automat din pagina Elevi nu intră în calcul.
               </p>
             </Card>
 
@@ -299,7 +300,7 @@ export default function StatisticsClient() {
           {/* ── Responsabilii de lead-uri ───────────────────────────── */}
           <Card
             title="Cine convertește lead-urile"
-            subtitle="Fiecare lead atribuit cuiva; un lead ajuns la „a plătit” sau „studiază” îi urcă procentul"
+            subtitle="Fiecare lead atribuit cuiva; unul ajuns pe listă, la plată sau la studiu îi urcă procentul"
           >
             {owners.ranked.length === 0 && owners.tooFew.length === 0 ? (
               <p className="text-sm text-gray-500">

@@ -66,6 +66,8 @@ globalThis.__FIXTURE__ = {
     L('L7', 'u2', 'LOST_LEAD'),
     // fără responsabil
     L('L8', null, 'LEAD'),
+    // pe lista de asteptare: a spus da, asteapta loc in grupa
+    L('L12', 'u1', 'WAITLIST'),
     // generat automat din pagina Elevi — nu trebuie să intre nicăieri
     L('L9', 'u1', 'STUDIAZA', { source: 'ELEV' }),
     // perioada precedentă: 2 lead-uri, 1 convertit
@@ -131,21 +133,21 @@ const eq = (name, got, want) => {
 const out = await buildStatistics({ period: 'month' })
 
 console.log('--- LEAD-URI ---')
-eq('total (fara cele din Elevi)', out.leads.total, 8)
-eq('convertite', out.leads.converted, 3)
-eq('rata conversie', out.leads.conversionRate, 37.5)
+eq('total (fara cele din Elevi)', out.leads.total, 9)
+eq('castigate (waitlist + platit + studiaza)', out.leads.converted, 4)
+eq('rata conversie', out.leads.conversionRate, 44.4)
 eq('rata precedenta', out.leads.prevConversionRate, 50)
-eq('crestere fata de luna trecuta', out.leads.totalDelta, 300)
+eq('crestere fata de luna trecuta', out.leads.totalDelta, 350)
 eq('pierdute', out.leads.lost, 2)
 eq('in lucru', out.leads.inProgress, 3)
 eq('follow-up restante', out.leads.overdueFollowUps, 1)
-eq('palnie', out.leads.funnel.map((s) => s.value), [8, 4, 3, 3, 3, 2])
+eq('palnie', out.leads.funnel.map((s) => s.value), [9, 5, 4, 4, 4])
 
 console.log('--- RESPONSABILI ---')
 eq('clasati', out.owners.ranked.map((o) => o.name), ['Ana'])
-eq('Ana: lead-uri', out.owners.ranked[0].total, 5)
-eq('Ana: conversie', out.owners.ranked[0].conversionRate, 40)
-eq('Ana: pierdute', out.owners.ranked[0].lostRate, 20)
+eq('Ana: lead-uri', out.owners.ranked[0].total, 6)
+eq('Ana: conversie (L1, L2, L12)', out.owners.ranked[0].conversionRate, 50)
+eq('Ana: pierdute', out.owners.ranked[0].lostRate, 16.7)
 eq('Ana: restante', out.owners.ranked[0].overdue, 1)
 eq('prea putine date', out.owners.tooFew.map((o) => o.name), ['Bogdan'])
 eq('fara responsabil', out.owners.unassigned, 1)
@@ -196,15 +198,15 @@ eq('elevi cu pachetul pe zero', out.absence.outOfLessons.map((s) => s.name), ['E
 
 console.log('--- SURSE ---')
 const insta = out.leads.bySource.find((s) => s.source === 'INSTAGRAM')
-eq('Instagram: total', insta.total, 8)
-eq('Instagram: rata', insta.rate, 37.5)
+eq('Instagram: total', insta.total, 9)
+eq('Instagram: rata', insta.rate, 44.4)
 eq('sursa ELEV nu apare', out.leads.bySource.some((s) => s.source === 'ELEV'), false)
 
 console.log('--- EVOLUTIE ---')
 eq('12 luni', out.evolution.length, 12)
 const thisMonth = out.evolution[out.evolution.length - 1]
-eq('luna curenta: lead-uri', thisMonth.leads, 8)
-eq('luna curenta: convertite', thisMonth.converted, 3)
+eq('luna curenta: lead-uri', thisMonth.leads, 9)
+eq('luna curenta: convertite', thisMonth.converted, 4)
 eq('luna curenta: elevi noi', thisMonth.newStudents, 2)
 eq('luna curenta: plecari', thisMonth.left, 1)
 eq('luna curenta: lectii', thisMonth.lessons, 4)
