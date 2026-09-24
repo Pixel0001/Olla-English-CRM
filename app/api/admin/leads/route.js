@@ -6,7 +6,7 @@ import { checkPermission } from '@/lib/permissions'
 import { ageRange } from '@/lib/age-groups'
 import { inboxLink } from '@/lib/meta-messages'
 import { LEAD_STATUS_VALUES, LEAD_SOURCE_VALUES } from '@/lib/leads-config'
-import { notifyNewLead, notifyLeadAssigned } from '@/lib/telegram'
+import { notifyLeadAssigned } from '@/lib/telegram'
 import { parseSchoolDate } from '@/lib/timezone'
 
 async function requireStaff(permission) {
@@ -318,8 +318,8 @@ export async function POST(request) {
         createdByName: createdBy?.name || createdBy?.email || null,
       }
 
-      // În topicul comun și, dacă are cont conectat, direct responsabilului
-      await notifyNewLead(enriched)
+      // Doar responsabilului, în privat. Topicul comun primește dimineața
+      // digestul de recontactări — lead-ul proaspăt îl știe deja cine l-a scris.
       if (assignedTo?.telegramChatId) {
         await notifyLeadAssigned(enriched, { chatId: assignedTo.telegramChatId })
       }

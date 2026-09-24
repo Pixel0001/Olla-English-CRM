@@ -61,6 +61,9 @@ export default function StatisticsClient() {
   const [loading, setLoading] = useState(!cached)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
+  // Câți elevi / câte grupe se arată în listele de absențe
+  const [riskShown, setRiskShown] = useState(10)
+  const [groupsShown, setGroupsShown] = useState(8)
 
   useEffect(() => {
     if (!hasPermission('statistics.view') && !isSuperAdmin) router.push('/admin')
@@ -313,13 +316,13 @@ export default function StatisticsClient() {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Responsabil</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Lead-uri</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Clienți</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Conversie</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">În lucru</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Pierdute</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Restanțe</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Timp mediu</th>
+                        <Th hint="Câte lead-uri i-au fost date în perioadă">Primite</Th>
+                        <Th hint="Câte au ajuns pe listă de așteptare, au plătit sau studiază">Câștigate</Th>
+                        <Th hint="Câștigate împărțit la primite">Conversie</Th>
+                        <Th hint="Nici câștigate, nici pierdute — încă se lucrează la ele">Încă deschise</Th>
+                        <Th hint="Marcate „Lead pierdut”">Pierdute</Th>
+                        <Th hint="Lead-uri deschise cărora le-a trecut data de recontactare">Recontactări întârziate</Th>
+                        <Th hint="De la primul contact până a devenit client">Cât durează</Th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -339,11 +342,13 @@ export default function StatisticsClient() {
                           </td>
                           <td className="px-3 py-2 text-center text-gray-600">{int(o.inProgress)}</td>
                           <td className="px-3 py-2 text-center text-gray-600">
-                            {int(o.lost)}
-                            <span className="text-[10px] text-gray-400 ml-0.5">{percent(o.lostRate)}</span>
+                            <span className="block">{int(o.lost)}</span>
+                            <span className="block text-[10px] text-gray-400">
+                              {percent(o.lostRate)} din primite
+                            </span>
                           </td>
                           <td className={`px-3 py-2 text-center ${o.overdue > 0 ? 'text-red-600 font-semibold' : 'text-gray-400'}`}>
-                            {int(o.overdue)}
+                            {o.overdue > 0 ? int(o.overdue) : '—'}
                           </td>
                           <td className="px-3 py-2 text-center text-gray-600 whitespace-nowrap">
                             {o.avgDaysToClient != null ? `${o.avgDaysToClient} zile` : '—'}
@@ -360,13 +365,21 @@ export default function StatisticsClient() {
                     {owners.tooFew.map((o) => `${o.name} (${o.total})`).join(', ')}.
                   </p>
                 )}
-                <p className="text-[11px] text-gray-500 mt-2">
-                  În clasament intră doar cine are cel puțin {owners.minLeads} lead-uri în perioadă —
-                  sub atât, un procent spune mai mult despre noroc decât despre muncă.
-                  {owners.unassigned > 0 && (
-                    <> <b className="text-amber-700">{owners.unassigned} lead-uri n-au niciun responsabil</b> și nu se numără nimănui.</>
-                  )}
-                </p>
+                <div className="text-[11px] text-gray-500 mt-3 space-y-1">
+                  <p><b>Câștigate</b> — lead-ul a spus da: stă pe listă de așteptare, a plătit sau învață deja.</p>
+                  <p><b>Încă deschise</b> — nici câștigate, nici pierdute: se mai poate lucra la ele.</p>
+                  <p>
+                    <b>Recontactări întârziate</b> — lead-uri deschise cărora le-a trecut data de
+                    recontactare din fișă. Cifra asta arată disciplina, nu norocul.
+                  </p>
+                  <p>
+                    În clasament intră doar cine are cel puțin {owners.minLeads} lead-uri în perioadă —
+                    sub atât, un procent spune mai mult despre noroc decât despre muncă.
+                    {owners.unassigned > 0 && (
+                      <> <b className="text-amber-700">{owners.unassigned} lead-uri n-au niciun responsabil</b> și nu se numără nimănui.</>
+                    )}
+                  </p>
+                </div>
               </>
             )}
           </Card>
@@ -389,7 +402,7 @@ export default function StatisticsClient() {
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Noi</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Plecări</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Lecții</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Prezență</th>
+                      <Th hint="Prezenți din totalul marcat, apoi prezenți / absenți în cifre">Prezență</Th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Închise</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Încasări</th>
                     </tr>
@@ -434,6 +447,12 @@ export default function StatisticsClient() {
                         </td>
                         <td className="px-3 py-2 text-center">
                           <RateBar value={t.attendanceRate} good={85} ok={70} />
+                          <span className="block text-[10px] mt-0.5 whitespace-nowrap">
+                            <span className="text-emerald-700 font-medium">{int(t.present)}</span>
+                            <span className="text-gray-300"> / </span>
+                            <span className="text-red-600 font-medium">{int(t.absent)}</span>
+                            <span className="text-gray-400"> abs</span>
+                          </span>
                         </td>
                         <td className="px-3 py-2 text-center text-gray-600">{percent(t.closingRate)}</td>
                         <td className="px-3 py-2 text-center text-gray-700 whitespace-nowrap">{money(t.revenue)}</td>
@@ -465,12 +484,20 @@ export default function StatisticsClient() {
             <Card
               title="Elevi care lipsesc des"
               subtitle="Cel mai bun semn că cineva e pe cale să plece — de la cel mai mare procent de absențe"
+              action={
+                <ShowCount
+                  total={absence.atRisk.length}
+                  value={riskShown}
+                  onChange={setRiskShown}
+                  label="elevi"
+                />
+              }
             >
               {absence.atRisk.length === 0 ? (
                 <p className="text-sm text-gray-500">Nimeni cu două sau mai multe absențe. 🎉</p>
               ) : (
                 <ul className="divide-y divide-gray-100">
-                  {absence.atRisk.map((s) => (
+                  {absence.atRisk.slice(0, riskShown).map((s) => (
                     <li key={s.studentId} className="py-2 flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{s.name}</p>
@@ -496,12 +523,20 @@ export default function StatisticsClient() {
             <Card
               title="Grupe cu cele mai multe absențe"
               subtitle="Dacă o grupă întreagă lipsește, problema nu e la elevi"
+              action={
+                <ShowCount
+                  total={absence.worstGroups.length}
+                  value={groupsShown}
+                  onChange={setGroupsShown}
+                  label="grupe"
+                />
+              }
             >
               {absence.worstGroups.length === 0 ? (
                 <p className="text-sm text-gray-500">Prea puține lecții ca să iasă un clasament.</p>
               ) : (
                 <RankBars
-                  rows={absence.worstGroups.map((g) => ({
+                  rows={absence.worstGroups.slice(0, groupsShown).map((g) => ({
                     label: `${g.name}${g.level ? ` · ${g.level}` : ''}`,
                     value: g.absenceRate ?? 0,
                     hint: `${g.absent} absențe din ${g.present + g.absent} · ${g.teacher || '—'}`,
@@ -635,17 +670,51 @@ export default function StatisticsClient() {
 
 // ── Bucăți mici ─────────────────────────────────────────────────────────
 
-function Card({ title, subtitle, children }) {
+/** Cap de tabel cu explicație la hover — coloanele scurte au nevoie de ea. */
+function Th({ children, hint }) {
+  return (
+    <th
+      title={hint}
+      className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap"
+    >
+      {children}
+    </th>
+  )
+}
+
+function Card({ title, subtitle, action, children }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-3 xs:p-4">
       {title && (
-        <div className="mb-3">
-          <h2 className="text-sm xs:text-base font-bold text-gray-900">{title}</h2>
-          {subtitle && <p className="text-[11px] xs:text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-sm xs:text-base font-bold text-gray-900">{title}</h2>
+            {subtitle && <p className="text-[11px] xs:text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+          </div>
+          {action && <div className="flex-shrink-0">{action}</div>}
         </div>
       )}
       {children}
     </div>
+  )
+}
+
+/** Câte rânduri se arată dintr-o listă lungă — ultimul pas e „toate". */
+function ShowCount({ total, value, onChange, label }) {
+  const steps = [10, 25, 50].filter((n) => n < total)
+
+  if (total <= 10) return null
+
+  return (
+    <select
+      value={String(value)}
+      onChange={(e) => onChange(e.target.value === 'all' ? total : parseInt(e.target.value, 10))}
+      className="px-2 py-1 text-[11px] border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-indigo-500"
+      aria-label={`Câte ${label} se arată`}
+    >
+      {steps.map((n) => <option key={n} value={n}>{n} {label}</option>)}
+      <option value="all">Toate ({total})</option>
+    </select>
   )
 }
 

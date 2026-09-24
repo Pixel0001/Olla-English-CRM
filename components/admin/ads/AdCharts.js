@@ -202,22 +202,56 @@ export function AreaChart({ rows, series, height = 200, formatValue = fmt }) {
   )
 }
 
+/**
+ * Procente întregi care chiar adună 100.
+ *
+ * Rotunjite fiecare pe cont propriu, 65.4 + 28.3 + 5.1 + 1.2 dau 99 — și
+ * omul care le adună crede că lipsește ceva. Metoda resturilor mari împarte
+ * unitățile rămase către feliile cu cea mai mare parte zecimală.
+ */
+function wholePercents(values, total) {
+  if (total <= 0) return values.map(() => 0)
+
+  const exact = values.map((v) => ((v || 0) / total) * 100)
+  const floors = exact.map(Math.floor)
+  let rest = 100 - floors.reduce((a, b) => a + b, 0)
+
+  const order = exact
+    .map((v, i) => ({ i, frac: v - Math.floor(v) }))
+    .sort((a, b) => b.frac - a.frac)
+
+  const out = [...floors]
+  for (const { i } of order) {
+    if (rest <= 0) break
+    out[i]++
+    rest--
+  }
+  return out
+}
+
 /** Inel — cum se împarte bugetul pe conturi sau campanii. */
 export function DonutChart({ slices, size = 180, formatValue = fmt, centerLabel, centerValue }) {
   const total = slices.reduce((s, x) => s + (x.value || 0), 0)
   if (total <= 0) return <Empty>Nimic de împărțit încă.</Empty>
 
+  // Feliile goale nu desenează nimic, dar umplu legenda cu rânduri de „0%"
+  const shown = slices.filter((s) => (s.value || 0) > 0)
+  const percents = wholePercents(shown.map((s) => s.value), total)
+  const hidden = slices.length - shown.length
+
   const radius = 42
   const circumference = 2 * Math.PI * radius
+  // O pauză mică între felii, ca să se vadă unde se termină una și începe alta
+  const gap = shown.length > 1 ? 1.2 : 0
   let offset = 0
 
   return (
     <div className="flex flex-wrap items-center gap-4">
-      <div className="relative" style={{ width: size, height: size }}>
+      <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
         <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-          {slices.map((s, i) => {
-            const fraction = (s.value || 0) / total
-            const dash = fraction * circumference
+          {shown.map((s, i) => {
+            const dash = ((s.value || 0) / total) * circumference
+            const visible = Math.max(dash - gap, 0.4)
             const el = (
               <circle
                 key={s.label}
@@ -227,10 +261,10 @@ export function DonutChart({ slices, size = 180, formatValue = fmt, centerLabel,
                 fill="none"
                 stroke={s.color || CHART_COLORS[i % CHART_COLORS.length]}
                 strokeWidth="14"
-                strokeDasharray={`${dash} ${circumference - dash}`}
+                strokeDasharray={`${visible} ${circumference - visible}`}
                 strokeDashoffset={-offset}
               >
-                <title>{`${s.label}: ${formatValue(s.value)} (${Math.round(fraction * 100)}%)`}</title>
+                <title>{`${s.label}: ${formatValue(s.value)} (${percents[i]}%)`}</title>
               </circle>
             )
             offset += dash
@@ -244,19 +278,26 @@ export function DonutChart({ slices, size = 180, formatValue = fmt, centerLabel,
         </div>
       </div>
 
-      <ul className="space-y-1 text-xs min-w-[9rem] flex-1">
-        {slices.map((s, i) => (
+      {/* Cifrele stau scrise, nu ascunse sub cursor */}
+      <ul className="space-y-1 text-xs min-w-[11rem] flex-1">
+        {shown.map((s, i) => (
           <li key={s.label} className="flex items-center gap-2">
             <span
               className="h-2.5 w-2.5 rounded-sm flex-shrink-0"
               style={{ background: s.color || CHART_COLORS[i % CHART_COLORS.length] }}
             />
             <span className="text-gray-700 truncate flex-1" title={s.label}>{s.label}</span>
-            <span className="text-gray-900 font-medium whitespace-nowrap">
-              {Math.round(((s.value || 0) / total) * 100)}%
+            <span className="text-gray-500 whitespace-nowrap tabular-nums">{formatValue(s.value)}</span>
+            <span className="text-gray-900 font-semibold whitespace-nowrap tabular-nums w-9 text-right">
+              {percents[i]}%
             </span>
           </li>
         ))}
+        {hidden > 0 && (
+          <li className="text-[10px] text-gray-400 pl-4.5">
+            încă {hidden} {hidden === 1 ? 'sursă fără nimic' : 'surse fără nimic'}
+          </li>
+        )}
       </ul>
     </div>
   )

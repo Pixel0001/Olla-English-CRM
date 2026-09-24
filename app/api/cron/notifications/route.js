@@ -451,15 +451,16 @@ export async function GET(request) {
       const held = group.lessonSessions.length
       const remaining = total - held
 
-      // Anunțăm la 3, 2, 1, 0 și când s-a depășit pachetul (negativ)
-      if (remaining > 3) continue
+      // Numărătoarea inversă (3 → 2 → 1) umplea Telegramul degeaba: singurul
+      // moment în care cineva trebuie să facă ceva e când pachetul lunii s-a
+      // terminat. Anunțăm deci doar la ultima lecție ținută (8 din 8) și, mai
+      // departe, dacă se predă peste pachet.
+      if (remaining > 0) continue
 
-      const type = remaining < 0
-        ? 'NEGATIVE_LESSONS'
-        : remaining === 0 ? 'ZERO_LESSONS' : 'LOW_LESSONS'
+      const type = remaining < 0 ? 'NEGATIVE_LESSONS' : 'ZERO_LESSONS'
 
-      // O singură notificare per valoare: 3 → 2 → 1 → 0 → -1 anunță de fiecare
-      // dată, dar aceeași valoare nu se repetă zi de zi.
+      // O singură notificare per valoare: 0 → -1 → -2 anunță de fiecare dată,
+      // dar aceeași valoare nu se repetă zi de zi.
       const lastForGroup = await prisma.notification.findFirst({
         where: {
           groupId: group.id,

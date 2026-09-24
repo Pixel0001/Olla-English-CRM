@@ -79,6 +79,7 @@ globalThis.__FIXTURE__ = {
     { id: 's1', fullName: 'Elev Unu', createdAt: at(0.8), active: true },
     { id: 's2', fullName: 'Elev Doi', createdAt: at(0.1), active: true },
     { id: 's3', fullName: 'Elev Trei', createdAt: atPrev(0.5), active: true },
+    { id: 's4', fullName: 'Elev Patru', createdAt: atPrev(0.7), active: true },
   ],
 
   groups: [
@@ -94,6 +95,8 @@ globalThis.__FIXTURE__ = {
     { id: 'gs3', groupId: 'g1', studentId: 's3', status: 'LEFT', statusChangedAt: at(0.9), enrolledAt: atPrev(0.5), lessonsRemaining: 0 },
     { id: 'gs4', groupId: 'g2', studentId: 's1', status: 'ACTIVE', statusChangedAt: null, enrolledAt: at(0.05), lessonsRemaining: 0 },
     { id: 'gs5', groupId: 'g3', studentId: 's1', status: 'ACTIVE', statusChangedAt: null, enrolledAt: at(0.5), lessonsRemaining: 4 },
+    // a intrat luna asta, dar e pe pauza: nu se numara la 'elevi noi activi'
+    { id: 'gs6', groupId: 'g1', studentId: 's4', status: 'PAUSED', statusChangedAt: null, enrolledAt: at(0.3), lessonsRemaining: 2 },
   ],
 
   sessions: [
@@ -158,7 +161,7 @@ eq('elevi noi', out.school.newStudents, 2)
 eq('plecari', out.school.left, 1)
 eq('retentie', out.school.retentionRate, 66.7)
 eq('churn', out.school.churnRate, 33.3)
-eq('inscrieri in grupe (gs1,gs2,gs4,gs5)', out.school.enrolled, 4)
+eq('inscrieri in grupe (gs1,gs2,gs4,gs5,gs6)', out.school.enrolled, 5)
 eq('lectii', out.school.lessons, 4)
 eq('incasari', out.school.revenue, 800)
 eq('crestere incasari', out.school.revenueDelta, 100)
@@ -170,7 +173,8 @@ const carmen = out.teachers.ranked.find((t) => t.name === 'Carmen')
 const dan = out.teachers.ranked.find((t) => t.name === 'Dan')
 eq('Carmen: elevi activi (s1 in doua grupe, numarat o data)', carmen.studentsActive, 2)
  eq('Carmen: grupe active', carmen.groupsActive, 2)
-eq('Carmen: elevi noi', carmen.studentsNew, 2)
+eq('Carmen: elevi noi (fara cel pus pe pauza)', carmen.studentsNew, 2)
+ eq('noi nu poate depasi elevii activi', carmen.studentsNew <= carmen.studentsActive, true)
 eq('Carmen: plecari', carmen.left, 1)
 eq('Carmen: lectii', carmen.lessons, 3)
 eq('Carmen: lectii inchise %', carmen.closingRate, 66.7)
