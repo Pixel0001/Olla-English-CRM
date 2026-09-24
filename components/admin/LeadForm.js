@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { LEAD_STATUSES, LEAD_SOURCES, getSource } from '@/lib/leads-config'
 import LevelSelect from '@/components/LevelSelect'
+import { LESSON_TYPES, LOCATION_TYPES } from '@/lib/lesson-preferences'
 import FollowUpPicker from '@/components/admin/FollowUpPicker'
 import DuplicateLeadWarning from '@/components/admin/DuplicateLeadWarning'
 
@@ -45,6 +46,8 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
     studentAge: lead?.studentAge ?? '',
     isAdult: lead?.isAdult ?? false,
     interestedIn: lead?.interestedIn || '',
+    lessonType: lead?.lessonType || '',
+    locationType: lead?.locationType || '',
     status: lead?.status || 'LEAD',
     assignedToId: lead?.assignedToId || '',
     nextFollowUpAt: lead?.nextFollowUpAt || null,
@@ -177,6 +180,24 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
               />
               Adult (fără vârstă exactă)
             </label>
+          </div>
+          <div>
+            <label className={label}>Cum vrea lecțiile</label>
+            <select className={input} value={form.lessonType} onChange={(e) => set('lessonType', e.target.value)}>
+              <option value="">Nespecificat</option>
+              {LESSON_TYPES.map((o) => (
+                <option key={o.value} value={o.value}>{o.emoji} {o.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={label}>Unde</label>
+            <select className={input} value={form.locationType} onChange={(e) => set('locationType', e.target.value)}>
+              <option value="">Nespecificat</option>
+              {LOCATION_TYPES.map((o) => (
+                <option key={o.value} value={o.value}>{o.emoji} {o.label}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className={label}>Nivel actual</label>

@@ -145,6 +145,8 @@ export async function POST(request) {
         studentAge: data.isAdult ? null : (data.studentAge ? parseInt(data.studentAge) : null),
         isAdult: !!data.isAdult,
         interestedIn: data.interestedIn?.trim() || null,
+        lessonType: data.lessonType || null,
+        locationType: data.locationType || null,
         status: data.status || 'LEAD',
         nextFollowUpAt: parseSchoolDate(data.nextFollowUpAt),
         assignedToId: data.assignedToId || null,

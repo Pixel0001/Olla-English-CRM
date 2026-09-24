@@ -58,7 +58,7 @@ export async function PUT(request, { params }) {
     }
 
     const { fullName, age, grade, parentName, parentPhone, parentEmail, notes, isAdult, level,
-      startYear, startMonth } = body
+      startYear, startMonth, lessonType, locationType } = body
 
     const student = await prisma.student.update({
       where: { id },
@@ -74,6 +74,8 @@ export async function PUT(request, { params }) {
         ...(level === undefined ? {} : { level: level || null }),
         ...(startYear === undefined ? {} : { startYear: startYear ?? null }),
         ...(startMonth === undefined ? {} : { startMonth: startMonth ?? null }),
+        ...(lessonType === undefined ? {} : { lessonType: lessonType || null }),
+        ...(locationType === undefined ? {} : { locationType: locationType || null }),
       }
     })
 

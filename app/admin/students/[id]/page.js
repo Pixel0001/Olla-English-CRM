@@ -6,6 +6,8 @@ import prisma from '@/lib/prisma'
 import { requireAdmin } from '@/lib/session'
 import { checkPermission } from '@/lib/permissions'
 import { paidForMonth, periodLabel } from '@/lib/payments'
+import { getAgeGroup } from '@/lib/age-groups'
+import { preferenceLabel } from '@/lib/lesson-preferences'
 import AddPaymentButton from '@/components/admin/AddPaymentButton'
 import {
   ArrowLeftIcon,
@@ -134,6 +136,10 @@ export default async function StudentDetailPage({ params }) {
               {student.startYear && student.startMonth
                 ? ` · începe ${MONTH_NAMES[student.startMonth - 1]} ${student.startYear}`
                 : ''}
+              {getAgeGroup(student.age, student.isAdult)
+                ? ` · ${getAgeGroup(student.age, student.isAdult).label}`
+                : ''}
+              {preferenceLabel(student) ? ` · ${preferenceLabel(student)}` : ''}
             </p>
           </div>
         </div>

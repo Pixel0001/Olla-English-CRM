@@ -56,7 +56,7 @@ export async function PATCH(request, { params }) {
     }
 
     // Câmpuri text: șirul gol înseamnă „golește câmpul"
-    for (const f of ['name', 'phone', 'email', 'sourceDetail', 'message', 'studentName', 'interestedIn']) {
+    for (const f of ['name', 'phone', 'email', 'sourceDetail', 'message', 'studentName', 'interestedIn', 'lessonType', 'locationType']) {
       if (data[f] !== undefined) update[f] = data[f]?.trim() || null
     }
     if (data.name !== undefined && !update.name) {

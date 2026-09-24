@@ -16,6 +16,8 @@ import FollowUpPicker from '@/components/admin/FollowUpPicker'
 import { zonedDateInDays } from '@/lib/timezone'
 import { whatsAppLink } from '@/lib/phone'
 import { PlatformIcon } from '@/components/icons/BrandIcons'
+import { AGE_GROUPS, getAgeGroup } from '@/lib/age-groups'
+import { preferenceLabel } from '@/lib/lesson-preferences'
 
 const ITEMS_PER_PAGE = 30
 
@@ -84,6 +86,7 @@ export default function LeadsClient({ leads, staff = [] }) {
   const [source, setSource] = useState('')
   const [level, setLevel] = useState('')
   const [audience, setAudience] = useState('') // '', 'adult', 'copil'
+  const [ageGroup, setAgeGroup] = useState('')
   const [period, setPeriod] = useState('')
   const [followUp, setFollowUp] = useState('')
   const [sort, setSort] = useState('newest')
@@ -95,13 +98,14 @@ export default function LeadsClient({ leads, staff = [] }) {
   const resetPaging = () => setDisplayCount(ITEMS_PER_PAGE)
 
   const resetAll = () => {
-    setSearch(''); setStatus(''); setSource(''); setLevel(''); setAudience('')
+    setSearch(''); setStatus(''); setSource(''); setLevel(''); setAudience(''); setAgeGroup('')
     setPeriod(''); setFollowUp(''); setSort('newest'); resetPaging()
   }
 
   const activeFilterCount =
     (search ? 1 : 0) + (status ? 1 : 0) +
-    (source ? 1 : 0) + (level ? 1 : 0) + (audience ? 1 : 0) + (period ? 1 : 0) + (followUp ? 1 : 0)
+    (source ? 1 : 0) + (level ? 1 : 0) + (audience ? 1 : 0) + (ageGroup ? 1 : 0) +
+    (period ? 1 : 0) + (followUp ? 1 : 0)
 
   // Actualizează un lead în listă după o modificare din rândul extins
   const patchLead = useCallback((id, patch) => {
@@ -187,6 +191,9 @@ export default function LeadsClient({ leads, staff = [] }) {
     if (source) r = r.filter((l) => l.source === source)
     if (level) r = r.filter((l) => (level === 'none' ? !l.interestedIn : l.interestedIn === level))
     if (audience) r = r.filter((l) => (audience === 'adult' ? !!l.isAdult : !l.isAdult))
+    if (ageGroup) {
+      r = r.filter((l) => getAgeGroup(l.studentAge, l.isAdult)?.value === ageGroup)
+    }
 
     if (period) {
       const limit = startOfToday()
@@ -229,7 +236,7 @@ export default function LeadsClient({ leads, staff = [] }) {
     } else sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
     return sorted
-  }, [items, search, status, source, level, audience, period, followUp, sort])
+  }, [items, search, status, source, level, audience, ageGroup, period, followUp, sort])
 
   // Nivelurile care chiar apar în lead-uri, cu câte unul din fiecare
   const levelOptions = useMemo(() => {
@@ -334,6 +341,13 @@ export default function LeadsClient({ leads, staff = [] }) {
           <option value="">Adult/copil: toți</option>
           <option value="adult">🧑 Adulți</option>
           <option value="copil">🧒 Copii</option>
+        </select>
+
+        <select value={ageGroup} onChange={(e) => { setAgeGroup(e.target.value); resetPaging() }} className={selectClass} aria-label="Categorie de vârstă">
+          <option value="">Vârstă: toate</option>
+          {AGE_GROUPS.map((g) => (
+            <option key={g.value} value={g.value}>{g.label}</option>
+          ))}
         </select>
 
         <select value={level} onChange={(e) => { setLevel(e.target.value); resetPaging() }} className={selectClass} aria-label="Nivel">
@@ -525,6 +539,11 @@ function LeadRow({ lead, expanded, onToggle, onPatch, onEdit, onDelete, onStatus
         {lead.interestedIn && (
           <span className="hidden xl:inline shrink-0 px-1 rounded bg-gray-100 text-gray-600 text-[10px] font-medium">
             {lead.interestedIn}
+          </span>
+        )}
+        {getAgeGroup(lead.studentAge, lead.isAdult) && (
+          <span className={`hidden xl:inline shrink-0 px-1 rounded text-[10px] font-medium ${getAgeGroup(lead.studentAge, lead.isAdult).color}`}>
+            {getAgeGroup(lead.studentAge, lead.isAdult).short}
           </span>
         )}
 
@@ -753,6 +772,10 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
           </Detail>
         )}
         {lead.interestedIn && <Detail label="Nivel actual">{lead.interestedIn}</Detail>}
+        {getAgeGroup(lead.studentAge, lead.isAdult) && (
+          <Detail label="Categorie">{getAgeGroup(lead.studentAge, lead.isAdult).label}</Detail>
+        )}
+        {preferenceLabel(lead) && <Detail label="Preferă">{preferenceLabel(lead)}</Detail>}
         {lead.sourceDetail && <Detail label={source.detailLabel}>{lead.sourceDetail}</Detail>}
         <Detail label="Adăugat">
           {new Date(lead.createdAt).toLocaleDateString('ro-RO', {

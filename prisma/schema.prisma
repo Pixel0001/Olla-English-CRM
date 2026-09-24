@@ -250,6 +250,10 @@ model Student {
   startYear    Int?
   startMonth   Int?     // 1-12
 
+  // Cum invata: singur sau in grupa, online sau la sediu
+  lessonType   String?  // 'grup' | 'individual'
+  locationType String?  // 'online' | 'offline'
+
   // Limite per-elev (override peste grupă/global; null = folosește valoarea super-setării)
   cooldownOverrideMin Int?     // în minute, null = moștenește de la grupă/global
   dailyXpCapOverride  Int?     // în puncte XP, null = moștenește
@@ -675,6 +679,8 @@ model Lead {
   studentAge   Int?
   isAdult      Boolean @default(false) // Adult — nu are rost o vârstă exactă
   interestedIn String?    // Nivelul dorit: A1, B2, IELTS, Kids...
+  lessonType   String?    // Preferinta: 'grup' | 'individual'
+  locationType String?    // Preferinta: 'online' | 'offline'
 
   status         LeadStatus @default(LEAD)
   nextFollowUpAt DateTime?  // Când trebuie recontactat

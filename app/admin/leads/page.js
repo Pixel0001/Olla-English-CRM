@@ -35,6 +35,8 @@ async function LeadsPageContent() {
     studentAge: l.studentAge,
     isAdult: l.isAdult,
     interestedIn: l.interestedIn,
+    lessonType: l.lessonType || null,
+    locationType: l.locationType || null,
     status: l.status,
     nextFollowUpAt: l.nextFollowUpAt ? l.nextFollowUpAt.toISOString() : null,
     createdAt: l.createdAt.toISOString(),

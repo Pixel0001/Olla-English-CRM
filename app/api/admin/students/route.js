@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 import { requireAdmin, getCurrentUser } from '@/lib/session'
 import { require2FAToken } from '@/lib/security/action-tokens'
 import { checkPermission } from '@/lib/permissions'
+import { ageRange } from '@/lib/age-groups'
 
 const ITEMS_PER_PAGE = 20
 
@@ -22,6 +23,7 @@ export async function GET(request) {
     const search = searchParams.get('search') || ''
     const hasGroup = searchParams.get('hasGroup') // 'yes', 'no', or empty
     const startPeriod = searchParams.get('startPeriod') // 'YYYY-MM', 'none' sau gol
+    const ageGroup = searchParams.get('ageGroup') // ex. '7-9', 'adulti'
     const all = searchParams.get('all') === 'true' // Pentru dropdown-uri
 
     // Construiește where clause
@@ -41,6 +43,18 @@ export async function GET(request) {
       where.groupStudents = { some: {} }
     } else if (hasGroup === 'no') {
       where.groupStudents = { none: {} }
+    }
+
+    // Categoria de vârstă: la adulți contează bifa, nu vârsta exactă
+    if (ageGroup === 'adulti') {
+      const range = ageRange('adulti')
+      where.OR = [...(where.OR || []), { isAdult: true }, { age: range }]
+    } else if (ageGroup) {
+      const range = ageRange(ageGroup)
+      if (range) {
+        where.age = range
+        where.isAdult = false
+      }
     }
 
     // Filtru după luna de început
@@ -158,7 +172,7 @@ export async function POST(request) {
     }
 
     const { fullName, age, grade, parentName, parentPhone, parentEmail, notes, isAdult, level,
-      startYear, startMonth } = body
+      startYear, startMonth, lessonType, locationType } = body
 
     const student = await prisma.student.create({
       data: {
@@ -173,6 +187,8 @@ export async function POST(request) {
         level: level || null,
         startYear: startYear ?? null,
         startMonth: startMonth ?? null,
+        lessonType: lessonType || null,
+        locationType: locationType || null,
       }
     })
 

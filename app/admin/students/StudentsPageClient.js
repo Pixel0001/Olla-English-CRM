@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AddStudentButton from '@/components/admin/AddStudentButton'
 import StudentLeadsSync from '@/components/admin/StudentLeadsSync'
+import { AGE_GROUPS, getAgeGroup } from '@/lib/age-groups'
+import { preferenceLabel } from '@/lib/lesson-preferences'
 import DeleteStudentButton from '@/components/admin/DeleteStudentButton'
 import AddPaymentButton from '@/components/admin/AddPaymentButton'
 import { usePermissions, PermissionGate } from '@/hooks/usePermissions'
@@ -39,6 +41,7 @@ export default function StudentsPage() {
   const [search, setSearch] = useState('')
   const [hasGroup, setHasGroup] = useState('')
   const [startPeriod, setStartPeriod] = useState('')
+  const [ageGroup, setAgeGroup] = useState('')
   const [startPeriods, setStartPeriods] = useState([])
 
   // Verifică permisiunea
@@ -50,7 +53,7 @@ export default function StudentsPage() {
 
   useEffect(() => {
     fetchStudents()
-  }, [currentPage, hasGroup, startPeriod])
+  }, [currentPage, hasGroup, startPeriod, ageGroup])
 
   useEffect(() => {
     fetchGroups()
@@ -73,6 +76,7 @@ export default function StudentsPage() {
       if (search) params.set('search', search)
       if (hasGroup) params.set('hasGroup', hasGroup)
       if (startPeriod) params.set('startPeriod', startPeriod)
+      if (ageGroup) params.set('ageGroup', ageGroup)
 
       const res = await fetch(`/api/admin/students?${params.toString()}`)
       const data = await res.json()
@@ -108,10 +112,11 @@ export default function StudentsPage() {
     setSearch('')
     setHasGroup('')
     setStartPeriod('')
+    setAgeGroup('')
     setCurrentPage(1)
   }
 
-  const hasActiveFilters = search || hasGroup || startPeriod
+  const hasActiveFilters = search || hasGroup || startPeriod || ageGroup
 
   // Generare numere pagini
   const getPageNumbers = () => {
@@ -197,6 +202,21 @@ export default function StudentsPage() {
               </select>
             </div>
 
+            {/* Categorie de vârstă */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Vârstă</label>
+              <select
+                value={ageGroup}
+                onChange={(e) => { setAgeGroup(e.target.value); setCurrentPage(1); }}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white min-w-[140px]"
+              >
+                <option value="">Toate vârstele</option>
+                {AGE_GROUPS.map((g) => (
+                  <option key={g.value} value={g.value}>{g.label}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Filtru după luna de început */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Începe din luna</label>
@@ -266,7 +286,17 @@ export default function StudentsPage() {
                     <p className="font-medium text-gray-900">{student.fullName}</p>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
-                    {student.age ? `${student.age} ani` : '-'}
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span>{student.isAdult ? 'adult' : student.age ? `${student.age} ani` : '-'}</span>
+                      {getAgeGroup(student.age, student.isAdult) && (
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${getAgeGroup(student.age, student.isAdult).color}`}>
+                          {getAgeGroup(student.age, student.isAdult).short}
+                        </span>
+                      )}
+                    </div>
+                    {preferenceLabel(student) && (
+                      <p className="text-[10px] text-gray-500 mt-0.5">{preferenceLabel(student)}</p>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {student.parentName || '-'}
