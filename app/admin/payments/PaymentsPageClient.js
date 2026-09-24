@@ -138,9 +138,47 @@ export default function PaymentsPage() {
     })
   }
 
+  // Plățile rămase de la elevii șterși — se pot curăța de aici
+  const [orphans, setOrphans] = useState(null)
+  const [orphansOpen, setOrphansOpen] = useState(false)
+  const [deletingOrphans, setDeletingOrphans] = useState(false)
+
   useEffect(() => {
     fetchData()
   }, [year])
+
+  useEffect(() => {
+    if (!accessGranted) return
+    fetch('/api/admin/payments/orphans')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => setOrphans(j))
+      .catch(() => {})
+  }, [accessGranted])
+
+  const deleteOrphans = async () => {
+    const confirmed = confirm(
+      `Ștergi definitiv ${orphans.count} plăți ale elevilor șterși, în valoare de ` +
+      `${orphans.totalAmount.toLocaleString('ro-RO')} MDL?\n\n` +
+      'Nu se mai pot recupera, iar încasările din rapoarte și din statistică vor scădea cu suma asta.'
+    )
+    if (!confirmed) return
+
+    setDeletingOrphans(true)
+    try {
+      const res = await fetch(`/api/admin/payments/orphans?expected=${orphans.count}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Eroare la ștergere')
+
+      toast.success(`${json.deleted} plăți șterse`)
+      setOrphans({ count: 0, totalAmount: 0, students: [], canDelete: orphans.canDelete })
+      setOrphansOpen(false)
+      fetchData()
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setDeletingOrphans(false)
+    }
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -880,6 +918,81 @@ export default function PaymentsPage() {
           </button>
         </div>
       </div>
+
+      {/* Plăți rămase de la elevi șterși */}
+      {orphans?.count > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl xs:rounded-2xl p-3 xs:p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-amber-900">
+                {orphans.count} plăți rămase de la elevi șterși
+              </p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                {orphans.totalAmount.toLocaleString('ro-RO')} MDL, de la {orphans.students.length}{' '}
+                {orphans.students.length === 1 ? 'elev' : 'elevi'}. Sunt numărate în încasări, dar
+                elevul lor nu mai există în sistem.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => setOrphansOpen((v) => !v)}
+                className="px-3 py-1.5 rounded-lg border border-amber-300 bg-white text-xs font-medium text-amber-900 hover:bg-amber-100"
+              >
+                {orphansOpen ? 'Ascunde lista' : 'Vezi lista'}
+              </button>
+              {orphans.canDelete && (
+                <button
+                  onClick={deleteOrphans}
+                  disabled={deletingOrphans}
+                  className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700 disabled:opacity-50"
+                >
+                  {deletingOrphans ? 'Se șterge…' : 'Șterge-le definitiv'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {orphansOpen && (
+            <div className="mt-3 pt-3 border-t border-amber-200 max-h-64 overflow-y-auto">
+              <table className="min-w-full text-xs">
+                <thead>
+                  <tr className="text-amber-900/70">
+                    <th className="text-left font-medium py-1">Elev</th>
+                    <th className="text-left font-medium py-1">Grupe</th>
+                    <th className="text-center font-medium py-1">Plăți</th>
+                    <th className="text-right font-medium py-1">Total</th>
+                    <th className="text-right font-medium py-1">Ultima</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-amber-100">
+                  {orphans.students.map((st) => (
+                    <tr key={st.name}>
+                      <td className="py-1 pr-2 text-gray-900 font-medium">{st.name}</td>
+                      <td className="py-1 pr-2 text-gray-600">{st.groups.join(', ') || '—'}</td>
+                      <td className="py-1 text-center text-gray-600">{st.payments}</td>
+                      <td className="py-1 text-right text-gray-900 whitespace-nowrap">
+                        {st.amount.toLocaleString('ro-RO')} MDL
+                      </td>
+                      <td className="py-1 text-right text-gray-500 whitespace-nowrap">
+                        {st.lastPaymentAt
+                          ? new Date(st.lastPaymentAt).toLocaleDateString('ro-RO')
+                          : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {!orphans.canDelete && (
+            <p className="text-[11px] text-amber-700 mt-2">
+              Ștergerea o poate face doar superadminul.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Payment Method Filter */}
       <div className="flex items-center justify-center gap-2 flex-wrap px-1 xs:px-0">
