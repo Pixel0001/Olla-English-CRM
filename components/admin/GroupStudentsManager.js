@@ -1035,7 +1035,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                     paymentForm.payMode === 'MONTHLY' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
                   }`}
                 >
-                  Grupă — lunar
+                  Lunar
                 </button>
                 <button
                   type="button"
@@ -1044,7 +1044,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                     paymentForm.payMode === 'INDIVIDUAL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
                   }`}
                 >
-                  Individual — pe lecții
+                  Per lecție
                 </button>
               </div>
 

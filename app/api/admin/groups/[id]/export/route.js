@@ -65,7 +65,7 @@ function buildCsv(data) {
   out.push(csvRow(['Filială', group.branch?.name || '—']))
   out.push(csvRow(['Program', formatSchedule(group.scheduleDays, group.scheduleTime)]))
   out.push(csvRow(['Început', fmtDate(group.startDate || group.createdAt)]))
-  out.push(csvRow(['Mod de plată', isIndividual ? 'Individual (per elev)' : 'Lunar (grupă)']))
+  out.push(csvRow(['Mod de plată', isIndividual ? 'Per lecție' : 'Lunar']))
   if (!isIndividual) out.push(csvRow(['Lecții pe lună', group.monthlyLessons ?? 8]))
   out.push(csvRow(['Status', group.active ? 'Activă' : 'Inactivă']))
   out.push(csvRow(['Total lecții ținute', sessions.length]))
@@ -214,7 +214,7 @@ function buildHtml(data) {
     <div class="card"><span>Elevi</span><b>${students.length}</b></div>
     <div class="card"><span>Lecții ținute</span><b>${sessions.length}</b></div>
     ${isIndividual
-      ? '<div class="card"><span>Mod de plată</span><b style="font-size:13px">Individual</b></div>'
+      ? '<div class="card"><span>Mod de plată</span><b style="font-size:13px">Per lecție</b></div>'
       : `<div class="card"><span>Lecții pe lună</span><b>${group.monthlyLessons ?? 8}</b></div>`}
     <div class="card"><span>Total încasat</span><b>${totals.paid} lei</b></div>
     <div class="card"><span>Probe</span><b>${trials.length}</b></div>

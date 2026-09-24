@@ -254,13 +254,13 @@ export default function GroupForm({ group, teachers, branches = [] }) {
               {[
                 {
                   value: 'MONTHLY',
-                  title: 'Lunar (grupă)',
+                  title: 'Lunar',
                   desc: 'Grupa are un număr fix de lecții pe lună. Se achită lunar, indiferent de prezență.',
                 },
                 {
                   value: 'INDIVIDUAL',
-                  title: 'Individual (per elev)',
-                  desc: 'Fiecare elev cumpără lecții. La fiecare prezență i se scade o lecție.',
+                  title: 'Per lecție',
+                  desc: 'Fiecare elev își cumpără lecțiile. La fiecare prezență i se scade una — poate fi și o grupă întreagă, nu doar un elev singur.',
                 },
               ].map((opt) => (
                 <label

@@ -421,7 +421,7 @@ export async function GET(request) {
               title: lessons <= 0
                 ? `⚠️ ${gs.student.fullName} a rămas fără lecții`
                 : `📉 ${gs.student.fullName} mai are 1 lecție`,
-              message: `Grupa "${group.name}" — plată individuală. Lecții rămase: ${lessons}.`,
+              message: `Grupa "${group.name}" — plată per lecție. Lecții rămase: ${lessons}.`,
               link: `/admin/students/${gs.studentId}`,
               recipientId: null,
               studentId: gs.studentId,
@@ -442,7 +442,7 @@ export async function GET(request) {
             }
           )
 
-          notificationsCreated.push(`Individual ${gs.student.fullName}: ${lessons} lecții`)
+          notificationsCreated.push(`Per lecție ${gs.student.fullName}: ${lessons} lecții`)
         }
         continue
       }

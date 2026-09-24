@@ -182,7 +182,7 @@ export default function AddPaymentButton({
                   mode === 'INDIVIDUAL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Individual — pe lecții
+                Per lecție
               </button>
             </div>
 

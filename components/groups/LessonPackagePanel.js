@@ -147,12 +147,12 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-base xs:text-lg md:text-xl font-bold text-gray-900">
-              {isIndividual ? 'Lecții individuale' : 'Lecții lunare'}
+              {isIndividual ? 'Lecții per elev' : 'Lecții lunare'}
             </h2>
             <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
               isIndividual ? 'bg-purple-100 text-purple-800' : 'bg-indigo-100 text-indigo-800'
             }`}>
-              {isIndividual ? 'plată individuală' : 'plată lunară'}
+              {isIndividual ? 'plată per lecție' : 'plată lunară'}
             </span>
           </div>
           <p className="text-xs xs:text-sm text-gray-600">
@@ -845,7 +845,7 @@ function PaymentModal({ student, monthLabel, defaultLessons, year, month, billin
                   payMode === 'MONTHLY' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
                 }`}
               >
-                Grupă — lunar
+                Lunar
               </button>
               <button
                 type="button"
@@ -854,7 +854,7 @@ function PaymentModal({ student, monthLabel, defaultLessons, year, month, billin
                   payMode === 'INDIVIDUAL' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
                 }`}
               >
-                Individual — pe lecții
+                Per lecție
               </button>
             </div>
 
