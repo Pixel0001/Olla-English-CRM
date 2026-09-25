@@ -8,6 +8,12 @@ import LevelSelect from '@/components/LevelSelect'
 import { LESSON_TYPES, LOCATION_TYPES } from '@/lib/lesson-preferences'
 import FollowUpPicker from '@/components/admin/FollowUpPicker'
 import DuplicateLeadWarning from '@/components/admin/DuplicateLeadWarning'
+import { childrenOf } from '@/lib/lead-children'
+import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
+
+const emptyChild = () => ({
+  name: '', age: '', isAdult: false, level: '', lessonType: '', locationType: '',
+})
 
 const input =
   'w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
@@ -54,6 +60,27 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
     message: lead?.message || '',
   })
 
+  // Un părinte poate întreba pentru mai mulți copii odată. Lead-urile vechi
+  // au un singur elev în câmpurile lor — îl aducem aici ca prim rând.
+  const [children, setChildren] = useState(() => {
+    const existing = childrenOf(lead).map((c) => ({
+      name: c.name || '',
+      age: c.age ?? '',
+      isAdult: !!c.isAdult,
+      level: c.level || '',
+      lessonType: c.lessonType || '',
+      locationType: c.locationType || '',
+    }))
+    return existing.length > 0 ? existing : [emptyChild()]
+  })
+
+  const setChild = (i, key, value) =>
+    setChildren((prev) => prev.map((c, j) => (j === i ? { ...c, [key]: value } : c)))
+
+  const addChild = () => setChildren((prev) => [...prev, emptyChild()])
+  const removeChild = (i) =>
+    setChildren((prev) => (prev.length === 1 ? [emptyChild()] : prev.filter((_, j) => j !== i)))
+
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
   const sourceCfg = getSource(form.source)
 
@@ -70,13 +97,19 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
       const res = await fetch(lead ? `/api/admin/leads/${lead.id}` : '/api/admin/leads', {
         method: lead ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, children: children.filter((c) => c.name.trim()) }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Eroare la salvare')
 
       toast.success(lead ? 'Lead actualizat' : 'Lead adăugat')
-      if (data.conversion?.created) toast.success('Elevul a fost adăugat în lista de elevi')
+      if (data.conversion?.created) {
+        toast.success(
+          data.conversion.count > 1
+            ? `${data.conversion.count} elevi au fost adăugați în lista de elevi`
+            : 'Elevul a fost adăugat în lista de elevi'
+        )
+      }
       if (onSaved) onSaved(data)
       else router.push(`/admin/leads/${data.id}`)
       router.refresh()
@@ -146,69 +179,117 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
         </div>
       </section>
 
-      {/* Cine învață */}
+      {/* Cine învață — unul sau mai mulți copii */}
       <section className="space-y-2 pt-3 border-t border-gray-100">
-        <h2 className="text-sm font-semibold text-gray-900">Cine învață</h2>
-        <div className="grid xs:grid-cols-2 sm:grid-cols-3 gap-2">
-          <div>
-            <label className={label}>Nume elev</label>
-            <input
-              className={input} value={form.studentName}
-              onChange={(e) => set('studentName', e.target.value)}
-              placeholder="dacă diferă de persoana de contact"
-            />
-          </div>
-          <div>
-            <label className={label}>Vârstă</label>
-            {form.isAdult ? (
-              <div className={`${input} bg-gray-50 text-gray-500 flex items-center`}>Adult</div>
-            ) : (
-              <input
-                className={input} type="number" min="1" max="99" value={form.studentAge}
-                onChange={(e) => set('studentAge', e.target.value)} placeholder="ex: 12"
-              />
-            )}
-            <label className="mt-1 flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.isAdult}
-                onChange={(e) => {
-                  set('isAdult', e.target.checked)
-                  if (e.target.checked) set('studentAge', '')
-                }}
-                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              Adult (fără vârstă exactă)
-            </label>
-          </div>
-          <div>
-            <label className={label}>Cum vrea lecțiile</label>
-            <select className={input} value={form.lessonType} onChange={(e) => set('lessonType', e.target.value)}>
-              <option value="">Nespecificat</option>
-              {LESSON_TYPES.map((o) => (
-                <option key={o.value} value={o.value}>{o.emoji} {o.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={label}>Unde</label>
-            <select className={input} value={form.locationType} onChange={(e) => set('locationType', e.target.value)}>
-              <option value="">Nespecificat</option>
-              {LOCATION_TYPES.map((o) => (
-                <option key={o.value} value={o.value}>{o.emoji} {o.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={label}>Nivel actual</label>
-            <LevelSelect
-              className={input}
-              value={form.interestedIn}
-              onChange={(e) => set('interestedIn', e.target.value)}
-              emptyLabel="Nespecificat"
-            />
-          </div>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-gray-900">Cine învață</h2>
+          <button
+            type="button"
+            onClick={addChild}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-indigo-200 text-indigo-700 text-xs font-medium hover:bg-indigo-50"
+          >
+            <PlusIcon className="h-3.5 w-3.5" />
+            Încă un copil
+          </button>
         </div>
+
+        <div className="space-y-2">
+          {children.map((child, i) => (
+            <div
+              key={i}
+              className={`rounded-lg ${children.length > 1 ? 'border border-gray-200 p-2' : ''}`}
+            >
+              {children.length > 1 && (
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-medium text-gray-500">Copilul {i + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeChild(i)}
+                    className="p-0.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
+                    aria-label={`Șterge copilul ${i + 1}`}
+                  >
+                    <TrashIcon className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+
+              <div className="grid xs:grid-cols-2 sm:grid-cols-3 gap-2">
+                <div>
+                  <label className={label}>Nume elev</label>
+                  <input
+                    className={input}
+                    value={child.name}
+                    onChange={(e) => setChild(i, 'name', e.target.value)}
+                    placeholder="dacă diferă de persoana de contact"
+                  />
+                </div>
+                <div>
+                  <label className={label}>Vârstă</label>
+                  {child.isAdult ? (
+                    <div className={`${input} bg-gray-50 text-gray-500 flex items-center`}>Adult</div>
+                  ) : (
+                    <input
+                      className={input} type="number" min="1" max="99" value={child.age}
+                      onChange={(e) => setChild(i, 'age', e.target.value)} placeholder="ex: 12"
+                    />
+                  )}
+                  <label className="mt-1 flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={child.isAdult}
+                      onChange={(e) => {
+                        setChild(i, 'isAdult', e.target.checked)
+                        if (e.target.checked) setChild(i, 'age', '')
+                      }}
+                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    Adult (fără vârstă exactă)
+                  </label>
+                </div>
+                <div>
+                  <label className={label}>Cum vrea lecțiile</label>
+                  <select
+                    className={input}
+                    value={child.lessonType}
+                    onChange={(e) => setChild(i, 'lessonType', e.target.value)}
+                  >
+                    <option value="">Nespecificat</option>
+                    {LESSON_TYPES.map((o) => (
+                      <option key={o.value} value={o.value}>{o.emoji} {o.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={label}>Unde</label>
+                  <select
+                    className={input}
+                    value={child.locationType}
+                    onChange={(e) => setChild(i, 'locationType', e.target.value)}
+                  >
+                    <option value="">Nespecificat</option>
+                    {LOCATION_TYPES.map((o) => (
+                      <option key={o.value} value={o.value}>{o.emoji} {o.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={label}>Nivel actual</label>
+                  <LevelSelect
+                    className={input}
+                    value={child.level}
+                    onChange={(e) => setChild(i, 'level', e.target.value)}
+                    emptyLabel="Nespecificat"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-[11px] text-gray-500">
+          Lasă gol dacă persoana de contact învață chiar ea. La trecerea pe „a plătit" sau
+          „studiază", fiecare copil de aici devine un elev separat, cu același părinte și telefon.
+        </p>
       </section>
 
       {/* Pipeline */}

@@ -19,7 +19,8 @@
     "telegram:webhook": "node scripts/set-telegram-webhook.mjs",
     "brand:icons": "node scripts/generate-brand-assets.mjs",
     "telegram:discover": "node scripts/discover-telegram-topics.mjs",
-    "test:stats": "node scripts/test-statistics.mjs"
+    "test:stats": "node scripts/test-statistics.mjs",
+    "test:leads": "node scripts/test-lead-children.mjs"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

@@ -25,7 +25,7 @@ export async function POST(request, { params }) {
     const lead = await prisma.lead.findUnique({ where: { id } })
     if (!lead) return NextResponse.json({ error: 'Lead negăsit' }, { status: 404 })
 
-    if (lead.convertedStudentId) {
+    if (lead.convertedStudentId || lead.convertedStudentIds?.length) {
       return NextResponse.json({
         created: false,
         studentId: lead.convertedStudentId,

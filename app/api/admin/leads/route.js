@@ -8,6 +8,32 @@ import { inboxLink } from '@/lib/meta-messages'
 import { LEAD_STATUS_VALUES, LEAD_SOURCE_VALUES } from '@/lib/leads-config'
 import { notifyLeadAssigned } from '@/lib/telegram'
 import { parseSchoolDate } from '@/lib/timezone'
+import { normalizeChildren, mirrorOfFirstChild, childrenOf } from '@/lib/lead-children'
+
+/**
+ * Câmpurile legate de „cine învață", din ce a trimis formularul.
+ *
+ * Formularul nou trimite `children`; cel vechi (și integrările) trimit
+ * câmpurile singulare. Oricare ar fi, salvăm și lista, și oglinda primului
+ * copil — ca filtrele și statisticile de dinainte să meargă neatinse.
+ */
+function childFields(data) {
+  const children = normalizeChildren(data.children)
+
+  if (children.length > 0) {
+    return { children, ...mirrorOfFirstChild(children) }
+  }
+
+  return {
+    children: [],
+    studentName: data.studentName?.trim() || null,
+    studentAge: data.isAdult ? null : (data.studentAge ? parseInt(data.studentAge) : null),
+    isAdult: !!data.isAdult,
+    interestedIn: data.interestedIn?.trim() || null,
+    lessonType: data.lessonType || null,
+    locationType: data.locationType || null,
+  }
+}
 
 async function requireStaff(permission) {
   const session = await getServerSession(authOptions)
@@ -86,20 +112,39 @@ export async function GET(request) {
     if (level === 'none') where.interestedIn = null
     else if (level) where.interestedIn = level
 
+    // Online sau la sediu
+    const locationType = searchParams.get('locationType')
+    if (locationType) where.locationType = locationType
+
+    // În grupă sau individual
+    const lessonType = searchParams.get('lessonType')
+    if (lessonType) where.lessonType = lessonType
+
     // Adult sau copil
     const audience = searchParams.get('audience')
     if (audience === 'adult') where.isAdult = true
     else if (audience === 'copil') where.isAdult = false
 
     // Categorie de vârstă, din vârsta elevului
+    // Vârsta se caută prin toți copiii lead-ului, nu doar prin primul:
+    // un părinte poate întreba pentru un copil de 5 ani și unul de 10.
     const ageGroup = searchParams.get('ageGroup')
     if (ageGroup === 'adulti') {
-      where.OR = [...(where.OR || []), { isAdult: true }, { studentAge: ageRange('adulti') }]
+      where.OR = [
+        ...(where.OR || []),
+        { isAdult: true },
+        { studentAge: ageRange('adulti') },
+        { children: { some: { isAdult: true } } },
+        { children: { some: { age: ageRange('adulti') } } },
+      ]
     } else if (ageGroup) {
       const range = ageRange(ageGroup)
       if (range) {
-        where.studentAge = range
-        where.isAdult = false
+        where.OR = [
+          ...(where.OR || []),
+          { AND: [{ studentAge: range }, { isAdult: false }] },
+          { children: { some: { AND: [{ age: range }, { isAdult: false }] } } },
+        ]
       }
     }
 
@@ -216,6 +261,7 @@ export async function GET(request) {
       interestedIn: l.interestedIn,
       lessonType: l.lessonType || null,
       locationType: l.locationType || null,
+      children: childrenOf(l),
       status: l.status,
       nextFollowUpAt: l.nextFollowUpAt ? l.nextFollowUpAt.toISOString() : null,
       createdAt: l.createdAt.toISOString(),
@@ -280,12 +326,7 @@ export async function POST(request) {
         source: data.source || 'ALTA',
         sourceDetail: data.sourceDetail?.trim() || null,
         message: data.message?.trim() || null,
-        studentName: data.studentName?.trim() || null,
-        studentAge: data.isAdult ? null : (data.studentAge ? parseInt(data.studentAge) : null),
-        isAdult: !!data.isAdult,
-        interestedIn: data.interestedIn?.trim() || null,
-        lessonType: data.lessonType || null,
-        locationType: data.locationType || null,
+        ...childFields(data),
         status: data.status || 'LEAD',
         nextFollowUpAt: parseSchoolDate(data.nextFollowUpAt),
         assignedToId: data.assignedToId || null,

@@ -6,7 +6,7 @@ import Link from 'next/link'
 import AddStudentButton from '@/components/admin/AddStudentButton'
 import StudentLeadsSync from '@/components/admin/StudentLeadsSync'
 import { AGE_GROUPS, getAgeGroup } from '@/lib/age-groups'
-import { preferenceLabel } from '@/lib/lesson-preferences'
+import { preferenceLabel, LOCATION_TYPES } from '@/lib/lesson-preferences'
 import DeleteStudentButton from '@/components/admin/DeleteStudentButton'
 import AddPaymentButton from '@/components/admin/AddPaymentButton'
 import { usePermissions, PermissionGate } from '@/hooks/usePermissions'
@@ -43,6 +43,7 @@ export default function StudentsPage() {
   const [hasGroup, setHasGroup] = useState('')
   const [startPeriod, setStartPeriod] = useState('')
   const [ageGroup, setAgeGroup] = useState('')
+  const [locationType, setLocationType] = useState('')
   const [startPeriods, setStartPeriods] = useState([])
 
   // Verifică permisiunea
@@ -54,7 +55,7 @@ export default function StudentsPage() {
 
   useEffect(() => {
     fetchStudents()
-  }, [currentPage, pageSize, hasGroup, startPeriod, ageGroup])
+  }, [currentPage, pageSize, hasGroup, startPeriod, ageGroup, locationType])
 
   useEffect(() => {
     setCurrentPage(1)
@@ -83,6 +84,7 @@ export default function StudentsPage() {
       if (hasGroup) params.set('hasGroup', hasGroup)
       if (startPeriod) params.set('startPeriod', startPeriod)
       if (ageGroup) params.set('ageGroup', ageGroup)
+      if (locationType) params.set('locationType', locationType)
 
       const res = await fetch(`/api/admin/students?${params.toString()}`)
       const data = await res.json()
@@ -119,10 +121,11 @@ export default function StudentsPage() {
     setHasGroup('')
     setStartPeriod('')
     setAgeGroup('')
+    setLocationType('')
     setCurrentPage(1)
   }
 
-  const hasActiveFilters = search || hasGroup || startPeriod || ageGroup
+  const hasActiveFilters = search || hasGroup || startPeriod || ageGroup || locationType
 
   // Generare numere pagini
   const getPageNumbers = () => {
@@ -219,6 +222,21 @@ export default function StudentsPage() {
                 <option value="">Toate vârstele</option>
                 {AGE_GROUPS.map((g) => (
                   <option key={g.value} value={g.value}>{g.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Online sau la sediu */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Unde învață</label>
+              <select
+                value={locationType}
+                onChange={(e) => { setLocationType(e.target.value); setCurrentPage(1); }}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white min-w-[140px]"
+              >
+                <option value="">Oriunde</option>
+                {LOCATION_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>
                 ))}
               </select>
             </div>

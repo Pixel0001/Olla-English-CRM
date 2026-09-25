@@ -6,6 +6,7 @@ import { checkPermission } from '@/lib/permissions'
 import { LEAD_STATUS_VALUES, LEAD_SOURCE_VALUES } from '@/lib/leads-config'
 import { convertLeadToStudent, isWonStatus } from '@/lib/lead-conversion'
 import { parseSchoolDate } from '@/lib/timezone'
+import { normalizeChildren, mirrorOfFirstChild } from '@/lib/lead-children'
 import { notifyLeadAssigned } from '@/lib/telegram'
 
 async function requireStaff(permission) {
@@ -69,6 +70,18 @@ export async function PATCH(request, { params }) {
     if (data.studentAge !== undefined && !data.isAdult) {
       update.studentAge = data.studentAge ? parseInt(data.studentAge) : null
     }
+
+    // Lista de copii înlocuiește tot ce ținea un singur elev: salvăm lista
+    // și oglindim primul copil în câmpurile vechi, ca filtrele și
+    // statisticile scrise înainte să meargă mai departe.
+    if (data.children !== undefined) {
+      const children = normalizeChildren(data.children)
+      update.children = children
+      Object.assign(update, mirrorOfFirstChild(children) || {
+        studentName: null, studentAge: null, isAdult: false,
+        interestedIn: null, lessonType: null, locationType: null,
+      })
+    }
     if (data.nextFollowUpAt !== undefined) {
       update.nextFollowUpAt = parseSchoolDate(data.nextFollowUpAt)
       // Data schimbată → lead-ul reintră în coada de notificări
@@ -107,7 +120,7 @@ export async function PATCH(request, { params }) {
 
     // Lead câștigat → elevul apare automat în lista de elevi (o singură dată)
     let conversion = null
-    if (isWonStatus(lead.status) && !lead.convertedStudentId) {
+    if (isWonStatus(lead.status) && !lead.convertedStudentId && !lead.convertedStudentIds?.length) {
       conversion = await convertLeadToStudent(lead)
     }
 

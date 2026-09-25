@@ -50,3 +50,4 @@ next-env.d.ts
 metodici/
 
 scripts/_statistics-fixture.mjs
+scripts/_lead-children-fixture.mjs

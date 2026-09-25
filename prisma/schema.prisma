@@ -665,6 +665,17 @@ model Payment {
 
 // ==================== LEADS (PIPELINE VÂNZĂRI) ====================
 
+/// Un copil de pe un lead. Un părinte poate întreba pentru doi-trei odată,
+/// fiecare cu vârsta și nivelul lui — la conversie iese câte un elev de fiecare.
+type LeadChild {
+  name         String
+  age          Int?
+  isAdult      Boolean @default(false)
+  level        String?  // Nivelul dorit: A1, B2, Kids…
+  lessonType   String?  // 'grup' | 'individual'
+  locationType String?  // 'online' | 'offline'
+}
+
 model Lead {
   id           String     @id @default(auto()) @map("_id") @db.ObjectId
   name         String     // Persoana de contact (părinte sau viitorul elev)
@@ -696,6 +707,12 @@ model Lead {
   assignedToId       String?  @db.ObjectId // Cine se ocupă de acest lead
   followUpNotifiedAt DateTime? // Când s-a trimis ultima notificare de recontactare
   convertedStudentId String?  @db.ObjectId // Elevul creat din acest lead
+  convertedStudentIds String[] @db.ObjectId // Toți elevii creați (un lead poate avea mai mulți copii)
+
+  // Copiii pentru care se interesează. Primul e oglindit în câmpurile
+  // studentName / studentAge / interestedIn de mai sus, ca tot ce citea
+  // dinainte un singur elev să meargă mai departe neschimbat.
+  children LeadChild[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -754,6 +771,7 @@ enum LeadStatus {
   PRIMA_LECTIE      // 🟢 A venit la prima lecție
   FINALIZAT_LECTIA  // ⚫ A terminat lecția de probă
   SE_GANDESTE       // 🔘 Se gândește
+  INTERESAT_MAI_TARZIU // 🗓️ Revine mai târziu — nu acum, dar nu e pierdut
   WAITLIST          // 📋 Listă de așteptare (locuri ocupate / grupă în formare)
   ASTEPTAM_PLATA    // 💵 Așteptăm plata
   PLATIT            // 💰 A plătit

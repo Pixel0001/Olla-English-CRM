@@ -17,7 +17,8 @@ import { zonedDateInDays } from '@/lib/timezone'
 import { whatsAppLink } from '@/lib/phone'
 import { PlatformIcon } from '@/components/icons/BrandIcons'
 import { AGE_GROUPS, getAgeGroup } from '@/lib/age-groups'
-import { preferenceLabel } from '@/lib/lesson-preferences'
+import { childrenOf } from '@/lib/lead-children'
+import { preferenceLabel, LOCATION_TYPES } from '@/lib/lesson-preferences'
 
 
 
@@ -110,6 +111,7 @@ export default function LeadsClient({ leads = [], staff = [] }) {
   const [level, setLevel] = useState('')
   const [audience, setAudience] = useState('') // '', 'adult', 'copil'
   const [ageGroup, setAgeGroup] = useState('')
+  const [locationType, setLocationType] = useState('')
   const [period, setPeriod] = useState('')
   const [followUp, setFollowUp] = useState('')
   const [sort, setSort] = useState('newest')
@@ -125,6 +127,7 @@ export default function LeadsClient({ leads = [], staff = [] }) {
     if (level) params.set('level', level)
     if (audience) params.set('audience', audience)
     if (ageGroup) params.set('ageGroup', ageGroup)
+    if (locationType) params.set('locationType', locationType)
     if (followUp) params.set('followUp', followUp)
     if (sort) params.set('sort', sort)
     if (period === 'interval') {
@@ -136,7 +139,7 @@ export default function LeadsClient({ leads = [], staff = [] }) {
     params.set('page', String(page))
     params.set('pageSize', String(pageSize))
     return params
-  }, [statuses, source, level, audience, ageGroup, followUp, sort, period, from, to, page, pageSize])
+  }, [statuses, source, level, audience, ageGroup, locationType, followUp, sort, period, from, to, page, pageSize])
 
   const fetchLeads = useCallback(async (searchTerm) => {
     setLoading(true)
@@ -173,6 +176,7 @@ export default function LeadsClient({ leads = [], staff = [] }) {
         if (saved.level) setLevel(saved.level)
         if (saved.audience) setAudience(saved.audience)
         if (saved.ageGroup) setAgeGroup(saved.ageGroup)
+        if (saved.locationType) setLocationType(saved.locationType)
         if (saved.followUp) setFollowUp(saved.followUp)
         if (PERIODS.some((p) => p.value === saved.period)) setPeriod(saved.period)
         if (saved.from) setFrom(saved.from)
@@ -189,10 +193,10 @@ export default function LeadsClient({ leads = [], staff = [] }) {
     if (!restored) return
     try {
       localStorage.setItem(FILTERS_KEY, JSON.stringify({
-        statuses, source, level, audience, ageGroup, followUp, period, from, to, sort, pageSize,
+        statuses, source, level, audience, ageGroup, locationType, followUp, period, from, to, sort, pageSize,
       }))
     } catch {}
-  }, [restored, statuses, source, level, audience, ageGroup, followUp, period, from, to, sort, pageSize])
+  }, [restored, statuses, source, level, audience, ageGroup, locationType, followUp, period, from, to, sort, pageSize])
 
   // Filtrele se aplică imediat; scrisul în căutare, după o pauză
   useEffect(() => {
@@ -204,7 +208,7 @@ export default function LeadsClient({ leads = [], staff = [] }) {
   // Orice filtru nou readuce lista la prima pagină
   useEffect(() => {
     setPage(1)
-  }, [statuses, source, level, audience, ageGroup, followUp, period, from, to, search, pageSize])
+  }, [statuses, source, level, audience, ageGroup, locationType, followUp, period, from, to, search, pageSize])
 
   const resetPaging = () => setPage(1)
 
@@ -215,6 +219,7 @@ export default function LeadsClient({ leads = [], staff = [] }) {
 
   const resetAll = () => {
     setSearch(''); setStatuses([]); setSource(''); setLevel(''); setAudience(''); setAgeGroup('')
+    setLocationType('')
     setPeriod(''); setFrom(''); setTo(''); setFollowUp(''); setSort('newest'); resetPaging()
     try { localStorage.removeItem(FILTERS_KEY) } catch {}
   }
@@ -222,6 +227,7 @@ export default function LeadsClient({ leads = [], staff = [] }) {
   const activeFilterCount =
     (search ? 1 : 0) + statuses.length +
     (source ? 1 : 0) + (level ? 1 : 0) + (audience ? 1 : 0) + (ageGroup ? 1 : 0) +
+    (locationType ? 1 : 0) +
     (period ? 1 : 0) + (followUp ? 1 : 0)
 
   // Actualizează un lead în listă după o modificare din rândul extins
@@ -262,7 +268,13 @@ export default function LeadsClient({ leads = [], staff = [] }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Eroare la schimbarea statusului")
-      if (data.conversion?.created) toast.success("Elevul a fost adăugat în lista de elevi")
+      if (data.conversion?.created) {
+        toast.success(
+          data.conversion.count > 1
+            ? `${data.conversion.count} elevi au fost adăugați în lista de elevi`
+            : "Elevul a fost adăugat în lista de elevi"
+        )
+      }
     } catch (err) {
       toast.error(err.message)
       setItems((prev) => prev.map((l) => (l.id === lead.id ? { ...l, status: previous } : l)))
@@ -399,6 +411,13 @@ export default function LeadsClient({ leads = [], staff = [] }) {
           <option value="">Vârstă: toate</option>
           {AGE_GROUPS.map((g) => (
             <option key={g.value} value={g.value}>{g.label}</option>
+          ))}
+        </select>
+
+        <select value={locationType} onChange={(e) => { setLocationType(e.target.value); resetPaging() }} className={pick(locationType)} aria-label="Online sau la sediu">
+          <option value="">Unde: oriunde</option>
+          {LOCATION_TYPES.map((t) => (
+            <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>
           ))}
         </select>
 
@@ -916,9 +935,17 @@ function LeadDetails({ lead, onPatch, staff = [], onAssign }) {
             <a href={`mailto:${lead.email}`} className="text-indigo-600 hover:underline break-all">{lead.email}</a>
           </Detail>
         )}
-        {lead.studentName && (
-          <Detail label="Elev">
-            {lead.studentName}{lead.studentAge ? `, ${lead.studentAge} ani` : ''}
+        {childrenOf(lead).length > 0 && (
+          <Detail label={childrenOf(lead).length > 1 ? `Elevi (${childrenOf(lead).length})` : 'Elev'}>
+            <span className="space-y-0.5 block">
+              {childrenOf(lead).map((c, i) => (
+                <span key={i} className="block">
+                  {c.name}
+                  {c.isAdult ? ', adult' : c.age ? `, ${c.age} ani` : ''}
+                  {c.level ? ` · ${c.level}` : ''}
+                </span>
+              ))}
+            </span>
           </Detail>
         )}
         {lead.interestedIn && <Detail label="Nivel actual">{lead.interestedIn}</Detail>}

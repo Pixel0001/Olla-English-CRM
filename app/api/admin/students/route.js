@@ -31,7 +31,9 @@ export async function GET(request) {
     const search = searchParams.get('search') || ''
     const hasGroup = searchParams.get('hasGroup') // 'yes', 'no', or empty
     const startPeriod = searchParams.get('startPeriod') // 'YYYY-MM', 'none' sau gol
-    const ageGroup = searchParams.get('ageGroup') // ex. '7-9', 'adulti'
+    const ageGroup = searchParams.get('ageGroup') // ex. '7-8', 'adulti'
+    const locationType = searchParams.get('locationType') // 'online' | 'offline'
+    const lessonType = searchParams.get('lessonType') // 'grup' | 'individual'
     const all = searchParams.get('all') === 'true' // Pentru dropdown-uri
 
     // Construiește where clause
@@ -45,6 +47,10 @@ export async function GET(request) {
         { parentEmail: { contains: search, mode: 'insensitive' } }
       ]
     }
+
+    // Online sau la sediu
+    if (locationType) where.locationType = locationType
+    if (lessonType) where.lessonType = lessonType
 
     // Filtru pentru elevi cu/fără grupă
     if (hasGroup === 'yes') {
