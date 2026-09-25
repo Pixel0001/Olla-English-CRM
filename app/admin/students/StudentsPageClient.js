@@ -31,6 +31,10 @@ export default function StudentsPage() {
   const [students, setStudents] = useState([])
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
+  // Prima încărcare merită ecranul de așteptare; filtrările de după, nu —
+  // altfel antetul și filtrele dispar la fiecare clic și pare că se
+  // reîncarcă toată pagina.
+  const [firstLoadDone, setFirstLoadDone] = useState(false)
   
   // Paginare
   const [currentPage, setCurrentPage] = useState(1)
@@ -103,6 +107,7 @@ export default function StudentsPage() {
       console.error('Error fetching students:', error)
     } finally {
       setLoading(false)
+      setFirstLoadDone(true)
     }
   }
 
@@ -156,7 +161,7 @@ export default function StudentsPage() {
     return pages
   }
 
-  if (loading && students.length === 0) {
+  if (loading && !firstLoadDone) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -297,7 +302,13 @@ export default function StudentsPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {students.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
+                  Se caută…
+                </td>
+              </tr>
+            ) : students.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                   {hasActiveFilters ? 'Nu s-au găsit elevi cu filtrele selectate' : 'Nu există elevi. Adaugă primul elev!'}
@@ -393,7 +404,11 @@ export default function StudentsPage() {
 
       {/* Mobile Cards */}
       <div className="lg:hidden space-y-3 xs:space-y-4">
-        {students.length === 0 ? (
+        {loading ? (
+          <div className="bg-white rounded-xl xs:rounded-2xl shadow-sm border border-gray-100 p-8 xs:p-12 text-center text-gray-400 text-sm xs:text-base">
+            Se caută…
+          </div>
+        ) : students.length === 0 ? (
           <div className="bg-white rounded-xl xs:rounded-2xl shadow-sm border border-gray-100 p-8 xs:p-12 text-center text-gray-500 text-sm xs:text-base">
             {hasActiveFilters ? 'Nu s-au găsit elevi cu filtrele selectate' : 'Nu există elevi. Adaugă primul elev!'}
           </div>
