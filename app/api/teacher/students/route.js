@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { NOT_COMPLETED } from '@/lib/group-filters'
 
 // GET - Fetch all students for a teacher's groups with detailed info
 export async function GET(request) {
@@ -14,7 +15,7 @@ export async function GET(request) {
   try {
     // Get all groups for this teacher
     const groups = await prisma.group.findMany({
-      where: { teacherId: session.user.id, completedAt: null },
+      where: { teacherId: session.user.id, ...NOT_COMPLETED },
       include: {
         groupStudents: {
           include: {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { NOT_COMPLETED } from '@/lib/group-filters'
 import { notifyMissedGroupSession, notifyMissedMakeup, notifyGroupLessonsLow, notifyLowLessons, notifyTeacherDailySchedule } from '@/lib/telegram'
 
 import { cleanupExpiredSessions } from '@/lib/security/session.js'
@@ -65,7 +66,7 @@ export async function GET(request) {
     const groupsWithLessonsToday = await prisma.group.findMany({
       where: {
         active: true,
-        completedAt: null,
+        ...NOT_COMPLETED,
         scheduleDays: { has: dayOfWeek }
       },
       include: {
@@ -159,7 +160,7 @@ export async function GET(request) {
     const groupsWithLessonsYesterday = await prisma.group.findMany({
       where: {
         active: true,
-        completedAt: null,
+        ...NOT_COMPLETED,
         scheduleDays: { has: yesterdayDayOfWeek }
       },
       include: {
@@ -361,7 +362,7 @@ export async function GET(request) {
     const monthLabel = `${MONTH_NAMES_RO[today.getMonth()]} ${today.getFullYear()}`
 
     const activeGroups = await prisma.group.findMany({
-      where: { active: true, completedAt: null },
+      where: { active: true, ...NOT_COMPLETED },
       include: {
         teacher: { select: { name: true } },
         groupStudents: {

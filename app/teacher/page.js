@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { NOT_COMPLETED } from '@/lib/group-filters'
 import Link from 'next/link'
 import { 
   UserGroupIcon, 
@@ -16,7 +17,7 @@ export default async function TeacherDashboardPage() {
   // Get teacher's groups and statistics — all in one parallel batch
   const [groups, students, recentSessions, makeupLessons, totalSessions] = await Promise.all([
     prisma.group.findMany({
-      where: { teacherId: session.user.id, active: true, completedAt: null },
+      where: { teacherId: session.user.id, active: true, ...NOT_COMPLETED },
       include: {
         groupStudents: {
           where: { status: 'ACTIVE' }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { NOT_COMPLETED, IS_COMPLETED } from '@/lib/group-filters'
 import { parseSchoolDate } from '@/lib/timezone'
 import { requireAdmin, getCurrentUser } from '@/lib/session'
 import { require2FAToken } from '@/lib/security/action-tokens'
@@ -31,8 +32,10 @@ export async function GET(request) {
     // Build where clause
     const where = {}
 
-    if (status === 'completed') where.completedAt = { not: null }
-    else if (status !== 'all') where.completedAt = null
+    // Căutarea își pune propriul OR, așa că starea grupei intră pe AND —
+    // altfel una din cele două condiții ar călca peste cealaltă.
+    if (status === 'completed') Object.assign(where, IS_COMPLETED)
+    else if (status !== 'all') where.AND = [...(where.AND || []), NOT_COMPLETED]
     
     if (search) {
       where.OR = [

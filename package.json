@@ -20,7 +20,8 @@
     "brand:icons": "node scripts/generate-brand-assets.mjs",
     "telegram:discover": "node scripts/discover-telegram-topics.mjs",
     "test:stats": "node scripts/test-statistics.mjs",
-    "test:leads": "node scripts/test-lead-children.mjs"
+    "test:leads": "node scripts/test-lead-children.mjs",
+    "test:groups": "node scripts/test-group-filters.mjs"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

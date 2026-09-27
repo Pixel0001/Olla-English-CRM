@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { NOT_COMPLETED } from '@/lib/group-filters'
 import TeacherGroupsClient from './TeacherGroupsClient'
 
 export default async function TeacherGroupsPage() {
@@ -8,7 +9,7 @@ export default async function TeacherGroupsPage() {
 
   const [groups, branches, allGroups] = await Promise.all([
     prisma.group.findMany({
-      where: { teacherId: session.user.id, completedAt: null },
+      where: { teacherId: session.user.id, ...NOT_COMPLETED },
       include: {
         groupStudents: {
           where: {
@@ -30,7 +31,7 @@ export default async function TeacherGroupsPage() {
     }),
     // Get all groups for schedule display
     prisma.group.findMany({
-      where: { active: true, completedAt: null },
+      where: { active: true, ...NOT_COMPLETED },
       include: {
         teacher: { select: { name: true } },
         branch: { select: { name: true } }
