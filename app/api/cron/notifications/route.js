@@ -65,6 +65,7 @@ export async function GET(request) {
     const groupsWithLessonsToday = await prisma.group.findMany({
       where: {
         active: true,
+        completedAt: null,
         scheduleDays: { has: dayOfWeek }
       },
       include: {
@@ -158,6 +159,7 @@ export async function GET(request) {
     const groupsWithLessonsYesterday = await prisma.group.findMany({
       where: {
         active: true,
+        completedAt: null,
         scheduleDays: { has: yesterdayDayOfWeek }
       },
       include: {
@@ -359,7 +361,7 @@ export async function GET(request) {
     const monthLabel = `${MONTH_NAMES_RO[today.getMonth()]} ${today.getFullYear()}`
 
     const activeGroups = await prisma.group.findMany({
-      where: { active: true },
+      where: { active: true, completedAt: null },
       include: {
         teacher: { select: { name: true } },
         groupStudents: {

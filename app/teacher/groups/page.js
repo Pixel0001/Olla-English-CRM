@@ -8,7 +8,7 @@ export default async function TeacherGroupsPage() {
 
   const [groups, branches, allGroups] = await Promise.all([
     prisma.group.findMany({
-      where: { teacherId: session.user.id },
+      where: { teacherId: session.user.id, completedAt: null },
       include: {
         groupStudents: {
           where: {
@@ -30,7 +30,7 @@ export default async function TeacherGroupsPage() {
     }),
     // Get all groups for schedule display
     prisma.group.findMany({
-      where: { active: true },
+      where: { active: true, completedAt: null },
       include: {
         teacher: { select: { name: true } },
         branch: { select: { name: true } }

@@ -6,6 +6,7 @@ import GroupForm from '@/components/admin/GroupForm'
 import LessonPackagePanel from '@/components/groups/LessonPackagePanel'
 import TrialLessonsPanel from '@/components/groups/TrialLessonsPanel'
 import AdminStartSessionButton from '@/components/admin/AdminStartSessionButton'
+import CompleteGroupButton from '@/components/admin/CompleteGroupButton'
 
 export default async function EditGroupPage({ params }) {
   const { id } = await params
@@ -100,6 +101,12 @@ export default async function EditGroupPage({ params }) {
           branches={JSON.parse(JSON.stringify(branches))}
         />
       </div>
+
+      <CompleteGroupButton
+        groupId={group.id}
+        groupName={group.name}
+        completedAt={group.completedAt ? group.completedAt.toISOString() : null}
+      />
 
       {/* Pachetul lunar are sens doar la grupele care se repetă săptămânal;
           la o probă contează cine vine, o singură dată */}

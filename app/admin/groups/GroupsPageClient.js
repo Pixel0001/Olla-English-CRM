@@ -77,6 +77,8 @@ export default function GroupsPage() {
   const [selectedDay, setSelectedDay] = useState('')
   const [selectedBranch, setSelectedBranch] = useState('')
   const [dateFilter, setDateFilter] = useState('all') // 'all', 'today', 'custom'
+  // 'active' (implicit) = grupele în curs, 'completed' = cele încheiate
+  const [groupStatus, setGroupStatus] = useState('active')
   const [customDate, setCustomDate] = useState('')
 
   // Verifică permisiunea
@@ -88,7 +90,7 @@ export default function GroupsPage() {
 
   useEffect(() => {
     fetchData()
-  }, [debouncedSearch, selectedTeacher, selectedBranch, selectedDay])
+  }, [debouncedSearch, selectedTeacher, selectedBranch, selectedDay, groupStatus])
 
   const fetchData = async () => {
     // Doar prima încărcare înlocuiește pagina cu spinner-ul;
@@ -107,6 +109,7 @@ export default function GroupsPage() {
       if (selectedTeacher) params.set('teacherId', selectedTeacher)
       if (selectedBranch) params.set('branchId', selectedBranch)
       if (selectedDay) params.set('day', selectedDay)
+      params.set('status', groupStatus)
 
       const res = await fetch(`/api/admin/groups?${params.toString()}`)
       const data = await res.json()
@@ -155,7 +158,8 @@ export default function GroupsPage() {
     setCustomDate('')
   }
 
-  const hasActiveFilters = searchQuery || selectedTeacher || selectedBranch || selectedDay || dateFilter !== 'all'
+  const hasActiveFilters = searchQuery || selectedTeacher || selectedBranch || selectedDay ||
+    dateFilter !== 'all' || groupStatus !== 'active'
 
   // Debounce search: cererea pleacă abia după ce te oprești din tastat
   useEffect(() => {
@@ -321,6 +325,24 @@ export default function GroupsPage() {
               </select>
             </div>
 
+            {/* În curs sau încheiate */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Stare</label>
+              <select
+                value={groupStatus}
+                onChange={(e) => setGroupStatus(e.target.value)}
+                className={`px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 min-w-[150px] ${
+                  groupStatus === 'completed'
+                    ? 'border-amber-400 bg-amber-50 text-amber-900 font-medium'
+                    : 'border-gray-300 text-gray-900'
+                }`}
+              >
+                <option value="active">Grupe în curs</option>
+                <option value="completed">Grupe terminate</option>
+                <option value="all">Toate</option>
+              </select>
+            </div>
+
             {/* Filtru dată */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Dată</label>
@@ -413,9 +435,11 @@ export default function GroupsPage() {
                         </div>
                         <div className="flex flex-col items-end gap-1 flex-shrink-0">
                           <span className={`inline-flex items-center px-2 xs:px-2.5 py-0.5 rounded-full text-[10px] xs:text-xs font-medium ${
-                            group.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            group.completedAt
+                              ? 'bg-amber-100 text-amber-800'
+                              : group.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                           }`}>
-                            {group.active ? 'Activ' : 'Inactiv'}
+                            {group.completedAt ? 'Terminată' : group.active ? 'Activ' : 'Inactiv'}
                           </span>
                           {group.branch && (
                             <span className="inline-flex items-center px-2 xs:px-2.5 py-0.5 rounded-full text-[10px] xs:text-xs font-medium bg-purple-100 text-purple-800">

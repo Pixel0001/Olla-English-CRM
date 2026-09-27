@@ -14,7 +14,7 @@ export async function GET(request) {
 
   try {
     const groups = await prisma.group.findMany({
-      where: { teacherId: session.user.id },
+      where: { teacherId: session.user.id, completedAt: null },
       include: {
         branch: true,
         groupStudents: {

@@ -24,9 +24,15 @@ export async function GET(request) {
     const branchId = searchParams.get('branchId') || ''
     const day = searchParams.get('day') || ''
     const all = searchParams.get('all') === 'true' // Pentru a obține toate (pentru filtre)
+    // 'active' (implicit) = grupele în curs, 'completed' = cele terminate,
+    // 'all' = amândouă. Grupele terminate nu trebuie să încurce nicăieri.
+    const status = searchParams.get('status') || 'active'
 
     // Build where clause
     const where = {}
+
+    if (status === 'completed') where.completedAt = { not: null }
+    else if (status !== 'all') where.completedAt = null
     
     if (search) {
       where.OR = [

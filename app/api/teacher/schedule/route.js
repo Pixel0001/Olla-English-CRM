@@ -28,6 +28,7 @@ export async function GET() {
     const groups = await prisma.group.findMany({
       where: {
         active: true,
+        completedAt: null,
         ...onlyMine,
       },
       include: {

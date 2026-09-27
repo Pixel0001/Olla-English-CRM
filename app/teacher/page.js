@@ -16,7 +16,7 @@ export default async function TeacherDashboardPage() {
   // Get teacher's groups and statistics — all in one parallel batch
   const [groups, students, recentSessions, makeupLessons, totalSessions] = await Promise.all([
     prisma.group.findMany({
-      where: { teacherId: session.user.id, active: true },
+      where: { teacherId: session.user.id, active: true, completedAt: null },
       include: {
         groupStudents: {
           where: { status: 'ACTIVE' }

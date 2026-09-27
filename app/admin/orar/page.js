@@ -83,7 +83,9 @@ export default function OrarPage() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch('/api/admin/groups')
+      // Orarul are nevoie de toate grupele în curs, nu de prima pagină de 20:
+      // altfel lipsesc din orar grupe care chiar au lecții.
+      const res = await fetch('/api/admin/groups?all=true')
       const data = await res.json()
       setGroups(data.groups || [])
       setBranches(data.branches || [])

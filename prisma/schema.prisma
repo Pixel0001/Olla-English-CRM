@@ -397,6 +397,11 @@ model Group {
   trialDate       DateTime?
   active          Boolean  @default(true)
 
+  // Grupa și-a încheiat cursul. Rămâne cu tot istoricul, dar iese din
+  // liste, din orar și din notificări — altfel încurcă la fiecare pas.
+  completedAt     DateTime?
+  completedById   String?  @db.ObjectId
+
   // Limite per-grupă (override peste global; null = moștenește)
   cooldownOverrideMin Int?
   dailyXpCapOverride  Int?
