@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { LEAD_STATUSES, getStatus } from '@/lib/leads-config'
+import { statusOptionsFor, getStatus } from '@/lib/leads-config'
 
 /**
  * Statusul lead-ului, chiar din conversație.
@@ -95,7 +95,7 @@ export default function ConversationLeadControl({ conversation, onChange }) {
         title="Statusul lead-ului"
         className={`pl-2 pr-7 py-1.5 rounded-lg border text-xs font-medium focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 ${st.color}`}
       >
-        {LEAD_STATUSES.map((s) => (
+        {statusOptionsFor(lead.status).map((s) => (
           <option key={s.value} value={s.value}>{s.emoji} {s.label}</option>
         ))}
       </select>

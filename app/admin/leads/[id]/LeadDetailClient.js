@@ -12,7 +12,7 @@ import toast from 'react-hot-toast'
 import { usePermissions } from '@/hooks/usePermissions'
 import { whatsAppLink } from '@/lib/phone'
 import FollowUpPicker from '@/components/admin/FollowUpPicker'
-import { LEAD_STATUSES, getStatus, getSource } from '@/lib/leads-config'
+import { statusOptionsFor, getStatus, getSource } from '@/lib/leads-config'
 import LeadForm from '@/components/admin/LeadForm'
 
 export default function LeadDetailClient({ lead: initial }) {
@@ -303,7 +303,7 @@ export default function LeadDetailClient({ lead: initial }) {
               disabled={saving || !canEdit}
               className={`w-full px-4 py-3 rounded-lg border-2 text-sm font-medium cursor-pointer focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 ${status.color}`}
             >
-              {LEAD_STATUSES.map((o) => (
+              {statusOptionsFor(lead.status).map((o) => (
                 <option key={o.value} value={o.value}>{o.emoji} {o.label}</option>
               ))}
             </select>

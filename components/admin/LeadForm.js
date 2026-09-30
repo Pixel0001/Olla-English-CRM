@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { LEAD_STATUSES, LEAD_SOURCES, getSource } from '@/lib/leads-config'
+import { statusOptionsFor, LEAD_SOURCES, getSource } from '@/lib/leads-config'
 import LevelSelect from '@/components/LevelSelect'
 import { LESSON_TYPES, LOCATION_TYPES } from '@/lib/lesson-preferences'
 import FollowUpPicker from '@/components/admin/FollowUpPicker'
@@ -299,7 +299,7 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
           <div>
             <label className={label}>Status</label>
             <select className={input} value={form.status} onChange={(e) => set('status', e.target.value)}>
-              {LEAD_STATUSES.map((s) => (
+              {statusOptionsFor(lead?.status).map((s) => (
                 <option key={s.value} value={s.value}>{s.emoji} {s.label}</option>
               ))}
             </select>

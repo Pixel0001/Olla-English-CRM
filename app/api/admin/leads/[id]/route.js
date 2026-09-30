@@ -43,7 +43,15 @@ export async function PATCH(request, { params }) {
     const data = await request.json()
     const update = {}
 
-    if (data.status !== undefined) {
+    const previous = await prisma.lead.findUnique({
+      where: { id },
+      select: { assignedToId: true, status: true },
+    })
+    if (!previous) return NextResponse.json({ error: 'Lead negăsit' }, { status: 404 })
+
+    // Formularul retrimite statusul curent; unul scos din uz (ex. PROGRAMAT)
+    // trebuie să treacă neschimbat, altfel restul modificărilor se pierd.
+    if (data.status !== undefined && data.status !== previous.status) {
       if (!LEAD_STATUS_VALUES.includes(data.status)) {
         return NextResponse.json({ error: 'Status invalid' }, { status: 400 })
       }
@@ -93,11 +101,6 @@ export async function PATCH(request, { params }) {
     if (data.convertedStudentId !== undefined) {
       update.convertedStudentId = data.convertedStudentId || null
     }
-
-    const previous = await prisma.lead.findUnique({
-      where: { id },
-      select: { assignedToId: true },
-    })
 
     const lead = await prisma.lead.update({ where: { id }, data: update })
 

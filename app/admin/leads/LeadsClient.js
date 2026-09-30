@@ -9,7 +9,7 @@ import {
   PlusIcon, XMarkIcon, BellAlertIcon, ChevronDownIcon, PencilSquareIcon,
   ArrowTopRightOnSquareIcon, TrashIcon, AcademicCapIcon,
 } from '@heroicons/react/24/outline'
-import { LEAD_STATUSES, LEAD_SOURCES, getStatus, getSource } from '@/lib/leads-config'
+import { LEAD_STATUSES, LEAD_SOURCES, getStatus, getSource, statusOptionsFor } from '@/lib/leads-config'
 import { PermissionGate } from '@/hooks/usePermissions'
 import LeadForm from '@/components/admin/LeadForm'
 import FollowUpPicker from '@/components/admin/FollowUpPicker'
@@ -749,7 +749,7 @@ function LeadRow({ lead, expanded, onToggle, onPatch, onEdit, onDelete, onStatus
             title="Schimbă statusul"
             className={`shrink-0 max-w-[8.5rem] px-1 py-0.5 my-1 rounded border text-[10px] font-medium cursor-pointer focus:ring-2 focus:ring-indigo-500 ${status.color}`}
           >
-            {LEAD_STATUSES.map((s) => (
+            {statusOptionsFor(lead.status).map((s) => (
               <option key={s.value} value={s.value}>{s.emoji} {s.label}</option>
             ))}
           </select>
