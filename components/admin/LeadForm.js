@@ -71,7 +71,17 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
       lessonType: c.lessonType || '',
       locationType: c.locationType || '',
     }))
-    return existing.length > 0 ? existing : [emptyChild()]
+    if (existing.length > 0) return existing
+    // Fără copil cu nume: contactul învață chiar el, iar vârsta, nivelul și
+    // preferințele lui stau în câmpurile singulare ale lead-ului.
+    return [{
+      ...emptyChild(),
+      age: lead?.studentAge ?? '',
+      isAdult: !!lead?.isAdult,
+      level: lead?.interestedIn || '',
+      lessonType: lead?.lessonType || '',
+      locationType: lead?.locationType || '',
+    }]
   })
 
   const setChild = (i, key, value) =>
@@ -89,12 +99,28 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
 
     if (!form.name.trim()) return toast.error('Numele este obligatoriu')
 
+    const named = children.filter((c) => c.name.trim())
+    // Rândul fără nume = contactul însuși; datele lui merg în câmpurile singulare
+    const self = named.length === 0 ? children[0] : null
+    const payload = {
+      ...form,
+      children: named,
+      ...(self && {
+        studentName: '',
+        isAdult: !!self.isAdult,
+        studentAge: self.isAdult ? '' : self.age,
+        interestedIn: self.level,
+        lessonType: self.lessonType,
+        locationType: self.locationType,
+      }),
+    }
+
     setSaving(true)
     try {
       const res = await fetch(lead ? `/api/admin/leads/${lead.id}` : '/api/admin/leads', {
         method: lead ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, children: children.filter((c) => c.name.trim()) }),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Eroare la salvare')

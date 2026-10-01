@@ -76,7 +76,8 @@ export async function PATCH(request, { params }) {
       if (data.isAdult) update.studentAge = null
     }
     if (data.studentAge !== undefined && !data.isAdult) {
-      update.studentAge = data.studentAge ? parseInt(data.studentAge) : null
+      const age = parseInt(data.studentAge, 10)
+      update.studentAge = Number.isFinite(age) ? age : null
     }
 
     // Lista de copii înlocuiește tot ce ținea un singur elev: salvăm lista
@@ -85,10 +86,11 @@ export async function PATCH(request, { params }) {
     if (data.children !== undefined) {
       const children = normalizeChildren(data.children)
       update.children = children
-      Object.assign(update, mirrorOfFirstChild(children) || {
-        studentName: null, studentAge: null, isAdult: false,
-        interestedIn: null, lessonType: null, locationType: null,
-      })
+      const mirror = mirrorOfFirstChild(children)
+      // Fără copii: contactul învață chiar el — vârsta, nivelul și preferințele
+      // lui vin în câmpurile singulare, tratate mai sus; nu le ștergem.
+      if (mirror) Object.assign(update, mirror)
+      else update.studentName = null
     }
     if (data.nextFollowUpAt !== undefined) {
       update.nextFollowUpAt = parseSchoolDate(data.nextFollowUpAt)
