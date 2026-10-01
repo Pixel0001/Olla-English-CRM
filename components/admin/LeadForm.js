@@ -88,9 +88,6 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
     e.preventDefault()
 
     if (!form.name.trim()) return toast.error('Numele este obligatoriu')
-    if (!form.phone.trim() && !form.email.trim()) {
-      return toast.error('Adaugă cel puțin un telefon sau un email')
-    }
 
     setSaving(true)
     try {
@@ -120,8 +117,10 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
     }
   }
 
+  // noValidate: un email sau o vârstă vechi, în alt format, nu trebuie să
+  // blocheze salvarea în tăcere — numele se verifică oricum în submit.
   return (
-    <form onSubmit={submit} className="space-y-3">
+    <form onSubmit={submit} noValidate className="space-y-3">
       {/* Persoana de contact */}
       <section className="space-y-2">
         <h2 className="text-sm font-semibold text-gray-900">Persoana de contact</h2>
@@ -148,7 +147,6 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
             />
           </div>
         </div>
-        <p className="text-[11px] text-gray-500">Cel puțin telefon sau email trebuie completat.</p>
 
         <DuplicateLeadWarning name={form.name} phone={form.phone} excludeId={lead?.id || null} />
       </section>
