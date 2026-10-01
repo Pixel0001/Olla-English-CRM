@@ -14,8 +14,12 @@ import { whatsAppLink } from '@/lib/phone'
 import FollowUpPicker from '@/components/admin/FollowUpPicker'
 import { statusOptionsFor, getStatus, getSource } from '@/lib/leads-config'
 import LeadForm from '@/components/admin/LeadForm'
+import { childrenOf } from '@/lib/lead-children'
+import { preferenceLabel } from '@/lib/lesson-preferences'
 
-export default function LeadDetailClient({ lead: initial }) {
+const ageText = (age, isAdult) => (isAdult ? 'Adult' : age ? `${age} ani` : null)
+
+export default function LeadDetailClient({ lead: initial, staff = [] }) {
   const router = useRouter()
   const { hasPermission } = usePermissions()
   const canEdit = hasPermission('leads.edit')
@@ -31,6 +35,13 @@ export default function LeadDetailClient({ lead: initial }) {
   const status = getStatus(lead.status)
   const source = getSource(lead.source)
   const sourceLink = source.link(lead)
+  const kids = childrenOf(lead)
+  const assignedName = lead.assignedToId
+    ? (() => {
+        const u = staff.find((s) => s.id === lead.assignedToId)
+        return u ? (u.name || u.email) : null
+      })()
+    : null
 
   const patch = async (payload, successMsg) => {
     setSaving(true)
@@ -111,6 +122,7 @@ export default function LeadDetailClient({ lead: initial }) {
         <div className="bg-white rounded-xl border border-gray-200 p-4 xs:p-6">
           <LeadForm
             lead={lead}
+            staff={staff}
             onSaved={(updated) => {
               setLead({ ...lead, ...updated })
               setEditing(false)
@@ -191,13 +203,26 @@ export default function LeadDetailClient({ lead: initial }) {
                 </Field>
               )}
               {lead.sourceDetail && <Field label={source.detailLabel} value={lead.sourceDetail} />}
-              {lead.studentName && (
-                <Field
-                  label="Elev"
-                  value={`${lead.studentName}${lead.studentAge ? `, ${lead.studentAge} ani` : ''}`}
-                />
+              {kids.length > 0 ? (
+                <Field label={kids.length > 1 ? `Elevi (${kids.length})` : 'Elev'}>
+                  <div className="space-y-0.5">
+                    {kids.map((c, i) => (
+                      <p key={i} className="font-medium text-gray-900">
+                        {[c.name, ageText(c.age, c.isAdult), c.level, preferenceLabel(c)].filter(Boolean).join(' · ')}
+                      </p>
+                    ))}
+                  </div>
+                </Field>
+              ) : (
+                <>
+                  {ageText(lead.studentAge, lead.isAdult) && (
+                    <Field label="Vârstă" value={ageText(lead.studentAge, lead.isAdult)} />
+                  )}
+                  {lead.interestedIn && <Field label="Nivel actual" value={lead.interestedIn} />}
+                  {preferenceLabel(lead) && <Field label="Preferă" value={preferenceLabel(lead)} />}
+                </>
               )}
-              {lead.interestedIn && <Field label="Nivel actual" value={lead.interestedIn} />}
+              {assignedName && <Field label="Responsabil" value={assignedName} />}
             </div>
           </div>
 

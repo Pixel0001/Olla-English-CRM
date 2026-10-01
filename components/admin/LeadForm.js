@@ -335,6 +335,9 @@ export default function LeadForm({ lead = null, onSaved = null, onCancel = null,
               onChange={(e) => set('assignedToId', e.target.value)}
             >
               <option value="">Nimeni</option>
+              {form.assignedToId && !staff.some((u) => u.id === form.assignedToId) && (
+                <option value={form.assignedToId}>{lead?.assignedToName || 'Responsabilul actual'}</option>
+              )}
               {staff.map((u) => (
                 <option key={u.id} value={u.id}>{u.name || u.email}</option>
               ))}

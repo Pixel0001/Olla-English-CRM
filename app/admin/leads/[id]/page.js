@@ -25,5 +25,17 @@ async function Content({ id }) {
 
   if (!lead) notFound()
 
-  return <LeadDetailClient lead={JSON.parse(JSON.stringify(lead))} />
+  // Aceeași listă ca pe /admin/leads — fără ea, „Responsabil" din formular are doar „Nimeni"
+  const staff = await prisma.user.findMany({
+    where: { active: true, role: { in: ['SUPERADMIN', 'ADMIN', 'TEACHER'] } },
+    select: { id: true, name: true, email: true },
+    orderBy: { name: 'asc' },
+  })
+
+  return (
+    <LeadDetailClient
+      lead={JSON.parse(JSON.stringify(lead))}
+      staff={JSON.parse(JSON.stringify(staff))}
+    />
+  )
 }
