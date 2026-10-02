@@ -2,6 +2,7 @@
 
 import TelegramConnect from '@/components/TelegramConnect'
 import MetaLeadsToggle from '@/components/admin/MetaLeadsToggle'
+import DatabaseBackup from '@/components/admin/DatabaseBackup'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -445,6 +446,11 @@ export default function SecurityPage() {
       {isSuperAdmin && (
         <div className="mt-6">
           <MetaLeadsToggle />
+        </div>
+      )}
+      {isSuperAdmin && (
+        <div className="mt-6">
+          <DatabaseBackup />
         </div>
       )}
       {/* Account Info */}
