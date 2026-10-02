@@ -658,11 +658,12 @@ html.light footer {
 }
 
 @media (max-width: 640px) {
-  section {
+  /* Doar CRM-ul: site-ul public (.site-root) își are propriile spațieri */
+  section:not(.site-root *) {
     padding-top: 3rem !important;
     padding-bottom: 3rem !important;
   }
-  form { padding: 1.5rem !important; }
+  form:not(.site-root *) { padding: 1.5rem !important; }
   .input-field {
     font-size: 1rem;
     padding: 0.875rem 1rem;
@@ -693,3 +694,17 @@ html.light footer {
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in { animation: fade-in 0.5s ease-out; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Site public (ollaenglish.md) — culorile brandului școlii
+───────────────────────────────────────────────────────────────────────────── */
+@theme {
+  --color-olla-navy: #021044;
+  --color-olla-blue: #08217d;
+  --color-olla-coral: #ff5252;
+  --color-olla-cyan: #20cff5;
+  --color-olla-lavender: #d1cde5;
+  --color-olla-peach: #ffaea3;
+  --color-olla-gray: #f2f3f5;
+  --color-olla-lime: #c1ff70;
+}

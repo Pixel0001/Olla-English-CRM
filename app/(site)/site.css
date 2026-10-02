@@ -1,0 +1,75 @@
+/* Animațiile și sliderele site-ului public */
+
+@keyframes site-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.site-marquee {
+  display: flex;
+  width: max-content;
+  animation: site-marquee var(--marquee-duration, 35s) linear infinite;
+}
+
+.site-marquee-fade {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-marquee { animation: none; }
+}
+
+/* Splide: săgețile din site-ul vechi, mari și fără fundal */
+.site-slider .splide__arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  height: 50px;
+  width: 50px;
+  transform: translateY(-50%);
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--arrow-color, #000);
+}
+.site-slider .splide__arrow svg { height: 2.2rem; width: 2.2rem; fill: currentColor; stroke: currentColor; stroke-width: 1.5px; }
+.site-slider .splide__arrow--prev { left: 0; }
+.site-slider .splide__arrow--next { right: 0; }
+.site-slider .splide__arrow--prev svg { transform: scaleX(-1); }
+.site-slider .splide__arrow:disabled { opacity: 0.3; }
+
+.site-faq-answer { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.25s ease; }
+.site-faq-answer[data-open='true'] { grid-template-rows: 1fr; }
+.site-faq-answer > div { overflow: hidden; }
+
+/* Mânuța pe tot ce se poate apăsa */
+.site-root button,
+.site-root [role='button'],
+.site-root a[href],
+.site-root label:has(input[type='checkbox']),
+.site-root input[type='checkbox'],
+.site-root select {
+  cursor: pointer;
+}
+.site-root button:disabled { cursor: not-allowed; }
+
+/* Scrollbar în culorile site-ului */
+html:has(.site-root) {
+  scrollbar-color: #08217d #e4e6ee;
+  scrollbar-width: thin;
+}
+html:has(.site-root)::-webkit-scrollbar { width: 10px; height: 10px; }
+html:has(.site-root)::-webkit-scrollbar-track { background: #e4e6ee; }
+html:has(.site-root)::-webkit-scrollbar-thumb {
+  background: #08217d;
+  border-radius: 999px;
+  border: 2px solid #e4e6ee;
+}
+html:has(.site-root)::-webkit-scrollbar-thumb:hover { background: #ff5252; }
+
+/* Ancorele (#cursuri, #despre…) nu ajung sub bara de navigare */
+.site-root [id] { scroll-margin-top: 96px; }

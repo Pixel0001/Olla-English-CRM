@@ -7,7 +7,8 @@ const protectedRoutes = ['/admin', '/teacher']
 const adminRoutes = ['/admin']
 const teacherRoutes = ['/teacher']
 
-// Singurele rute fără autentificare
+// Rute fără autentificare. Site-ul public (/, /team, /test,
+// /termeni-si-conditii) nu e protejat oricum — doar /admin și /teacher sunt.
 const publicRoutes = [
   '/login',
   '/',
@@ -27,12 +28,6 @@ export async function middleware(request) {
     pathname.includes('.') // Static files
   ) {
     return NextResponse.next()
-  }
-
-  // Nu există site public: rădăcina duce direct în ecranul de autentificare.
-  // Se face aici (nu doar în app/page.js) ca să fie un 307 real, fără randare intermediară.
-  if (pathname === '/') {
-    return NextResponse.redirect(new URL('/login', request.url))
   }
 
   // Get session token from cookies (NextAuth uses different cookie names)

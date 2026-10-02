@@ -1,11 +1,15 @@
-// CRM intern — nimic nu trebuie indexat de motoarele de căutare.
+import { SITE_URL } from '@/components/site/content'
+
+// Site-ul public al școlii se indexează; CRM-ul (admin, profesori, login) nu.
 export default function robots() {
   return {
     rules: [
       {
         userAgent: '*',
-        disallow: '/',
+        allow: '/',
+        disallow: ['/admin', '/teacher', '/login', '/api/'],
       },
     ],
+    sitemap: `${SITE_URL}/sitemap.xml`,
   }
 }

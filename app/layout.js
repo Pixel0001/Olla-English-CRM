@@ -5,6 +5,7 @@ import AuthProvider from "@/components/providers/AuthProvider";
 import ThemeProvider from "@/components/providers/ThemeProvider";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { CRM_PATH } from "@/lib/crm-paths";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-poppins",
@@ -70,12 +71,13 @@ export const viewport = {
   interactiveWidget: 'resizes-content',
 };
 
-// Script to apply theme before page renders to prevent flash
+// Script to apply theme before page renders to prevent flash — doar în CRM,
+// site-ul public are culorile lui
 const themeScript = `
   (function() {
     try {
       const theme = localStorage.getItem('theme');
-      if (theme === 'light') {
+      if (theme === 'light' && ${CRM_PATH}.test(location.pathname)) {
         document.documentElement.classList.add('light');
       }
     } catch (e) {}
