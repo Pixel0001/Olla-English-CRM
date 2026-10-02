@@ -187,6 +187,9 @@ export default function AdsClient() {
           <div>
             <p className="font-medium text-red-800">Nu s-au putut citi datele din Meta</p>
             <p className="text-sm text-red-700 mt-0.5">{error}</p>
+            {data?.accounts?.length > 0 && (
+              <p className="text-xs text-red-600 mt-1">Mai jos sunt datele de la ultima citire reușită.</p>
+            )}
           </div>
         </div>
       )}
@@ -200,7 +203,13 @@ export default function AdsClient() {
         </div>
       )}
 
-      {data && data.accounts.length === 0 && data.filteredByPages?.length > 0 && (
+      {!error && data && data.accounts.length === 0 && !data.filteredByPages?.length && (
+        <p className="bg-white rounded-xl border border-gray-200 p-6 text-sm text-gray-500 text-center">
+          Token-ul curent nu are acces la niciun cont de reclame.
+        </p>
+      )}
+
+      {!error && data && data.accounts.length === 0 && data.filteredByPages?.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-6 xs:p-10 text-center">
           <p className="text-4xl mb-3">📣</p>
           <p className="font-semibold text-gray-900">

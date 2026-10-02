@@ -36,9 +36,11 @@ export async function GET(request) {
 
     const refresh = new URL(request.url).searchParams.get('refresh') === '1'
 
+    // Un cache fără conturi nu are ce arăta — citim pe loc, ca să se vadă
+    // fie cifrele, fie motivul pentru care Meta nu le dă
     if (!refresh) {
       const cached = await readCache(ADS_KEY)
-      if (cached?.payload?.accounts) {
+      if (cached?.payload?.accounts?.length > 0) {
         if (cached.ageMs > FRESH_MS) refreshInBackground()
         return NextResponse.json({
           ...cached.payload,
