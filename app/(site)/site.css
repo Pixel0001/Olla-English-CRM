@@ -71,5 +71,5 @@ html:has(.site-root)::-webkit-scrollbar-thumb {
 }
 html:has(.site-root)::-webkit-scrollbar-thumb:hover { background: #ff5252; }
 
-/* Ancorele (#cursuri, #despre…) nu ajung sub bara de navigare */
-.site-root [id] { scroll-margin-top: 96px; }
+/* Saltul la #cursuri, #despre… îl face bara de navigare (SiteShell), ca să nu rămână spațiu gol */
+html:has(.site-root) { scroll-behavior: auto; }

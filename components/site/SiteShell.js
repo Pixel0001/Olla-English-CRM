@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowUpRightIcon, PhoneIcon, XMarkIcon } from '@heroicons/react/24/solid'
@@ -22,12 +22,17 @@ function Header({ openForm }) {
   const [hidden, setHidden] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
+  const headerRef = useRef(null)
+  const lockUntil = useRef(0)
+
   // Bara dispare când derulezi în jos și revine la primul pas în sus
   useEffect(() => {
     let lastY = window.scrollY
     const onScroll = () => {
       const y = window.scrollY
       setScrolled(y > 10)
+      // în timpul unui salt la o secțiune, bara rămâne cum am pus-o noi
+      if (Date.now() < lockUntil.current) { lastY = y; return }
       if (y < 120) setHidden(false)
       else if (y > lastY + 12) setHidden(true)
       else if (y < lastY - 12) setHidden(false)
@@ -36,6 +41,43 @@ function Header({ openForm }) {
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Linkurile spre secțiuni (#cursuri, #despre, #test), de oriunde din pagină:
+  // în jos, secțiunea ajunge exact sus și bara se ascunde; în sus, bara
+  // apare și secțiunea se oprește imediat sub ea — fără spațiu gol.
+  useEffect(() => {
+    const scrollToId = (id, behavior = 'smooth') => {
+      const el = document.getElementById(id)
+      if (!el) return false
+      const top = el.getBoundingClientRect().top + window.scrollY
+      const down = top > window.scrollY
+      const offset = down ? 0 : headerRef.current?.offsetHeight || 0
+      lockUntil.current = Date.now() + 1200
+      setHidden(down && top > 120)
+      window.scrollTo({ top: Math.max(0, top - offset), behavior })
+      return true
+    }
+
+    const onClick = (e) => {
+      const a = e.target.closest?.('a[href*="#"]')
+      if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return
+      const url = new URL(a.href, window.location.href)
+      if (url.pathname !== window.location.pathname || !url.hash) return
+      const id = decodeURIComponent(url.hash.slice(1))
+      if (!document.getElementById(id)) return
+      e.preventDefault()
+      e.stopPropagation()
+      setMenu(false)
+      history.replaceState(null, '', `#${id}`)
+      // după închiderea meniului de pe telefon pagina se poate derula din nou
+      setTimeout(() => scrollToId(id), 30)
+    }
+
+    document.addEventListener('click', onClick, true)
+    // venit de pe altă pagină cu /#cursuri: aceeași poziție, fără gol
+    if (window.location.hash) setTimeout(() => scrollToId(decodeURIComponent(window.location.hash.slice(1)), 'auto'), 60)
+    return () => document.removeEventListener('click', onClick, true)
   }, [])
 
   useEffect(() => {
@@ -53,6 +95,7 @@ function Header({ openForm }) {
   return (
     <>
     <header
+      ref={headerRef}
       // Ascunderea: alunecă în sus și se estompează, mai repede (400ms, accelerat).
       // Apariția: coboară lin și încetinește la final (650ms).
       className={`sticky top-0 z-50 bg-olla-gray px-4 transition-[transform,opacity,box-shadow] will-change-transform sm:px-[18px] ${
