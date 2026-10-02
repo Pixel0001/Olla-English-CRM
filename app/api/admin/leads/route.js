@@ -309,6 +309,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Status invalid' }, { status: 400 })
     }
 
+    // Un lead venit din Messenger/Instagram păstrează legătura cu conversația
+    const fromConversation = !!data.metaConversationId
+
     const lead = await prisma.lead.create({
       data: {
         name: data.name.trim(),
