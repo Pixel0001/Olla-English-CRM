@@ -90,6 +90,28 @@ export function Counter({ value, suffix = '', className = '' }) {
 export function CourseTabs({ tabs, panels }) {
   const [active, setActive] = useState(0)
   const last = tabs.length - 1
+  const headers = useRef([])
+  const pendingScroll = useRef(null)
+
+  // Pe telefon (acordeon), după ce se deschide un curs, pagina coboară lin
+  // până la titlul lui — altfel cursul închis sare și nu mai știi unde ești.
+  useEffect(() => {
+    const i = pendingScroll.current
+    if (i == null) return
+    pendingScroll.current = null
+    const el = headers.current[i]
+    if (!el) return
+    const top = el.getBoundingClientRect().top + window.scrollY
+    const up = top < window.scrollY
+    // la urcare bara de sus reapare și ar acoperi titlul
+    const offset = up ? (document.querySelector('header')?.offsetHeight || 0) + 12 : 12
+    window.scrollTo({ top: Math.max(0, top - offset), behavior: 'smooth' })
+  }, [active])
+
+  const openMobile = (i) => {
+    pendingScroll.current = i
+    setActive((cur) => (cur === i ? -1 : i))
+  }
 
   return (
     <div>
@@ -110,22 +132,33 @@ export function CourseTabs({ tabs, panels }) {
         ))}
       </div>
 
-      {tabs.map((t, i) => (
-        <div key={t.tab}>
-          <button
-            type="button"
-            onClick={() => setActive(i)}
-            aria-expanded={active === i}
-            className={`mt-3 flex w-full items-center justify-between rounded-xl px-5 py-5 text-left text-[16px] leading-[27px] md:hidden ${
-              active === i ? 'bg-olla-coral text-white' : 'bg-olla-navy text-olla-cyan'
-            }`}
-          >
-            {t.mobile || t.tab}
-            <ChevronUpIcon className={`h-4 w-4 transition-transform ${active === i ? '' : 'rotate-180'}`} />
-          </button>
-          {active === i && <div className="mt-8 md:mt-10">{panels[i]}</div>}
-        </div>
-      ))}
+      {tabs.map((t, i) => {
+        // pe desktop un tab e mereu deschis (dacă s-a închis pe telefon, primul)
+        const open = active === i || (active === -1 && i === 0)
+        return (
+          <div key={t.tab}>
+            <button
+              ref={(el) => { headers.current[i] = el }}
+              type="button"
+              onClick={() => openMobile(i)}
+              aria-expanded={active === i}
+              className={`mt-3 flex w-full items-center justify-between gap-3 rounded-xl px-5 py-4 text-left text-[16px] font-semibold leading-[1.4] shadow-sm transition-colors duration-300 md:hidden ${
+                active === i ? 'bg-olla-coral text-white' : 'bg-olla-navy text-olla-cyan'
+              }`}
+            >
+              {t.mobile || t.tab}
+              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${active === i ? 'bg-white/20' : 'rotate-180 bg-white/10'}`}>
+                <ChevronUpIcon className="h-4 w-4" />
+              </span>
+            </button>
+            {open && (
+              <div key={active} className={`site-tab-panel mt-6 md:mt-10 ${active === i ? '' : 'max-md:hidden'}`}>
+                {panels[i]}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

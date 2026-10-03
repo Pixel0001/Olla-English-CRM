@@ -73,3 +73,11 @@ html:has(.site-root)::-webkit-scrollbar-thumb:hover { background: #ff5252; }
 
 /* Saltul la #cursuri, #despre… îl face bara de navigare (SiteShell), ca să nu rămână spațiu gol */
 html:has(.site-root) { scroll-behavior: auto; }
+
+/* Cursurile: conținutul tab-ului deschis apare lin */
+@keyframes site-tab-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+.site-tab-panel { animation: site-tab-in 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+@media (prefers-reduced-motion: reduce) { .site-tab-panel { animation: none; } }
