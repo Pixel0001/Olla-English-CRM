@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import TwoFactorModal from './TwoFactorModal'
 import LevelSelect from '@/components/LevelSelect'
+import { salaryAccess } from '@/lib/salary-access'
 
 const days = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică']
 
@@ -33,6 +34,10 @@ export default function GroupForm({ group, teachers, branches = [] }) {
   const [show2FA, setShow2FA] = useState(false)
   const [branchSchedule, setBranchSchedule] = useState([])
   const [loadingSchedule, setLoadingSchedule] = useState(false)
+  // Plata profesorului: o vede cine vede salariile, o schimbă cine le editează
+  const salary = salaryAccess(session?.user)
+  const canViewSalary = salary.view
+  const canSetSalary = salary.edit
   const [formData, setFormData] = useState({
     name: group?.name || '',
     level: group?.level || '',
@@ -54,6 +59,8 @@ export default function GroupForm({ group, teachers, branches = [] }) {
       ? new Date(group.trialDate).toISOString().slice(11, 16)
       : '17:00',
     active: group?.active ?? true,
+    salaryType: group?.salaryType || '',
+    salaryAmount: group?.salaryAmount ?? '',
   })
 
   const handleChange = (e) => {
@@ -185,6 +192,9 @@ export default function GroupForm({ group, teachers, branches = [] }) {
           ? `${formData.trialDate}T${formData.trialTime || '17:00'}`
           : null,
         active: formData.active,
+        ...(canSetSalary
+          ? { salaryType: formData.salaryType || null, salaryAmount: formData.salaryAmount }
+          : {}),
       }
       if (actionToken) {
         payload.actionToken = actionToken
@@ -331,6 +341,65 @@ export default function GroupForm({ group, teachers, branches = [] }) {
               />
             </div>
           </div>
+        )}
+
+        {canViewSalary && (
+          <fieldset disabled={!canSetSalary} className="md:col-span-2 space-y-2 disabled:opacity-70">
+            <p className="text-xs xs:text-sm font-medium text-gray-700">Plata profesorului pe lecție</p>
+            {!canSetSalary && (
+              <p className="text-[11px] text-gray-500">Doar vizualizare — schimbarea cere dreptul „Editează salariile”.</p>
+            )}
+            <div className="grid xs:grid-cols-3 gap-2 xs:gap-3">
+              {[
+                { value: '', title: 'Nesetat', desc: 'Lecțiile nu se adaugă singure la salariu.' },
+                { value: 'FIXED', title: 'Sumă fixă', desc: 'Aceeași sumă pentru fiecare lecție ținută.' },
+                { value: 'PER_PRESENCE', title: 'Per prezență', desc: 'Suma × numărul elevilor prezenți la lecție.' },
+              ].map((opt) => (
+                <label
+                  key={opt.value || 'none'}
+                  className={`flex items-start gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                    formData.salaryType === opt.value
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : 'border-gray-200 hover:border-indigo-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="salaryType"
+                    value={opt.value}
+                    checked={formData.salaryType === opt.value}
+                    onChange={handleChange}
+                    className="mt-0.5 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-gray-900">{opt.title}</span>
+                    <span className="block text-xs text-gray-500">{opt.desc}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            {formData.salaryType && (
+              <div className="xs:max-w-xs">
+                <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">
+                  {formData.salaryType === 'FIXED' ? 'Lei pe lecție' : 'Lei pe elev prezent'}
+                </label>
+                <input
+                  type="number"
+                  name="salaryAmount"
+                  min={0}
+                  step="any"
+                  required
+                  value={formData.salaryAmount}
+                  onChange={handleChange}
+                  className="w-full px-3 xs:px-4 py-2 text-sm xs:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                />
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Se adaugă la salariu când lecția e salvată. Schimbarea nu atinge lecțiile deja ținute.
+                </p>
+              </div>
+            )}
+          </fieldset>
         )}
 
           <div>

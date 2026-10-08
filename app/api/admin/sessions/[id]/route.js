@@ -9,6 +9,7 @@ import {
   applyAttendanceChange,
   reverseSessionAccounting,
 } from '@/lib/session-corrections'
+import { syncSessionSalary, removeSourceSalary } from '@/lib/salary'
 
 /**
  * Corectarea unei lecții deja înregistrate, din panoul administrației.
@@ -86,6 +87,11 @@ export async function PATCH(request, { params }) {
       await prisma.lessonSession.update({ where: { id }, data })
     }
 
+    // La plata pe elev prezent, prezența corectată schimbă și suma din salariu
+    if (lessonSession.lessonsDeducted) {
+      await syncSessionSalary(id)
+    }
+
     return NextResponse.json({ success: true, session: await loadSession(id) })
   } catch (error) {
     console.error('Eroare la corectarea sesiunii:', error)
@@ -120,6 +126,7 @@ export async function DELETE(request, { params }) {
     // Lecția procesată se desface înainte de ștergere: orele se întorc în
     // pachete, absențele se scad.
     await reverseSessionAccounting(lessonSession)
+    await removeSourceSalary({ sessionId: id }, session.user.name)
 
     await notifyCancelledLesson(
       lessonSession.group.name,

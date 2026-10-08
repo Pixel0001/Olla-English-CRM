@@ -4,6 +4,7 @@ import { parseSchoolDate } from '@/lib/timezone'
 import { requireAdmin, getCurrentUser } from '@/lib/session'
 import { require2FAToken } from '@/lib/security/action-tokens'
 import { checkPermission } from '@/lib/permissions'
+import { parseGroupSalary, SALARY_PERMS } from '@/lib/salary'
 
 export async function GET(request, { params }) {
   try {
@@ -83,10 +84,15 @@ export async function PUT(request, { params }) {
     // Normalizare override-uri
     const norm = (v) => (v === '' || v == null) ? null : (Number.isFinite(parseInt(v)) ? parseInt(v) : null)
 
+    // Plata profesorului o schimbă doar cine se ocupă de salarii.
+    // Lecțiile deja ținute își păstrează suma de atunci.
+    const canSetSalary = (await checkPermission(SALARY_PERMS.edit)).allowed
+
     const group = await prisma.group.update({
       where: { id },
       data: {
         name,
+        ...(canSetSalary ? parseGroupSalary(body) : {}),
         level: level || null,
         teacherId,
         branchId: branchId || null,

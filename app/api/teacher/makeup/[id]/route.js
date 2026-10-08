@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { notifyCancelledLesson } from '@/lib/telegram'
+import { syncMakeupSalary, removeSourceSalary } from '@/lib/salary'
 
 // GET - Fetch a specific makeup lesson with students
 export async function GET(request, { params }) {
@@ -268,6 +269,9 @@ export async function PATCH(request, { params }) {
         }
       })
 
+      // Recuperarea ținută intră în salariul profesorului, după regula grupei
+      await syncMakeupSalary(id)
+
       // ============================================
       // CREATE REAL-TIME NOTIFICATIONS FOR LOW/ZERO/NEGATIVE LESSONS
       // ============================================
@@ -499,6 +503,9 @@ export async function DELETE(request, { params }) {
       true,
       studentNames
     )
+
+    // O recuperare ținută și ștearsă apoi iese și din salariu
+    await removeSourceSalary({ makeupId: id }, session.user.name)
 
     // Delete all students first (cascade should handle this, but being explicit)
     await prisma.makeupLessonStudent.deleteMany({

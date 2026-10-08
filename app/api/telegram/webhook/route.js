@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { convertLeadToStudent, isWonStatus } from '@/lib/lead-conversion'
+import { syncSessionSalary } from '@/lib/salary'
 
 export const runtime = 'nodejs'
 export const maxDuration = 10
@@ -508,6 +509,9 @@ De acum primești aici notificările tale din CRM.`,
             data: { lessonsDeducted: true },
           }),
         ])
+
+        // Lecția ținută intră în salariul profesorului, după regula grupei
+        await syncSessionSalary(sessionId)
 
         const dateStr = new Date(lesson.date).toLocaleString('ro-RO', {
           day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Chisinau',

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { checkPermission } from '@/lib/permissions'
+import { removeSourceSalary } from '@/lib/salary'
 
 // GET - Fetch specific makeup lesson details
 export async function GET(request, { params }) {
@@ -216,6 +217,9 @@ export async function DELETE(request, { params }) {
     if (!makeupLesson) {
       return NextResponse.json({ error: 'Makeup lesson not found' }, { status: 404 })
     }
+
+    // O recuperare ținută și ștearsă apoi iese și din salariu
+    await removeSourceSalary({ makeupId: id }, session.user.name)
 
     // Delete all students first
     await prisma.makeupLessonStudent.deleteMany({

@@ -35,21 +35,24 @@ for (const line of envContent.split('\n')) {
   env[key] = value
 }
 
-const token = env.TELEGRAM_LESSONS_BOT_TOKEN
+// --salary → botul de salarii, cu webhook-ul lui
+const isSalary = process.argv.includes('--salary')
+const tokenVar = isSalary ? 'TELEGRAM_SALARY_BOT_TOKEN' : 'TELEGRAM_LESSONS_BOT_TOKEN'
+const token = env[tokenVar]
 const secret = env.TELEGRAM_WEBHOOK_SECRET
-const baseUrl = process.argv[2]
+const baseUrl = process.argv.slice(2).find(a => !a.startsWith('--'))?.replace(/\/$/, '')
 
 if (!baseUrl) {
-  console.error('❌ Folosire: node scripts/set-telegram-webhook.mjs https://yourdomain.com')
+  console.error('❌ Folosire: node scripts/set-telegram-webhook.mjs https://yourdomain.com [--salary]')
   process.exit(1)
 }
 
 if (!token) {
-  console.error('❌ TELEGRAM_LESSONS_BOT_TOKEN lipsește din .env')
+  console.error(`❌ ${tokenVar} lipsește din .env`)
   process.exit(1)
 }
 
-const webhookUrl = `${baseUrl}/api/telegram/webhook?secret=${secret}`
+const webhookUrl = `${baseUrl}/api/telegram/${isSalary ? 'salary' : 'webhook'}?secret=${secret}`
 console.log(`📡 Setare webhook: ${webhookUrl}`)
 
 const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
@@ -69,6 +72,15 @@ if (data.ok) {
   console.log(`   URL: ${webhookUrl}`)
 } else {
   console.error('❌ Eroare la înregistrare:', data.description)
+}
+
+// Meniul de comenzi al botului de salarii
+if (isSalary) {
+  await fetch(`https://api.telegram.org/bot${token}/setMyCommands`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ commands: [{ command: 'meniu', description: 'Salarii — meniul principal' }] }),
+  })
 }
 
 // Verificare webhook curent

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { syncSessionSalary } from '@/lib/salary'
 
 export async function POST(request) {
   const session = await getServerSession(authOptions)
@@ -99,6 +100,9 @@ export async function POST(request) {
       where: { id: sessionId },
       data: { lessonsDeducted: true }
     })
+
+    // Lecția ținută intră în salariul profesorului, după regula grupei
+    await syncSessionSalary(sessionId)
 
     // Lecțiile rămase se urmăresc per grupă, în pachetul lunar — nu mai
     // trimitem alerte pentru fiecare elev în parte. Cron-ul zilnic anunță o

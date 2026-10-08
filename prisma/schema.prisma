@@ -392,6 +392,11 @@ model Group {
   billingType     BillingType @default(MONTHLY)
   monthlyLessons  Int      @default(8) // Câte lecții se achită lunar pentru grupă (poate fi suprascris pe o lună anume)
 
+  // Cât primește profesorul pentru o lecție ținută cu grupa. Fără setare,
+  // lecțiile nu se adaugă singure la salariu.
+  salaryType      SalaryType?
+  salaryAmount    Float?   // lei: pe lecție (FIXED) sau pe elev prezent (PER_PRESENCE)
+
   // Lecție de probă: eveniment unic, cu dată și oră proprie, fără orar săptămânal
   isTrial         Boolean  @default(false)
   trialDate       DateTime?
@@ -1530,6 +1535,78 @@ enum TrialStatus {
   PREZENT   // a venit
   ABSENT    // nu a venit
   ANULAT    // anulată
+}
+
+// ==================== SALARII PROFESORI ====================
+// Fiecare sumă care intră sau iese din salariul unui profesor e un rând aici.
+// Soldul = suma tuturor rândurilor nesterse. Nu are relații cu grupa sau
+// lecția: istoricul rămâne întreg chiar dacă acelea se șterg, de aceea
+// numele se păstrează ca snapshot.
+
+enum SalaryType {
+  FIXED        // aceeași sumă pentru fiecare lecție ținută
+  PER_PRESENCE // suma × numărul elevilor prezenți
+}
+
+enum SalaryEntryKind {
+  LESSON     // lecție ținută — adăugată automat
+  MAKEUP     // recuperare ținută — adăugată automat
+  BONUS      // adăugată manual (ex. lecție nepusă în sistem)
+  PAYOUT     // salariul scos — sumă negativă
+  ADJUSTMENT // corectare manuală, plus sau minus
+}
+
+model SalaryEntry {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  teacherId     String          @db.ObjectId
+  teacherName   String?
+  kind          SalaryEntryKind
+  amount        Float           // + intră în salariu, − iese
+  reason        String
+  date          DateTime        // când s-a ținut lecția / când s-a făcut operația — după ea se împarte pe luni
+
+  // Doar pentru lecții și recuperări
+  groupId       String?         @db.ObjectId
+  groupName     String?
+  sessionId     String?         @db.ObjectId
+  makeupId      String?         @db.ObjectId
+  salaryType    SalaryType?     // regula grupei în momentul lecției
+  rate          Float?
+  presentCount  Int?
+  studentsCount Int?
+
+  // Odată editată de mână, suma nu mai e recalculată automat
+  manual        Boolean         @default(false)
+
+  createdById   String?         @db.ObjectId
+  createdByName String?
+  editedAt      DateTime?
+  editedByName  String?
+  deleted       Boolean         @default(false)
+  deletedAt     DateTime?
+  deletedByName String?
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([teacherId, date])
+  @@index([sessionId])
+  @@index([makeupId])
+  @@index([date])
+  @@map("salary_entries")
+}
+
+/// Ce așteaptă botul de salarii de la un admin (o sumă, un motiv) după ce a apăsat un buton.
+model SalaryBotState {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  chatId    String   @unique
+  action    String   // bonus | payout | adjust | edit
+  teacherId String?  @db.ObjectId
+  entryId   String?  @db.ObjectId
+  expiresAt DateTime
+  updatedAt DateTime @updatedAt
+
+  @@map("salary_bot_states")
 }
 
 // ==================== CACHE PENTRU DATE EXTERNE ====================
