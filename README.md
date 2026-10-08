@@ -90,26 +90,18 @@ Configurare, o singură dată:
 
 Fără topic-uri configurate aplicația funcționează normal — toate notificările ajung în topicul „General".
 
-### Botul de salarii
+## Salarii profesori
 
-Un bot separat, doar pentru salariile profesorilor. Fiecare grupă are o regulă de plată
-(sumă fixă pe lecție sau sumă × elevi prezenți), setată la crearea/editarea grupei. Când
-lecția e salvată, suma intră singură în salariul profesorului.
+Fiecare grupă are o regulă de plată pentru profesor (sumă fixă pe lecție sau sumă × elevi
+prezenți), setată la crearea/editarea grupei. Când lecția e salvată, suma intră singură în
+salariul profesorului, iar el primește mesaj în privat pe Telegram și notificare în CRM.
 
-Cine ce poate (se bifează la permisiunile fiecărui cont; superadminii pot tot):
-- **Vezi salariile** (admin): toți profesorii, soldurile, istoricul pe luni și de la început
-- **Editează salariile** (admin): bonusuri, corectări, salariul scos, sume editate, plata pe grupe
-- **Anulează sume din salariu** (admin): anularea unui rând — rămâne în istoric, marcat
-- **Botul de salarii** (profesor, categoria „Salariul meu”): își vede salariul și primește
-  mesaj cu motivul la fiecare sumă. Fără el, sumele se înregistrează, dar profesorul nu le vede.
+- **Admin → Salarii**: toți profesorii cu soldul, istoricul pe luni și de la început,
+  bonusuri, corectări, salariul scos, sume editate sau anulate
+- **Profesor → Salariul meu**: doar salariul lui, de citit
 
-1. Creează botul la [@BotFather](https://t.me/BotFather) și pune token-ul în `TELEGRAM_SALARY_BOT_TOKEN`
-2. După deploy:
-   ```bash
-   npm run telegram:salary-webhook https://domeniul-tau.md
-   ```
-3. Fiecare admin și profesor deschide botul și apasă **Start**. Contul se recunoaște după
-   Telegram-ul conectat în CRM (Securitate → Telegram).
+Drepturi (la permisiunile fiecărui cont; superadminii pot tot): **Vezi / Editează / Anulează
+salariile** pentru admini și **Vede salariul propriu** pentru profesori.
 
 ## Comenzi
 
@@ -126,7 +118,6 @@ Cine ce poate (se bifează la permisiunile fiecărui cont; superadminii pot tot)
 | `npm run telegram:topics`  | Creează topic-urile Telegram și le scrie în `.env`  |
 | `npm run telegram:discover`| Găsește ID-urile topic-urilor create manual         |
 | `npm run telegram:webhook` | Înregistrează webhook-ul Telegram (după deploy)     |
-| `npm run telegram:salary-webhook` | Înregistrează webhook-ul botului de salarii  |
 | `npm run brand:icons`      | Regenerează favicon-urile și icoanele PWA           |
 
 Logo-ul folosit în interfață este `public/olla-english.png` — înlocuiește fișierul și se schimbă peste tot.

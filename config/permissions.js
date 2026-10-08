@@ -308,10 +308,10 @@ export const PERMISSIONS = {
     category: 'Statistică'
   },
 
-  // Salarii profesori (botul de salarii din Telegram)
+  // Salarii profesori (pagina Salarii)
   'salaries.view': {
     label: 'Vezi salariile',
-    description: 'Vede în botul de salarii toți profesorii, soldurile și tot istoricul; vede plata setată pe grupe',
+    description: 'Vede pagina Salarii: toți profesorii, soldurile și tot istoricul; vede plata setată pe grupe',
     category: 'Salarii'
   },
   'salaries.edit': {
@@ -327,8 +327,8 @@ export const PERMISSIONS = {
 
   // Salariul propriu, pentru profesori
   'teacher.salary.view': {
-    label: 'Botul de salarii',
-    description: 'Profesorul își vede salariul și istoricul în botul de salarii și primește mesaj la fiecare sumă adăugată sau scoasă. Fără limită de timp',
+    label: 'Vede salariul propriu',
+    description: 'Profesorul are pagina „Salariul meu" și primește mesaj în privat pe Telegram (și notificare în CRM) după fiecare lecție și la fiecare sumă adăugată sau scoasă. Fără limită de timp',
     category: 'Salariul meu'
   },
 
