@@ -26,7 +26,7 @@ export default async function TeacherDashboardPage() {
     }),
     prisma.groupStudent.findMany({
       where: {
-        group: { teacherId: session.user.id, active: true },
+        group: { teacherId: session.user.id, active: true, ...NOT_COMPLETED },
         status: 'ACTIVE'
       },
       include: {

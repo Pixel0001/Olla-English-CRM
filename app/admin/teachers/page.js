@@ -56,23 +56,31 @@ async function TeachersPageContent() {
   })
 
   // Calculate stats for each teacher
+  // Elevii se numără o singură dată, chiar dacă sunt în două grupe ale
+  // aceluiași profesor, și doar din grupele care chiar se țin (active,
+  // neîncheiate) — la fel ca pe dashboard-ul profesorului.
   const teachersWithStats = teachers.map(teacher => {
-    let totalStudents = 0
-    let activeStudents = 0
-    let leftStudents = 0
-    
+    const all = new Set()
+    const active = new Set()
+    const left = new Set()
+
     for (const group of teacher.teacherGroups) {
-      totalStudents += group.groupStudents.length
-      activeStudents += group.groupStudents.filter(gs => gs.status === 'ACTIVE' || !gs.status).length
-      // LEFT = plecat definitiv, nu includem TRANSFERRED (e doar mutat la altă grupă)
-      leftStudents += group.groupStudents.filter(gs => gs.status === 'LEFT').length
+      const running = group.active && !group.completedAt
+      for (const gs of group.groupStudents) {
+        all.add(gs.studentId)
+        if (running && (gs.status === 'ACTIVE' || !gs.status)) active.add(gs.studentId)
+        // LEFT = plecat definitiv, nu includem TRANSFERRED (e doar mutat la altă grupă)
+        if (gs.status === 'LEFT') left.add(gs.studentId)
+      }
     }
-    
+    // Cine a plecat dintr-o grupă, dar învață încă la ea în alta, nu e „plecat"
+    for (const id of active) left.delete(id)
+
     return {
       ...teacher,
-      totalStudents,
-      activeStudents,
-      leftStudents
+      totalStudents: all.size,
+      activeStudents: active.size,
+      leftStudents: left.size
     }
   })
 

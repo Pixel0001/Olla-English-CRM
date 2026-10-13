@@ -133,6 +133,25 @@ export default async function TeacherDetailPage({ params }) {
     }
   })
 
+  // Cifrele de sus numără fiecare elev o singură dată, chiar dacă e în două
+  // grupe ale profesorului; activii și cei în pauză doar din grupele care
+  // chiar se țin (active, neîncheiate) — la fel ca pe dashboard-ul lui.
+  const isActive = (gs) => gs.status === 'ACTIVE' || !gs.status
+  const distinctStudents = (match, onlyRunning = false) => new Set(
+    teacher.teacherGroups
+      .filter((g) => !onlyRunning || (g.active && !g.completedAt))
+      .flatMap((g) => g.groupStudents.filter(match).map((gs) => gs.studentId))
+  )
+  const activeIds = distinctStudents(isActive, true)
+  const pausedIds = distinctStudents((gs) => gs.status === 'PAUSED', true)
+  const notGone = (ids) => [...ids].filter((id) => !activeIds.has(id) && !pausedIds.has(id)).length
+  stats.totalStudents = distinctStudents(() => true).size
+  stats.activeStudents = activeIds.size
+  stats.pausedStudents = pausedIds.size
+  // Cine a plecat dintr-o grupă, dar învață încă la profesor în alta, nu e „plecat"
+  stats.leftStudents = notGone(distinctStudents((gs) => gs.status === 'LEFT'))
+  stats.completedStudents = notGone(distinctStudents((gs) => gs.status === 'COMPLETED'))
+
   stats.totalAttendances = stats.presentCount + stats.absentCount
   const overallAttendanceRate = stats.totalAttendances > 0 
     ? Math.round((stats.presentCount / stats.totalAttendances) * 100) 
