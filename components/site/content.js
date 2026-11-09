@@ -208,7 +208,7 @@ export const AUDIENCE = {
 }
 
 // Capturi cu mesajele părinților și ale cursanților
-export const REVIEW_IMAGES = [17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((n) => `curs-engleza-r${n}.jpg`)
+export const REVIEW_IMAGES = Array.from({ length: 12 }, (_, i) => `recenzii${i + 1}.jpg`)
 
 export const ABOUT = {
   tagline: 'Școală de engleză',
@@ -216,10 +216,10 @@ export const ABOUT = {
   text: 'Oferim cursuri de engleză pentru copii (4–14 ani) și adulți, adaptate fiecărui nivel. Poți învăța online sau la sediu, cu flexibilitate maximă, indiferent de program sau locație.',
   // Pe site-ul vechi a patra cifră avea eticheta de umplutură „Vestibulum"
   counters: [
-    { value: 5, suffix: '+', label: 'Ani experiență' },
+    { value: 8, suffix: '+', label: 'Ani experiență' },
     { value: 5, suffix: 'k', label: 'Cursuri' },
-    { value: 5, suffix: '+', label: 'Profesori' },
-    { value: 1000, suffix: '+', label: 'Cursanți' },
+    { value: 8, suffix: '+', label: 'Profesori' },
+    { value: 3000, suffix: '+', label: 'Cursanți' },
   ],
   images: [6, 5, 4, 3, 2, 1, 6, 5, 5, 3].map((n) => `curs-engleza-chisinau-${n}.jpg`),
 }
@@ -234,19 +234,29 @@ export const TEAM = {
       text: 'Fondatoarea școlii, cu peste 8 ani experiență și certificare internațională TESOL. A instruit sute de copii și adulți, creând programe moderne și eficiente, adaptate fiecărui nivel.',
     },
     {
-      photo: 'olla-english-1.jpg',
+      photo: 'profesor-mihaela.jpg',
       name: 'Mihaela – Profesor de engleză',
       text: 'Licențiată în filologie, cu 2 ani experiență. Pasionată de lectură și călătorii, inspiră elevii să privească engleza ca pe o poartă spre noi culturi și oportunități.',
     },
     {
-      photo: 'olla-english-2.jpg',
+      photo: 'profesor-oxana-andoni.jpg',
       name: 'Andoni Oxana – Profesor de limbi străine',
       text: '20 de ani experiență în predarea englezei și francezei. Specializată în pregătirea pentru examene Cambridge, IELTS și Bacalaureat.',
     },
     {
-      photo: 'olla-english-3.jpg',
+      photo: 'profesor-marina.jpg',
       name: 'Marina – Profesor de engleză',
       text: 'Licențiată în Științe ale Educației, cu peste 3 ani experiență. Transformă lecțiile în joc și descoperire, ajutând copiii să învețe cu bucurie și să câștige încredere.',
+    },
+    {
+      photo: 'profesor-viorica-curcudel.jpg',
+      name: 'Curcudel Viorica – Profesor de limba engleză',
+      text: 'Licențiată în științe umanistice, cu studii de master în traducere și interpretare de conferințe și 3 ani de experiență în predarea limbii engleze. Printr-o abordare modernă și adaptată nevoilor fiecărui cursant, urmărește dezvoltarea competențelor lingvistice și a încrederii în comunicarea în limba engleză.',
+    },
+    {
+      photo: 'profesor-mariana-buruiana.jpg',
+      name: 'Mariana Buruiana – Profesor de limba engleză',
+      text: '',
     },
   ],
 }
@@ -269,7 +279,7 @@ export const TEAM_PAGE = {
       ],
     },
     {
-      photo: 'olla-english-2.jpg',
+      photo: 'profesor-oxana-andoni.jpg',
       name: 'Andoni Oxana',
       role: 'Experiență: 20 ani de predare, cu clase primare, gimnaziale, liceu și adulți',
       bio: [
@@ -282,7 +292,7 @@ export const TEAM_PAGE = {
       ],
     },
     {
-      photo: 'olla-english-3.jpg',
+      photo: 'profesor-marina.jpg',
       name: 'Marina',
       role: 'Licențiată în Științe ale Educației. Predau limba engleză de peste 3 ani.',
       bio: [
@@ -290,6 +300,15 @@ export const TEAM_PAGE = {
         'Îmi place să lucrez cu copiii, pentru că energia și curiozitatea lor fac fiecare lecție specială și unică. Prin jocuri și activități interactive, transform orele de engleză într-o experiență plăcută și motivantă.',
         'Cred că limba engleză nu este doar o materie de studiat, ci o cheie către prietenii noi, aventuri și oportunități nelimitate.',
         'Misiunea mea este să îi ajut pe copii să învețe cu bucurie, să capete încredere în abilitățile lor și să privească engleza ca pe un instrument care le va deschide drumul către viitor.',
+      ],
+    },
+    {
+      photo: 'profesor-viorica-curcudel.jpg',
+      name: 'Curcudel Viorica',
+      role: 'Profesor de limba engleză, 3 ani de experiență',
+      bio: [
+        'Licențiată în științe umanistice, cu studii de master în traducere și interpretare de conferințe și 3 ani de experiență în predarea limbii engleze.',
+        'Printr-o abordare modernă și adaptată nevoilor fiecărui cursant, urmărește dezvoltarea competențelor lingvistice și a încrederii în comunicarea în limba engleză.',
       ],
     },
   ],
