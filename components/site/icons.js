@@ -12,6 +12,7 @@ import {
   ChatBubbleLeftRightIcon,
   PencilSquareIcon,
   SpeakerWaveIcon,
+  PaintBrushIcon,
 } from '@heroicons/react/24/solid'
 
 // Iconițele din lista fiecărui curs (content.js → features)
@@ -26,6 +27,7 @@ export const FEATURE_ICONS = {
   card: IdentificationIcon,
   video: VideoCameraIcon,
   personCheck: UserGroupIcon,
+  paint: PaintBrushIcon,
 }
 
 // Abilitățile de la BAC și Cambridge

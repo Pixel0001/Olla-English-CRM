@@ -42,7 +42,8 @@ export const EYEBROW = 'OLLA English Center'
 export const HERO = {
   title: 'Învață engleza prin practică, nu teorie plictisitoare',
   text: 'La OLLA English Center, cursurile sunt interactive, adaptate pentru copii și adulți, online sau offline. Începe acum și vezi diferența încă din prima lecție.',
-  images: ['curs-engleza-1a.jpg', 'curs-engleza-3a.jpg', 'curs-engleza-2a.jpg'],
+  // Stânga și dreapta: copii la lecții; la mijloc, Olga
+  images: ['copii-10.jpg', 'curs-engleza-3a.jpg', 'copii-23.jpg'],
 }
 
 export const TICKER = ['Engleză Fluentă', 'Încredere Totală', 'Viitor Sigur']
@@ -64,11 +65,14 @@ export const NEXT_COURSE = {
 // la prima lui vizită (4 zile 7 ore 45 de minute), apoi o ia de la capăt.
 export const COUNTDOWN_SECONDS = 4 * 86400 + 7 * 3600 + 45 * 60
 
-const KIDS_FEATURES = (frequency, duration) => [
+// Cei de 4–6 ani nu lucrează cu manuale — în locul lor, metoda
+const KIDS_FEATURES = (frequency, duration, { noBooks = false } = {}) => [
   ['display', 'Format: Online / Offline'],
   ['calendar', frequency],
   ['clock', duration],
-  ['book', 'Manuale Oxford/Cambridge (gratis online, contra cost offline)'],
+  noBooks
+    ? ['paint', 'Învățăm fără manuale, prin joacă, comunicare și activități inspirate din metodele Montessori și Waldorf']
+    : ['book', 'Manuale Oxford/Cambridge (gratis online, contra cost offline)'],
   ['laugh', 'Activități interactive: jocuri, cântece, dans'],
   ['star', 'Diplomă de absolvire'],
   ['card', 'Profesori calificați internațional TESOL/TEFL'],
@@ -102,14 +106,14 @@ export const COURSES = {
           name: 'Engleză pentru copii',
           age: '4–6 ANI',
           text: 'Ideal pentru copiii care vor să învețe într-un mediu prietenos și interactiv. Grupele mici asigură atenție individuală, iar copiii învață prin cântece, jocuri și activități creative, dezvoltându-și abilitățile de comunicare în limba engleză.',
-          features: KIDS_FEATURES('Frecvență: 2×/săptămână', '45 min/lecție - 8 lecții/lună'),
+          features: KIDS_FEATURES('Frecvență: 2×/săptămână', '45 min/lecție - 8 lecții/lună', { noBooks: true }),
         },
         {
           label: 'Lecții Individuale (1:1)',
           name: 'Engleză pentru copii',
           age: '4–6 ANI',
           text: 'Pentru părinții care vor rezultate mai rapide, oferim lecții individuale de engleză pentru copii. La fiecare oră, profesorul lucrează pe ritmul și nevoile copilului, folosind metode personalizate care accelerează progresul și aduc rezultate vizibile.',
-          features: KIDS_FEATURES('Frecvență: 2×/săptămână', 'Durată: 30 min/lecție'),
+          features: KIDS_FEATURES('Frecvență: 2×/săptămână', 'Durată: 30 min/lecție', { noBooks: true }),
         },
       ],
     },
@@ -221,7 +225,8 @@ export const ABOUT = {
     { value: 8, suffix: '+', label: 'Profesori' },
     { value: 3000, suffix: '+', label: 'Cursanți' },
   ],
-  images: [6, 5, 4, 3, 2, 1, 6, 5, 5, 3].map((n) => `curs-engleza-chisinau-${n}.jpg`),
+  // Pozele pe orizontală, pentru banda lată
+  images: [4, 1, 5, 27, 8, 2, 7, 24, 6, 26].map((n) => `copii-${n}.jpg`),
 }
 
 export const TEAM = {
@@ -259,8 +264,8 @@ export const TEAM = {
       text: 'Licențiată în filologie, găsește bucurie în lucrul cu cei mici și îi încurajează să descopere limba engleză cu drag și curiozitate.',
     },
     {
-      photo: 'profesor-arcadie-cvasniunc.jpg',
-      name: 'Cvasniunc Arcadie – Profesor de limba engleză',
+      photo: 'profesor-arcadie-cvasniuc.jpg',
+      name: 'Cvasniuc Arcadie – Profesor de limba engleză',
       text: '',
     },
   ],
@@ -377,7 +382,7 @@ export const DEMO = {
     'Primești feedback personalizat despre nivelul tău.',
     'Vezi dacă ți se potrivește formatul (online sau offline).',
   ],
-  images: [8, 7, 6, 5, 4, 2, 3, 1].map((n) => `curs-engleza-${n}.jpg`),
+  images: [17, 12, 3, 14, 30, 11, 21, 32, 15, 25, 13, 29, 18, 28, 16, 22, 19, 20].map((n) => `copii-${n}.jpg`),
 }
 
 export const POPUP = {

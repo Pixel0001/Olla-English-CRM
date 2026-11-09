@@ -16,7 +16,7 @@ export const metadata = {
     type: 'website',
     siteName: 'Olla English',
     locale: 'ro_RO',
-    images: ['/site/curs-engleza-1a.jpg'],
+    images: ['/site/copii-4.jpg'],
   },
 }
 

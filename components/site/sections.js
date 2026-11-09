@@ -39,13 +39,13 @@ export function Hero() {
 
       <div className="mx-auto flex max-w-[1100px] items-center justify-center pb-[calc(5.5vw+22.5px)] pt-[clamp(1.5rem,2.5vw,2.25rem)]">
         <div className={`${tilted} -mr-[min(25px,2vw)] aspect-[500/666] translate-y-[min(25px,2.5vw)] -rotate-[15deg]`}>
-          <Image src={img(left)} alt="Cursanți Olla English cu diplomele" fill sizes="360px" className="object-cover" priority />
+          <Image src={img(left)} alt="Copii la o lecție de engleză la Olla English" fill sizes="360px" className="object-cover" priority />
         </div>
         <div className={`${tilted} z-10 aspect-[500/666]`}>
           <Image src={img(center)} alt="Olga Lazarchevici, fondatoarea Olla English" fill sizes="360px" className="object-cover" priority />
         </div>
         <div className={`${tilted} -ml-[min(25px,2vw)] aspect-[500/666] translate-y-[min(25px,2.5vw)] rotate-[15deg]`}>
-          <Image src={img(right)} alt="Lecție la Olla English" fill sizes="360px" className="object-cover" priority />
+          <Image src={img(right)} alt="Copil la o lecție de engleză la Olla English" fill sizes="360px" className="object-cover" priority />
         </div>
       </div>
     </section>
