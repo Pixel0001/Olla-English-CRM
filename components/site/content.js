@@ -255,7 +255,12 @@ export const TEAM = {
     },
     {
       photo: 'profesor-mariana-buruiana.jpg',
-      name: 'Mariana Buruiana – Profesor de limba engleză',
+      name: 'Buruiana Mariana – Profesor de limba engleză',
+      text: 'Licențiată în filologie, găsește bucurie în lucrul cu cei mici și îi încurajează să descopere limba engleză cu drag și curiozitate.',
+    },
+    {
+      photo: 'profesor-arcadie-cvasniunc.jpg',
+      name: 'Cvasniunc Arcadie – Profesor de limba engleză',
       text: '',
     },
   ],
@@ -309,6 +314,14 @@ export const TEAM_PAGE = {
       bio: [
         'Licențiată în științe umanistice, cu studii de master în traducere și interpretare de conferințe și 3 ani de experiență în predarea limbii engleze.',
         'Printr-o abordare modernă și adaptată nevoilor fiecărui cursant, urmărește dezvoltarea competențelor lingvistice și a încrederii în comunicarea în limba engleză.',
+      ],
+    },
+    {
+      photo: 'profesor-mariana-buruiana.jpg',
+      name: 'Buruiana Mariana',
+      role: 'Profesor de limba engleză, licențiată în filologie',
+      bio: [
+        'Licențiată în filologie, găsește bucurie în lucrul cu cei mici și îi încurajează să descopere limba engleză cu drag și curiozitate.',
       ],
     },
   ],
