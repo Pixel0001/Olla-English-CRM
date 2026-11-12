@@ -266,7 +266,7 @@ export const TEAM = {
     {
       photo: 'profesor-arcadie-cvasniuc.jpg',
       name: 'Cvasniuc Arcadie – Profesor de limba engleză',
-      text: '',
+      text: 'Licențiat în filologie, cu peste 20 de ani de experiență în predarea limbii engleze și în traduceri scrise și orale. Privește instruirea lingvistică ca pe o călătorie culturală în care fiecare cursant descoperă o nouă lume, un nou fel de a gândi. Adaptează fiecare lecție nevoilor cursantului, pentru ca învățarea să fie o experiență plăcută și plină de încredere.',
     },
   ],
 }
@@ -327,6 +327,16 @@ export const TEAM_PAGE = {
       role: 'Profesor de limba engleză, licențiată în filologie',
       bio: [
         'Licențiată în filologie, găsește bucurie în lucrul cu cei mici și îi încurajează să descopere limba engleză cu drag și curiozitate.',
+      ],
+    },
+    {
+      photo: 'profesor-arcadie-cvasniuc.jpg',
+      name: 'Cvasniuc Arcadie',
+      role: 'Profesor de limba engleză, peste 20 de ani de experiență',
+      bio: [
+        'Licențiat în filologie, cu peste 20 de ani de experiență în predarea limbii engleze și în traduceri scrise și orale.',
+        'Privește instruirea lingvistică ca pe o călătorie culturală în care fiecare cursant descoperă o nouă lume, un nou fel de a gândi.',
+        'Adaptează fiecare lecție nevoilor cursantului, pentru ca învățarea să fie o experiență plăcută și plină de încredere.',
       ],
     },
   ],
