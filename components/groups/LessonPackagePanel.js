@@ -25,6 +25,8 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
+  // Grupele cu pachet fix: numărul pachetului afișat (null = cel curent)
+  const [cycle, setCycle] = useState(null)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -38,7 +40,7 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/lesson-packages?groupId=${groupId}&year=${year}&month=${month}`)
+      const res = await fetch(`/api/lesson-packages?groupId=${groupId}&year=${year}&month=${month}${cycle ? `&cycle=${cycle}` : ''}`)
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Eroare la încărcare')
       setData(json)
@@ -50,9 +52,17 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
     } finally {
       setLoading(false)
     }
-  }, [groupId, year, month])
+  }, [groupId, year, month, cycle])
 
   useEffect(() => { load() }, [load])
+
+  const shiftCycle = (delta) => {
+    const shown = data?.cycle
+    if (!shown) return
+    const target = shown.number + delta
+    if (target < 1 || target > shown.current) return
+    setCycle(target === shown.current ? null : target)
+  }
 
   const shiftMonth = (delta) => {
     const d = new Date(year, month - 1 + delta, 1)
@@ -138,6 +148,9 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
   const students = data?.students || []
   const canEdit = data?.canEdit
   const isIndividual = data?.group?.billingType === 'INDIVIDUAL'
+  const isPackage = data?.group?.billingType === 'PACKAGE'
+  // La grupele pe lecții plata nu e legată de o lună: arătăm ultima plată
+  const showLastPayment = isIndividual
   const isOverride = data?.package?.isOverride
   const totalsById = Object.fromEntries((data?.studentTotals || []).map((t) => [t.studentId, t]))
 
@@ -147,22 +160,51 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-base xs:text-lg md:text-xl font-bold text-gray-900">
-              {isIndividual ? 'Lecții per elev' : 'Lecții lunare'}
+              {isPackage ? 'Pachet de lecții' : isIndividual ? 'Lecții per elev' : 'Lecții lunare'}
             </h2>
             <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-              isIndividual ? 'bg-purple-100 text-purple-800' : 'bg-indigo-100 text-indigo-800'
+              isPackage ? 'bg-teal-100 text-teal-800'
+                : isIndividual ? 'bg-purple-100 text-purple-800' : 'bg-indigo-100 text-indigo-800'
             }`}>
-              {isIndividual ? 'plată per lecție' : 'plată lunară'}
+              {isPackage ? 'pachet fix' : isIndividual ? 'plată per lecție' : 'plată lunară'}
             </span>
           </div>
           <p className="text-xs xs:text-sm text-gray-600">
-            {isIndividual
-              ? 'Fiecare elev are pachetul lui — la fiecare prezență se scade o lecție'
-              : `Se achită ${data?.group?.monthlyLessons ?? 8} lecții pe lună, indiferent câți elevi vin`}
+            {isPackage
+              ? `Pachet de ${data?.group?.packageLessons ?? 8} lecții, care se reia când s-au ținut toate — absențele nu contează`
+              : isIndividual
+                ? 'Fiecare elev are pachetul lui — la fiecare prezență se scade o lecție'
+                : `Se achită ${data?.group?.monthlyLessons ?? 8} lecții pe lună, indiferent câți elevi vin`}
           </p>
         </div>
 
-        <div className={`items-center gap-1 ${isIndividual ? 'hidden' : 'flex'}`}>
+        {isPackage && data?.cycle && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => shiftCycle(-1)}
+              disabled={data.cycle.number <= 1}
+              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-40"
+              aria-label="Pachetul anterior"
+            >
+              <ChevronLeftIcon className="h-4 w-4 text-gray-600" />
+            </button>
+            <span className="px-3 py-2 text-sm font-semibold text-gray-900 min-w-[9.5rem] text-center">
+              Pachetul {data.cycle.number}{data.cycle.isCurrent ? ' (curent)' : ''}
+            </span>
+            <button
+              type="button"
+              onClick={() => shiftCycle(1)}
+              disabled={data.cycle.number >= data.cycle.current}
+              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-40"
+              aria-label="Pachetul următor"
+            >
+              <ChevronRightIcon className="h-4 w-4 text-gray-600" />
+            </button>
+          </div>
+        )}
+
+        <div className={`items-center gap-1 ${isIndividual || isPackage ? 'hidden' : 'flex'}`}>
           <button
             type="button"
             onClick={() => shiftMonth(-1)}
@@ -195,7 +237,14 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
       ) : (
         <>
           {/* Pachetul lunar — doar la grupele plătite lunar */}
-          {isIndividual ? (
+          {isPackage ? (
+            <PackageSummary
+              cycle={data.cycle}
+              completedCycles={data.completedCycles}
+              totalSessions={data.totalSessions ?? 0}
+              paidStats={data.paidStats}
+            />
+          ) : isIndividual ? (
             <div className="border border-gray-200 rounded-xl p-3 xs:p-4 space-y-3">
               <div className="grid grid-cols-2 gap-2 xs:gap-3">
                 <BigStat
@@ -410,7 +459,7 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
             <h3 className="text-base font-bold text-gray-900 mb-2">
               Prezențe
               <span className="ml-1.5 text-sm font-normal text-gray-500 capitalize">
-                {isIndividual ? 'toate lecțiile' : `${MONTH_NAMES[month - 1]} ${year}`}
+                {isIndividual ? 'toate lecțiile' : isPackage ? `pachetul ${data.cycle.number}` : `${MONTH_NAMES[month - 1]} ${year}`}
               </span>
             </h3>
 
@@ -418,6 +467,8 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
               <p className="text-sm text-gray-500 border border-gray-100 rounded-xl p-4 text-center">
                 {isIndividual
                   ? 'Nicio lecție ținută încă. Lecțiile apar aici pe măsură ce profesorul pornește sesiuni din pagina grupei.'
+                  : isPackage
+                  ? 'Nicio lecție în acest pachet încă. Lecțiile apar aici pe măsură ce profesorul pornește sesiuni din pagina grupei.'
                   : 'Nicio lecție ținută în această lună. Lecțiile apar aici pe măsură ce profesorul pornește sesiuni din pagina grupei.'}
               </p>
             ) : students.length === 0 ? (
@@ -446,7 +497,7 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
                         </th>
                       ))}
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
-                        {isIndividual ? 'Prezențe' : 'Luna'}
+                        {isIndividual ? 'Prezențe' : isPackage ? 'Pachet' : 'Luna'}
                       </th>
                       {!isIndividual && (
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
@@ -459,7 +510,7 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
                         </th>
                       )}
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
-                        {isIndividual ? 'Ultima plată' : 'Plată'}
+                        {showLastPayment ? 'Ultima plată' : 'Plată'}
                       </th>
                     </tr>
                   </thead>
@@ -507,7 +558,7 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
                             </td>
                           )}
                           <td className="px-3 py-2 text-center whitespace-nowrap">
-                            {isIndividual ? (
+                            {showLastPayment ? (
                               st.payments?.[0] ? (
                                 <span className="text-xs text-gray-700">
                                   {st.payments[0].lessons > 0 && (
@@ -520,6 +571,8 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
                               ) : (
                                 <span className="text-red-500 text-xs">fără plăți</span>
                               )
+                            ) : st.notEnrolled ? (
+                              <span className="text-gray-400 text-xs">nu era în grupă</span>
                             ) : st.payment ? (
                               <span className="text-emerald-700 font-semibold">
                                 {st.payment.amount.toLocaleString("ro-RO")} lei
@@ -532,7 +585,7 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
                             ) : (
                               <span className="text-red-500 text-xs">neachitat</span>
                             )}
-                            {canPay && (
+                            {canPay && !st.notEnrolled && (
                               <button
                                 type="button"
                                 onClick={() => setPayingStudent(st)}
@@ -582,8 +635,65 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
             )}
           </div>
 
+          {/* Istoricul pachetelor */}
+          {isPackage && data.cycleHistory?.length > 0 && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowHistory((v) => !v)}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                <span className="text-sm font-semibold text-gray-900">
+                  Istoric pachete
+                  <span className="ml-1.5 font-normal text-gray-500">
+                    {data.cycleHistory.length} {data.cycleHistory.length === 1 ? 'pachet' : 'pachete'} de la începutul grupei
+                  </span>
+                </span>
+                <span className="text-gray-400 text-lg leading-none">{showHistory ? '▴' : '▾'}</span>
+              </button>
+
+              {showHistory && (
+                <div className="mt-2 overflow-x-auto border border-gray-100 rounded-xl">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pachet</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Perioada</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Ținute</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Rămase</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {data.cycleHistory.map((h) => (
+                        <tr
+                          key={h.number}
+                          className={`hover:bg-gray-50 cursor-pointer ${h.number === data.cycle.number ? 'bg-indigo-50/60' : ''}`}
+                          onClick={() => setCycle(h.number === data.cycle.current ? null : h.number)}
+                        >
+                          <td className="px-3 py-1.5 text-gray-900">
+                            Pachetul {h.number}
+                            {h.complete && <span className="ml-1 text-[10px] text-emerald-600">(finalizat)</span>}
+                          </td>
+                          <td className="px-3 py-1.5 text-gray-600 whitespace-nowrap">
+                            {h.firstDate
+                              ? `${new Date(h.firstDate).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit' })} – ${new Date(h.lastDate).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+                              : '—'}
+                          </td>
+                          <td className="px-3 py-1.5 text-center font-medium text-indigo-600">{h.held} / {h.total}</td>
+                          <td className={`px-3 py-1.5 text-center font-medium ${h.remaining === 0 ? 'text-gray-400' : 'text-emerald-600'}`}>
+                            {h.remaining}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Istoric lunar */}
-          {!isIndividual && data.history?.length > 0 && (
+          {!isIndividual && !isPackage && data.history?.length > 0 && (
             <div>
               <button
                 type="button"
@@ -644,7 +754,8 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
       {payingStudent && (
         <PaymentModal
           student={payingStudent}
-          monthLabel={`${MONTH_NAMES[month - 1]} ${year}`}
+          monthLabel={isPackage ? `pachetul ${data.cycle.number}` : `${MONTH_NAMES[month - 1]} ${year}`}
+          packageNumber={isPackage ? data.cycle.number : null}
           year={year}
           month={month}
           billingType={data?.group?.billingType}
@@ -652,6 +763,77 @@ export default function LessonPackagePanel({ groupId, sessionHrefBase = '/teache
           onClose={() => setPayingStudent(null)}
           onSaved={() => { setPayingStudent(null); load() }}
         />
+      )}
+    </div>
+  )
+}
+
+/** Pachetul afișat: cifrele lui și bara de progres. */
+function PackageSummary({ cycle, completedCycles, totalSessions, paidStats }) {
+  const pct = Math.min(Math.round((cycle.held / cycle.size) * 100), 100)
+  const fmt = (d) => new Date(d).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+  return (
+    <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-lg font-bold text-gray-900">Pachetul {cycle.number}</h3>
+        {cycle.complete && (
+          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-medium">finalizat</span>
+        )}
+        {!cycle.isCurrent && (
+          <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[11px] font-medium">pachet anterior</span>
+        )}
+        {cycle.firstDate && (
+          <span className="text-xs text-gray-500">
+            {fmt(cycle.firstDate)}{cycle.lastDate && cycle.lastDate !== cycle.firstDate ? ` – ${fmt(cycle.lastDate)}` : ''}
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 xs:gap-3">
+        <BigStat label="În pachet" value={cycle.size} hint="lecții într-un pachet" tone="neutral" />
+        <BigStat label="Ținute" value={cycle.held} hint={`din pachetul ${cycle.number}`} tone="indigo" />
+        <BigStat
+          label="Rămase"
+          value={cycle.remaining}
+          hint={cycle.complete ? 'pachet finalizat' : 'până se reia pachetul'}
+          tone={cycle.remaining === 0 ? 'muted' : 'emerald'}
+        />
+        <BigStat label="Pachete finalizate" value={completedCycles} hint="de la începutul grupei" tone="neutral" />
+        <BigStat label="Total grupă" value={totalSessions} hint="lecții de la început" tone="neutral" />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+          <span>
+            <b className="text-gray-900">{cycle.held}</b> din <b className="text-gray-900">{cycle.size}</b> lecții ținute
+          </span>
+          {cycle.remaining > 0 && <span>mai sunt {cycle.remaining}</span>}
+        </div>
+        <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${cycle.complete ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+
+      {paidStats && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          <span className="font-medium text-gray-500">Plăți pachetul {cycle.number}:</span>
+          <span className="text-emerald-700"><b>{paidStats.paid}</b> achitat</span>
+          {paidStats.withDebt > 0 && <span className="text-amber-700"><b>{paidStats.withDebt}</b> cu datorie</span>}
+          <span className={paidStats.unpaid > 0 ? 'text-red-600' : 'text-gray-400'}><b>{paidStats.unpaid}</b> neachitat</span>
+        </div>
+      )}
+
+      {cycle.complete && cycle.isCurrent && (
+        <p className="text-xs text-gray-600">
+          Pachet finalizat — următoarea lecție începe pachetul {cycle.number + 1}.
+        </p>
+      )}
+      {cycle.startedAt && (
+        <p className="text-[11px] text-gray-400">Pachetele se numără începând cu {fmt(cycle.startedAt)}.</p>
       )}
     </div>
   )
@@ -729,13 +911,16 @@ function AttendanceCell({ value, locked, onClick }) {
   )
 }
 
-function PaymentModal({ student, monthLabel, defaultLessons, year, month, billingType, onClose, onSaved }) {
+function PaymentModal({ student, monthLabel, packageNumber, defaultLessons, year, month, billingType, onClose, onSaved }) {
   const [amount, setAmount] = useState('')
   const [debt, setDebt] = useState('')
   const [method, setMethod] = useState('cash')
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [period, setPeriod] = useState(`${year}-${month}`)
-  const [payMode, setPayMode] = useState(billingType === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'MONTHLY')
+  const isPackage = billingType === 'PACKAGE'
+  // Pachetul pe care îl acoperă plata (implicit cel afișat în panou)
+  const [pkgNumber, setPkgNumber] = useState(String(packageNumber ?? 1))
+  const [payMode, setPayMode] = useState(isPackage ? 'PACKAGE' : billingType === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'MONTHLY')
   const [lessons, setLessons] = useState('8')
   const periods = monthOptions()
   const [saving, setSaving] = useState(false)
@@ -764,11 +949,14 @@ function PaymentModal({ student, monthLabel, defaultLessons, year, month, billin
           paymentMethod: method,
           ...(payMode === 'INDIVIDUAL'
             ? { lessonsAdded: parseInt(lessons, 10) || 0 }
-            : {
-                forYear: parseInt(period.split('-')[0], 10),
-                forMonth: parseInt(period.split('-')[1], 10),
-              }),
-          notes: `Plată ${monthLabel}`,
+            // Pachetul nu urmează luna: plata rămâne fără lună, la data încasării
+            : payMode === 'PACKAGE'
+              ? { forPackage: parseInt(pkgNumber, 10) || null }
+              : {
+                  forYear: parseInt(period.split('-')[0], 10),
+                  forMonth: parseInt(period.split('-')[1], 10),
+                }),
+          notes: isPackage ? `Plată pachetul ${parseInt(pkgNumber, 10) || ''}`.trim() : `Plată ${monthLabel}`,
         }),
       })
       const data = await res.json()
@@ -837,6 +1025,7 @@ function PaymentModal({ student, monthLabel, defaultLessons, year, month, billin
                 <option value="transfer">Transfer</option>
               </select>
             </div>
+            {!isPackage && (
             <div className="col-span-2 grid grid-cols-2 gap-1 p-1 bg-gray-100 rounded-lg">
               <button
                 type="button"
@@ -857,8 +1046,21 @@ function PaymentModal({ student, monthLabel, defaultLessons, year, month, billin
                 Per lecție
               </button>
             </div>
+            )}
 
-            {payMode === 'INDIVIDUAL' ? (
+            {payMode === 'PACKAGE' ? (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Plată pentru pachetul *</label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={pkgNumber}
+                  onChange={(e) => setPkgNumber(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            ) : payMode === 'INDIVIDUAL' ? (
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Lecții achitate *</label>
                 <input
@@ -898,8 +1100,9 @@ function PaymentModal({ student, monthLabel, defaultLessons, year, month, billin
           </div>
 
           <p className="text-[11px] text-gray-500">
-            Plata acoperă lecțiile lunii alese pentru această grupă ({defaultLessons} lecții).
-            Data încasării rămâne separată — poți plăti în avans sau cu întârziere.
+            {isPackage
+              ? `Plata se leagă de pachetul ales (un pachet are ${defaultLessons} lecții), nu de o lună. Data încasării rămâne separată — poți plăti în avans sau cu întârziere.`
+              : `Plata acoperă lecțiile lunii alese pentru această grupă (${defaultLessons} lecții). Data încasării rămâne separată — poți plăti în avans sau cu întârziere.`}
           </p>
 
           <div className="flex gap-2">

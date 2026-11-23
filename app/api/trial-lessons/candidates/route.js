@@ -10,7 +10,8 @@ import prisma from '@/lib/prisma'
  * ei programează proba, dar nu au acces la restul CRM-ului de leads.
  */
 
-const CLOSED = ['PLATIT', 'STUDIAZA', 'PLECAT', 'LOST_LEAD']
+// „Profesor" nu vine la lecție de probă, așa că nu se propune ca elev
+const CLOSED = ['PLATIT', 'STUDIAZA', 'PLECAT', 'LOST_LEAD', 'PROFESOR']
 
 export async function GET(request) {
   const session = await getServerSession(authOptions)

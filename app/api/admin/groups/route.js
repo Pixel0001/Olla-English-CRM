@@ -6,6 +6,7 @@ import { requireAdmin, getCurrentUser } from '@/lib/session'
 import { require2FAToken } from '@/lib/security/action-tokens'
 import { checkPermission } from '@/lib/permissions'
 import { sendTeacherDirectMessage } from '@/lib/telegram'
+import { parseBillingType, parsePackageLessons } from '@/lib/package-cycles'
 import { parseGroupSalary, SALARY_PERMS } from '@/lib/salary'
 
 const ITEMS_PER_PAGE = 20
@@ -170,7 +171,7 @@ export async function POST(request) {
     }
 
     const { name, level, teacherId, branchId, scheduleDays, scheduleTime, 
-            locationType, locationDetails, startDate, active, monthlyLessons, isTrial, trialDate, billingType, notes } = body
+            locationType, locationDetails, startDate, active, monthlyLessons, isTrial, trialDate, billingType, notes, packageLessons } = body
 
     // Plata profesorului o pune doar cine se ocupă de salarii
     const canSetSalary = (await checkPermission(SALARY_PERMS.edit)).allowed
@@ -188,7 +189,9 @@ export async function POST(request) {
         locationDetails,
         startDate: startDate ? new Date(startDate) : null,
         monthlyLessons: parseInt(monthlyLessons, 10) || 8,
-        billingType: billingType === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'MONTHLY',
+        billingType: parseBillingType(billingType),
+        // La pachet, lecțiile se numără de la prima lecție a grupei
+        packageLessons: parseBillingType(billingType) === 'PACKAGE' ? (parsePackageLessons(packageLessons) ?? 8) : null,
         notes: notes?.trim() || null,
         isTrial: !!isTrial,
         trialDate: isTrial ? parseSchoolDate(trialDate) : null,

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { guardTeacherAction } from '@/lib/teacher-actions'
+import { parsePackageNumber } from '@/lib/package-cycles'
 
 /**
  * Corectarea unei plăți de către profesorul care a înregistrat-o.
@@ -63,6 +64,12 @@ export async function PATCH(request, { params }) {
     if (body.notes !== undefined) data.notes = body.notes?.trim() || null
     if (body.forYear !== undefined) data.forYear = body.forYear ? parseInt(body.forYear, 10) : null
     if (body.forMonth !== undefined) data.forMonth = body.forMonth ? parseInt(body.forMonth, 10) : null
+    // Doar plățile care au deja un pachet pot fi mutate la altul
+    if (body.forPackage !== undefined && payment.forPackage) {
+      const n = parsePackageNumber(body.forPackage)
+      if (!n) return NextResponse.json({ error: 'Numărul pachetului nu e valid' }, { status: 400 })
+      data.forPackage = n
+    }
 
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'Nimic de schimbat' }, { status: 400 })

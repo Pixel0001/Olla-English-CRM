@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { checkPermission } from '@/lib/permissions'
+import { packageCycles, packageSize } from '@/lib/package-cycles'
 
 /**
  * Istoricul complet al unei grupe: elevi, sesiuni cu prezențe, plăți,
@@ -55,7 +56,7 @@ const csvCell = (v) => {
 const csvRow = (cells) => cells.map(csvCell).join(',')
 
 function buildCsv(data) {
-  const { group, students, sessions, payments, months, trials, totals, isIndividual } = data
+  const { group, students, sessions, payments, months, trials, totals, isIndividual, isPackage, packages } = data
   const out = []
 
   out.push('GRUPA')
@@ -65,8 +66,9 @@ function buildCsv(data) {
   out.push(csvRow(['Filială', group.branch?.name || '—']))
   out.push(csvRow(['Program', formatSchedule(group.scheduleDays, group.scheduleTime)]))
   out.push(csvRow(['Început', fmtDate(group.startDate || group.createdAt)]))
-  out.push(csvRow(['Mod de plată', isIndividual ? 'Per lecție' : 'Lunar']))
-  if (!isIndividual) out.push(csvRow(['Lecții pe lună', group.monthlyLessons ?? 8]))
+  out.push(csvRow(['Mod de plată', isPackage ? 'Pachet de lecții' : isIndividual ? 'Per lecție' : 'Lunar']))
+  if (isPackage) out.push(csvRow(['Lecții în pachet', packageSize(group)]))
+  else if (!isIndividual) out.push(csvRow(['Lecții pe lună', group.monthlyLessons ?? 8]))
   out.push(csvRow(['Status', group.active ? 'Activă' : 'Inactivă']))
   out.push(csvRow(['Total lecții ținute', sessions.length]))
   out.push(csvRow(['Total încasat (lei)', totals.paid]))
@@ -119,7 +121,13 @@ function buildCsv(data) {
   }
   out.push('')
 
-  if (!isIndividual) {
+  if (isPackage) {
+    out.push('SITUAȚIE PE PACHETE')
+    out.push(csvRow(['Pachet', 'De la', 'Până la', 'Lecții în pachet', 'Lecții ținute', 'Rămase', 'Finalizat']))
+    for (const pk of packages) {
+      out.push(csvRow([pk.number, fmtDate(pk.firstDate), fmtDate(pk.lastDate), pk.total, pk.held, pk.remaining, pk.complete ? 'da' : 'nu']))
+    }
+  } else if (!isIndividual) {
     out.push('SITUAȚIE LUNARĂ')
     out.push(csvRow(['Luna', 'Lecții de achitat', 'Lecții ținute', 'Rămase', 'Încasat (lei)']))
     for (const m of months) {
@@ -147,7 +155,7 @@ const esc = (v) =>
   String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 function buildHtml(data) {
-  const { group, students, sessions, payments, months, trials, totals, isIndividual } = data
+  const { group, students, sessions, payments, months, trials, totals, isIndividual, isPackage, packages } = data
 
   const table = (headers, rows) => `
     <table>
@@ -213,9 +221,11 @@ function buildHtml(data) {
   <div class="cards">
     <div class="card"><span>Elevi</span><b>${students.length}</b></div>
     <div class="card"><span>Lecții ținute</span><b>${sessions.length}</b></div>
-    ${isIndividual
-      ? '<div class="card"><span>Mod de plată</span><b style="font-size:13px">Per lecție</b></div>'
-      : `<div class="card"><span>Lecții pe lună</span><b>${group.monthlyLessons ?? 8}</b></div>`}
+    ${isPackage
+      ? `<div class="card"><span>Lecții în pachet</span><b>${packageSize(group)}</b></div>`
+      : isIndividual
+        ? '<div class="card"><span>Mod de plată</span><b style="font-size:13px">Per lecție</b></div>'
+        : `<div class="card"><span>Lecții pe lună</span><b>${group.monthlyLessons ?? 8}</b></div>`}
     <div class="card"><span>Total încasat</span><b>${totals.paid} lei</b></div>
     <div class="card"><span>Probe</span><b>${trials.length}</b></div>
   </div>
@@ -238,7 +248,10 @@ function buildHtml(data) {
     ])
   )}
 
-  ${isIndividual ? '' : `<h2>Situație lunară</h2>${table(
+  ${isPackage ? `<h2>Situație pe pachete</h2>${table(
+    ['Pachet', 'De la', 'Până la', 'În pachet', 'Ținute', 'Rămase', 'Finalizat'],
+    packages.map((pk) => [pk.number, fmtDate(pk.firstDate) || '—', fmtDate(pk.lastDate) || '—', pk.total, pk.held, pk.remaining, pk.complete ? 'da' : 'nu'])
+  )}` : isIndividual ? '' : `<h2>Situație lunară</h2>${table(
     ['Luna', 'De achitat', 'Ținute', 'Rămase', 'Încasat (lei)'],
     months.map((m) => [`${MONTH_NAMES[m.month - 1]} ${m.year}`, m.total, m.held, m.remaining, m.paid])
   )}`}
@@ -431,8 +444,15 @@ export async function GET(request, { params }) {
       notes: t.notes,
     }))
 
+    const isPackage = group.billingType === 'PACKAGE'
+    const packages = isPackage
+      ? packageCycles(group.lessonSessions, packageSize(group), group.packageStartedAt).cycles
+      : []
+
     const data = {
       group,
+      isPackage,
+      packages,
       isIndividual: (group.billingType || 'MONTHLY') === 'INDIVIDUAL',
       students,
       sessions,

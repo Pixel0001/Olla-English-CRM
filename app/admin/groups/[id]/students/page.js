@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { notFound } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import GroupStudentsManager from '@/components/admin/GroupStudentsManager'
+import { packageCycles, packageSize } from '@/lib/package-cycles'
 
 const MONTH_NAMES = [
   'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
@@ -64,7 +65,7 @@ export default async function GroupStudentsPage({ params }) {
           }
         },
         lessonSessions: {
-          select: { date: true, attendances: { select: { studentId: true, status: true } } },
+          select: { id: true, date: true, attendances: { select: { studentId: true, status: true } } },
         },
       }
     }),
@@ -88,9 +89,18 @@ export default async function GroupStudentsPage({ params }) {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
+  // La grupele cu pachet fix „perioada" nu e luna, ci pachetul curent
+  const isPackage = group.billingType === 'PACKAGE'
+  const currentPackage = isPackage
+    ? packageCycles(group.lessonSessions, packageSize(group), group.packageStartedAt).current
+    : null
+  const inCurrentPackage = new Set((currentPackage?.sessions || []).map((s) => s.id))
+
   const attendanceStats = {}
   for (const session of group.lessonSessions) {
-    const inMonth = session.date >= monthStart && session.date < nextMonth
+    const inMonth = isPackage
+      ? inCurrentPackage.has(session.id)
+      : session.date >= monthStart && session.date < nextMonth
     for (const a of session.attendances) {
       const acc = (attendanceStats[a.studentId] ||= {
         present: 0, absent: 0, monthPresent: 0, monthAbsent: 0,
@@ -116,7 +126,8 @@ export default async function GroupStudentsPage({ params }) {
       <GroupStudentsManager
         attendanceStats={attendanceStats}
         totalSessions={totalSessions}
-        monthLabel={MONTH_NAMES[now.getMonth()]} 
+        packageNumber={currentPackage?.number ?? null}
+        monthLabel={isPackage ? `pachetul ${currentPackage.number}` : MONTH_NAMES[now.getMonth()]}
         group={JSON.parse(JSON.stringify(group))}
         allStudents={JSON.parse(JSON.stringify(allStudents))}
         allGroups={JSON.parse(JSON.stringify(otherGroups))}

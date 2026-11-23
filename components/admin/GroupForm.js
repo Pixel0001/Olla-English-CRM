@@ -50,6 +50,7 @@ export default function GroupForm({ group, teachers, branches = [] }) {
     startDate: group?.startDate ? new Date(group.startDate).toISOString().split('T')[0] : '',
     monthlyLessons: group?.monthlyLessons ?? 8,
     billingType: group?.billingType || 'MONTHLY',
+    packageLessons: group?.packageLessons ?? 8,
     notes: group?.notes || '',
     isTrial: group?.isTrial ?? false,
     trialDate: group?.trialDate
@@ -185,6 +186,7 @@ export default function GroupForm({ group, teachers, branches = [] }) {
         startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
         monthlyLessons: parseInt(formData.monthlyLessons, 10) || 8,
         billingType: formData.billingType,
+        packageLessons: parseInt(formData.packageLessons, 10) || 8,
         notes: formData.notes?.trim() || null,
         isTrial: formData.isTrial,
         // Proba are o singură dată; nu intră în orarul săptămânal
@@ -260,7 +262,7 @@ export default function GroupForm({ group, teachers, branches = [] }) {
         {!formData.isTrial && (
           <div className="md:col-span-2 space-y-2">
             <p className="text-xs xs:text-sm font-medium text-gray-700">Cum se plătește</p>
-            <div className="grid xs:grid-cols-2 gap-2 xs:gap-3">
+            <div className="grid xs:grid-cols-2 lg:grid-cols-3 gap-2 xs:gap-3">
               {[
                 {
                   value: 'MONTHLY',
@@ -271,6 +273,11 @@ export default function GroupForm({ group, teachers, branches = [] }) {
                   value: 'INDIVIDUAL',
                   title: 'Per lecție',
                   desc: 'Fiecare elev își cumpără lecțiile. La fiecare prezență i se scade una — poate fi și o grupă întreagă, nu doar un elev singur.',
+                },
+                {
+                  value: 'PACKAGE',
+                  title: 'Pachet de lecții',
+                  desc: 'Grupa are un pachet de N lecții, care se reia când s-au ținut toate — nu la început de lună. Absența cuiva nu contează: lecția trece pentru toți.',
                 },
               ].map((opt) => (
                 <label
@@ -296,6 +303,28 @@ export default function GroupForm({ group, teachers, branches = [] }) {
                 </label>
               ))}
             </div>
+
+            {formData.billingType === 'PACKAGE' && (
+              <div className="xs:max-w-xs">
+                <label className="block text-xs xs:text-sm font-medium text-gray-700 mb-1">Lecții în pachet</label>
+                <input
+                  type="number"
+                  name="packageLessons"
+                  min={1}
+                  max={200}
+                  value={formData.packageLessons}
+                  onChange={handleChange}
+                  className="w-full px-3 xs:px-4 py-2 text-sm xs:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                />
+                <p className="text-[11px] text-gray-500 mt-1">
+                  {group && group.billingType !== 'PACKAGE'
+                    ? 'Pachetele încep de azi; lecțiile ținute până acum nu intră în ele.'
+                    : group
+                      ? 'Dacă schimbi numărul, se refac și pachetele deja ținute, pe noul număr.'
+                      : 'Pachetul se reia singur când s-au ținut toate lecțiile.'}
+                </p>
+              </div>
+            )}
 
             {formData.billingType === 'MONTHLY' && (
               <div className="xs:max-w-xs">

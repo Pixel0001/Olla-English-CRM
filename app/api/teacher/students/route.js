@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { NOT_COMPLETED } from '@/lib/group-filters'
+import { packageCycles, packageSize } from '@/lib/package-cycles'
 
 // GET - Fetch all students for a teacher's groups with detailed info
 export async function GET(request) {
@@ -76,11 +77,19 @@ export async function GET(request) {
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
         const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
+        // La grupele cu pachet fix perioada nu e luna, ci pachetul curent
+        const currentPackage = group.billingType === 'PACKAGE'
+          ? packageCycles(group.lessonSessions, packageSize(group), group.packageStartedAt).current
+          : null
+        const inCurrentPackage = new Set((currentPackage?.sessions || []).map((s) => s.id))
+
         for (const groupSession of group.lessonSessions) {
           const attendance = groupSession.attendances.find(a => a.studentId === studentId)
           if (attendance) {
             totalGroupSessions++
-            const inMonth = groupSession.date >= monthStart && groupSession.date < nextMonth
+            const inMonth = currentPackage
+              ? inCurrentPackage.has(groupSession.id)
+              : groupSession.date >= monthStart && groupSession.date < nextMonth
             if (attendance.status === 'PRESENT') {
               presentCount++
               if (inMonth) monthPresent++
@@ -108,6 +117,8 @@ export async function GET(request) {
           remainingLessons: Math.max(0, gs.lessonsRemaining || 0),
           monthPresent,
           monthAbsent,
+          // Cum se numește perioada celor două cifre de mai sus; fără valoare = luna curentă
+          periodLabel: currentPackage ? `pachetul ${currentPackage.number}` : null,
           absences: Math.max(0, gs.absences || 0),
           status: studentStatus,
           statusNote: gs.statusNote,

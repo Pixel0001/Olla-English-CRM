@@ -392,6 +392,10 @@ model Group {
   billingType     BillingType @default(MONTHLY)
   monthlyLessons  Int      @default(8) // Câte lecții se achită lunar pentru grupă (poate fi suprascris pe o lună anume)
 
+  // Pachet de lecții (billingType PACKAGE): N lecții, care se reiau când s-au ținut toate
+  packageLessons   Int?       // câte lecții are un pachet; fără valoare = 8
+  packageStartedAt DateTime?  // de când se numără pachetele; fără valoare = de la prima lecție a grupei
+
   // Cât primește profesorul pentru o lecție ținută cu grupa. Fără setare,
   // lecțiile nu se adaugă singure la salariu.
   salaryType      SalaryType?
@@ -480,6 +484,7 @@ model GroupStudent {
 enum BillingType {
   MONTHLY    // grupa are N lecții pe lună, achitate indiferent de prezență
   INDIVIDUAL // fiecare elev cumpără un număr de lecții, care se consumă la prezență
+  PACKAGE    // grupa are un pachet de N lecții, care se reia când s-au ținut toate (nu la început de lună)
 }
 
 enum GroupStudentStatus {
@@ -652,6 +657,8 @@ model Payment {
   // Luna acoperită de plată (nu ziua în care a intrat banul)
   forYear        Int?
   forMonth       Int?          // 1–12
+  // La grupele cu pachet fix: al câtelea pachet acoperă plata (în loc de lună)
+  forPackage     Int?
   paymentMethod  String?       // "cash", "card", "transfer"
   notes          String?       // Notițe adiționale
   lessonsAdded   Int?          // Câte lecții s-au adăugat pentru această plată
@@ -790,6 +797,7 @@ enum LeadStatus {
   PLECAT            // 🔴 A plecat
   LOST_LEAD         // ❌ Lead pierdut
   OLD_STUDENT       // 🎒 Fost elev — a mai studiat la noi
+  PROFESOR          // 👨‍🏫 Profesor — nu e lead de elev (candidat sau contact de profesor)
   TEST              // 🧪 Test
 }
 

@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import TwoFactorModal from './TwoFactorModal'
 import CopyStudentsButton from '@/components/CopyStudentsButton'
 import { monthOptions, paidForMonth, periodLabel } from '@/lib/payments'
+import { packagePayment } from '@/lib/package-cycles'
 
 // Luna curentă, în formatul folosit de selectorul de plată
 const currentPeriod = () => {
@@ -45,7 +46,7 @@ function paidThisMonth(payments = []) {
   return total > 0 ? total : null
 }
 
-export default function GroupStudentsManager({ group, allStudents, allGroups = [], permissions = {} , attendanceStats = {}, totalSessions = 0, monthLabel = '' }) {
+export default function GroupStudentsManager({ group, allStudents, allGroups = [], permissions = {} , attendanceStats = {}, totalSessions = 0, monthLabel = '', packageNumber = null }) {
   // Destructure permissions with defaults
   const {
     canViewStudents = false,
@@ -89,7 +90,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
     paymentDate: new Date().toISOString().split('T')[0],
     paymentMethod: 'cash',
     notes: '',
-    forPeriod: currentPeriod(), payMode: group?.billingType || 'MONTHLY', lessons: '8', debt: ''
+    forPeriod: currentPeriod(), payMode: group?.billingType || 'MONTHLY', lessons: '8', debt: '', forPackage: ''
   })
   const [savingPayment, setSavingPayment] = useState(false)
   const [show2FAModal, setShow2FAModal] = useState(false)
@@ -227,7 +228,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
       paymentDate: new Date().toISOString().split('T')[0],
       paymentMethod: 'cash',
       notes: '',
-      forPeriod: currentPeriod(), payMode: group?.billingType || 'MONTHLY', lessons: '8', debt: ''
+      forPeriod: currentPeriod(), payMode: group?.billingType || 'MONTHLY', lessons: '8', debt: '', forPackage: ''
     })
   }
 
@@ -247,10 +248,13 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
       lessonsAdded: null,
       ...(paymentForm.payMode === 'INDIVIDUAL'
         ? { lessonsAdded: parseInt(paymentForm.lessons, 10) || 0 }
-        : {
-            forYear: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[0], 10) : null,
-            forMonth: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[1], 10) : null,
-          })
+        // Pachetul nu urmează luna: plata rămâne fără lună, la data încasării
+        : paymentForm.payMode === 'PACKAGE'
+          ? { forPackage: paymentForm.forPackage || null }
+          : {
+              forYear: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[0], 10) : null,
+              forMonth: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[1], 10) : null,
+            })
     }
 
     // If user has 2FA enabled, require verification
@@ -285,7 +289,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
           paymentDate: new Date().toISOString().split('T')[0],
           paymentMethod: 'cash',
           notes: '',
-          forPeriod: currentPeriod(), payMode: group?.billingType || 'MONTHLY', lessons: '8', debt: ''
+          forPeriod: currentPeriod(), payMode: group?.billingType || 'MONTHLY', lessons: '8', debt: '', forPackage: ''
         })
         setShowPaymentModal(null)
         setShow2FAModal(false)
@@ -827,10 +831,10 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                   {/* Plata lunii curente — lecțiile se numără per grupă, nu per elev */}
                   {canViewPayments && (
                     <div className="bg-white/50 rounded-lg p-2 xs:p-3 flex items-center justify-between">
-                      <span className="text-xs text-gray-500">Luna curentă:</span>
-                      {paidThisMonth(gs.payments) ? (
+                      <span className="text-xs text-gray-500">{packageNumber ? `Pachetul ${packageNumber}:` : 'Luna curentă:'}</span>
+                      {(packageNumber ? packagePayment(gs.payments, packageNumber)?.amount : paidThisMonth(gs.payments)) ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] xs:text-xs font-medium bg-emerald-100 text-emerald-800">
-                          achitat {paidThisMonth(gs.payments).toLocaleString('ro-RO')} MDL
+                          achitat {(packageNumber ? packagePayment(gs.payments, packageNumber).amount : paidThisMonth(gs.payments)).toLocaleString('ro-RO')} MDL
                         </span>
                       ) : (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] xs:text-xs font-medium bg-red-100 text-red-800">
@@ -1027,6 +1031,7 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
 
               </div>
 
+              {paymentForm.payMode !== 'PACKAGE' && (
               <div className="grid grid-cols-2 gap-1 p-1 bg-gray-100 rounded-xl">
                 <button
                   type="button"
@@ -1047,8 +1052,22 @@ export default function GroupStudentsManager({ group, allStudents, allGroups = [
                   Per lecție
                 </button>
               </div>
+              )}
 
-              {paymentForm.payMode === 'INDIVIDUAL' ? (
+              {paymentForm.payMode === 'PACKAGE' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Plată pentru pachetul nr.</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={paymentForm.forPackage}
+                    onChange={(e) => setPaymentForm(prev => ({ ...prev, forPackage: e.target.value }))}
+                    placeholder="automat"
+                    className="w-full px-4 py-2.5 xs:py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 font-medium"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-500">Gol = pachetul curent (sau următorul, dacă cel curent e plin).</p>
+                </div>
+              ) : paymentForm.payMode === 'INDIVIDUAL' ? (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Lecții achitate</label>
                   <input

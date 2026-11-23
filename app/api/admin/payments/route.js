@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { require2FAToken } from '@/lib/security/action-tokens'
 import { checkPermission } from '@/lib/permissions'
+import { resolveForPackage } from '@/lib/package-payments'
 
 // GET all payments with filters
 export async function GET(request) {
@@ -103,7 +104,7 @@ export async function POST(request) {
     }
 
     const data = await request.json()
-    const { groupStudentId, amount, paymentDate, paymentMethod, notes, lessonsAdded, forYear, forMonth, debt } = data
+    const { groupStudentId, amount, paymentDate, paymentMethod, notes, lessonsAdded, forYear, forMonth, forPackage, debt } = data
 
     // 2FA is not required for adding payments - only for sensitive actions
 
@@ -111,14 +112,18 @@ export async function POST(request) {
       return NextResponse.json({ error: 'groupStudentId și amount sunt obligatorii' }, { status: 400 })
     }
 
+    // La grupele cu pachet fix plata se leagă de un pachet, nu de o lună
+    const packageNumber = await resolveForPackage(groupStudentId, forPackage)
+
     // Create payment
     const payment = await prisma.payment.create({
       data: {
         groupStudentId,
+        forPackage: packageNumber,
         amount: parseFloat(amount),
         paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
-        forYear: forYear ? parseInt(forYear, 10) : null,
-        forMonth: forMonth ? parseInt(forMonth, 10) : null,
+        forYear: packageNumber ? null : forYear ? parseInt(forYear, 10) : null,
+        forMonth: packageNumber ? null : forMonth ? parseInt(forMonth, 10) : null,
         paymentMethod,
         notes,
         lessonsAdded: lessonsAdded ? parseInt(lessonsAdded) : null,

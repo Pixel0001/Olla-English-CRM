@@ -32,6 +32,7 @@ export default function AddPaymentButton({
   const [period, setPeriod] = useState(currentPeriod())
   const [mode, setMode] = useState('MONTHLY')   // MONTHLY = lunar pe grupă, INDIVIDUAL = pe lecții
   const [lessons, setLessons] = useState('8')
+  const [forPackage, setForPackage] = useState('')   // doar la pachet fix; gol = pachetul curent
   const [method, setMethod] = useState('cash')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [notes, setNotes] = useState('')
@@ -79,10 +80,13 @@ export default function AddPaymentButton({
           notes: notes.trim() || null,
           ...(mode === 'INDIVIDUAL'
             ? { lessonsAdded: parseInt(lessons, 10) || 0 }
-            : {
-                forYear: parseInt(period.split('-')[0], 10),
-                forMonth: parseInt(period.split('-')[1], 10),
-              }),
+            // Pachetul nu urmează luna: plata rămâne fără lună, la data încasării
+            : mode === 'PACKAGE'
+              ? { forPackage: forPackage || null }
+              : {
+                  forYear: parseInt(period.split('-')[0], 10),
+                  forMonth: parseInt(period.split('-')[1], 10),
+                }),
         }),
       })
       const data = await res.json()
@@ -164,7 +168,8 @@ export default function AddPaymentButton({
               </div>
             )}
 
-            {/* Lunar pe grupă sau individual, pe lecții — ca înainte */}
+            {/* Lunar pe grupă sau individual, pe lecții — ca înainte; la pachet fix nu se alege nimic */}
+            {mode !== 'PACKAGE' && (
             <div className="grid grid-cols-2 gap-1 p-1 bg-gray-100 rounded-lg">
               <button
                 type="button"
@@ -185,6 +190,7 @@ export default function AddPaymentButton({
                 Per lecție
               </button>
             </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -210,6 +216,18 @@ export default function AddPaymentButton({
                       max="100"
                       value={lessons}
                       onChange={(e) => setLessons(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    />
+                  </>
+                ) : mode === 'PACKAGE' ? (
+                  <>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Plată pentru pachetul nr.</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={forPackage}
+                      onChange={(e) => setForPackage(e.target.value)}
+                      placeholder="automat"
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     />
                   </>
@@ -279,6 +297,8 @@ export default function AddPaymentButton({
             <p className="text-[11px] text-gray-500">
               {mode === 'INDIVIDUAL'
                 ? 'Lecțiile intră în pachetul elevului și se consumă pe măsură ce vine la ore.'
+                : mode === 'PACKAGE'
+                  ? 'Plata se leagă de un pachet de lecții, nu de o lună. Dacă lași pachetul gol, intră la pachetul curent (sau la următorul, dacă cel curent e plin).'
                 : 'Plata acoperă lecțiile lunii alese. Data încasării e separată — poți înregistra o plată în avans sau cu întârziere.'}
             </p>
 

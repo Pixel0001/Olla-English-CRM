@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { NOT_COMPLETED } from '@/lib/group-filters'
+import { packageSize } from '@/lib/package-cycles'
 import { notifyMissedGroupSession, notifyMissedMakeup, notifyGroupLessonsLow, notifyLowLessons, notifyTeacherDailySchedule } from '@/lib/telegram'
 
 import { cleanupExpiredSessions } from '@/lib/security/session.js'
@@ -398,6 +399,75 @@ export async function GET(request) {
 
     for (const group of activeGroups) {
       if (group.groupStudents.length === 0) continue
+
+      // Grupele cu pachet fix nu urmează luna: pachetul se reia când s-au
+      // ținut toate lecțiile, deci anunțăm o singură dată, când s-a terminat.
+      if (group.billingType === 'PACKAGE') {
+        const size = packageSize(group)
+        const sessionsFilter = {
+          groupId: group.id,
+          ...(group.packageStartedAt ? { date: { gte: group.packageStartedAt } } : {}),
+        }
+        const counted = await prisma.lessonSession.count({ where: sessionsFilter })
+        if (counted === 0 || counted % size !== 0) continue
+
+        const packageNumber = counted / size
+
+        // Doar dacă ultima lecție a pachetului e proaspătă: altfel un pachet
+        // terminat acum o lună ar fi anunțat din nou, după ce notificarea
+        // veche se șterge.
+        const lastLesson = await prisma.lessonSession.findFirst({
+          where: sessionsFilter,
+          orderBy: { date: 'desc' },
+          select: { date: true },
+        })
+        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+        if (!lastLesson || lastLesson.date < threeDaysAgo) continue
+
+        const previous = await prisma.notification.findMany({
+          where: { groupId: group.id, type: 'ZERO_LESSONS' },
+          select: { data: true },
+        })
+        if (previous.some((n) => n.data?.packageNumber === packageNumber)) continue
+
+        // Cine n-a plătit pachetul terminat (cei înscriși după ultima lecție n-aveau cum)
+        const paidRows = await prisma.payment.findMany({
+          where: { forPackage: packageNumber, groupStudentId: { in: group.groupStudents.map((gs) => gs.id) } },
+          select: { groupStudentId: true },
+        })
+        const paidIds = new Set(paidRows.map((r) => r.groupStudentId))
+        const unpaidStudents = group.groupStudents
+          .filter((gs) => !paidIds.has(gs.id) && gs.enrolledAt <= lastLesson.date)
+          .map((gs) => gs.student.fullName)
+
+        await prisma.notification.create({
+          data: {
+            type: 'ZERO_LESSONS',
+            title: `⚠️ ${group.name}: pachetul ${packageNumber} s-a terminat`,
+            message: `Grupa "${group.name}" a ținut toate cele ${size} lecții din pachetul ${packageNumber}. Următoarea lecție începe pachetul ${packageNumber + 1}.` +
+              (unpaidStudents.length > 0 ? ` Neachitat: ${unpaidStudents.join(', ')}.` : ''),
+            link: `/admin/groups/${group.id}`,
+            recipientId: null,
+            groupId: group.id,
+            data: { packageNumber, total: size, held: size, remaining: 0, unpaidStudents },
+          },
+        })
+
+        await notifyGroupLessonsLow({
+          groupName: group.name,
+          levelName: group.level,
+          teacherName: group.teacher?.name,
+          total: size,
+          held: size,
+          remaining: 0,
+          monthLabel: '',
+          packageNumber,
+          unpaidStudents,
+        })
+
+        notificationsCreated.push(`Grupă ${group.name}: pachetul ${packageNumber} terminat`)
+        continue
+      }
 
       // Grupele plătite individual: alerta e per elev, pe pachetul lui
       if (group.billingType === 'INDIVIDUAL') {

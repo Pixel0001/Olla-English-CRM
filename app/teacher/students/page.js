@@ -290,10 +290,13 @@ export default function TeacherStudentsPage() {
           amount: paymentForm.amount,
           ...(paymentForm.mode === 'INDIVIDUAL'
             ? { lessonsAdded: parseInt(paymentForm.lessons, 10) || 0 }
-            : {
-                forYear: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[0], 10) : null,
-                forMonth: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[1], 10) : null,
-              }),
+            // Pachetul nu urmează luna: plata rămâne fără lună, la data încasării
+            : paymentForm.mode === 'PACKAGE'
+              ? { forPackage: paymentForm.forPackage || null }
+              : {
+                  forYear: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[0], 10) : null,
+                  forMonth: paymentForm.forPeriod ? parseInt(paymentForm.forPeriod.split('-')[1], 10) : null,
+                }),
           paymentMethod: paymentForm.paymentMethod,
           notes: paymentForm.notes,
           debt: paymentForm.debt === '' ? null : parseFloat(paymentForm.debt),
@@ -683,7 +686,7 @@ export default function TeacherStudentsPage() {
                               <span
                                 key={g.groupId}
                                 className="text-[10px] xs:text-xs px-1.5 xs:px-2 py-0.5 rounded font-medium bg-gray-100 text-gray-700"
-                                title="Prezențe / absențe în luna curentă"
+                                title={`Prezențe / absențe ${g.periodLabel ? `în ${g.periodLabel}` : 'în luna curentă'}`}
                               >
                                 <span className="text-emerald-700">{g.monthPresent ?? 0}</span>
                                 <span className="text-gray-400"> / </span>
@@ -839,11 +842,11 @@ export default function TeacherStudentsPage() {
                               ) : (
                                 <>
                                   <div className="bg-emerald-50 rounded p-1.5 xs:p-2 text-center">
-                                    <p className="text-emerald-600 font-medium">Prezențe {MONTH_NAMES[new Date().getMonth()]}</p>
+                                    <p className="text-emerald-600 font-medium">Prezențe {group.periodLabel || MONTH_NAMES[new Date().getMonth()]}</p>
                                     <p className="text-base xs:text-lg font-bold text-emerald-700">{group.monthPresent ?? 0}</p>
                                   </div>
                                   <div className="bg-red-50 rounded p-1.5 xs:p-2 text-center">
-                                    <p className="text-red-600 font-medium">Absențe {MONTH_NAMES[new Date().getMonth()]}</p>
+                                    <p className="text-red-600 font-medium">Absențe {group.periodLabel || MONTH_NAMES[new Date().getMonth()]}</p>
                                     <p className="text-base xs:text-lg font-bold text-red-700">{group.monthAbsent ?? 0}</p>
                                   </div>
                                 </>
@@ -1197,7 +1200,16 @@ export default function TeacherStudentsPage() {
                 <label className="block text-sm font-medium text-gray-900 mb-1">Grupa *</label>
                 <select
                   value={paymentForm.groupStudentId}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, groupStudentId: e.target.value })}
+                  onChange={(e) => {
+                    const picked = selectedStudent.groups.find((g) => g.groupStudentId === e.target.value)
+                    // Grupa cu pachet fix are doar „pachet"; la celelalte alege profesorul
+                    const mode = picked?.billingType === 'PACKAGE'
+                      ? 'PACKAGE'
+                      : picked?.billingType === 'INDIVIDUAL'
+                        ? 'INDIVIDUAL'
+                        : paymentForm.mode === 'PACKAGE' ? 'MONTHLY' : paymentForm.mode
+                    setPaymentForm({ ...paymentForm, groupStudentId: e.target.value, mode })
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
                   required
                 >
@@ -1222,6 +1234,7 @@ export default function TeacherStudentsPage() {
                   />
                 </div>
               </div>
+              {paymentForm.mode !== 'PACKAGE' && (
               <div className="grid grid-cols-2 gap-1 p-1 bg-gray-100 rounded-lg">
                 <button
                   type="button"
@@ -1242,8 +1255,22 @@ export default function TeacherStudentsPage() {
                   Per lecție
                 </button>
               </div>
+              )}
 
-              {paymentForm.mode === 'INDIVIDUAL' ? (
+              {paymentForm.mode === 'PACKAGE' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-1">Plată pentru pachetul nr.</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={paymentForm.forPackage || ''}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, forPackage: e.target.value })}
+                    placeholder="automat"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 text-gray-900"
+                  />
+                  <p className="mt-1 text-[11px] text-gray-500">Gol = pachetul curent (sau următorul, dacă cel curent e plin).</p>
+                </div>
+              ) : paymentForm.mode === 'INDIVIDUAL' ? (
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-1">Lecții achitate *</label>
                   <input

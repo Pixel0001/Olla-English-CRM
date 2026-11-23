@@ -11,6 +11,7 @@ import LessonPackagePanel from '@/components/groups/LessonPackagePanel'
 import AddPaymentButton from '@/components/admin/AddPaymentButton'
 import PaymentCorrectionControls from '@/components/teacher/PaymentCorrectionControls'
 import { paidForMonth } from '@/lib/payments'
+import { packageCycles, packageSize, packagePayment } from '@/lib/package-cycles'
 import TrialLessonsPanel from '@/components/groups/TrialLessonsPanel'
 import { 
   AcademicCapIcon, 
@@ -25,6 +26,24 @@ const paidThisMonth = (payments = []) => {
   const now = new Date()
   const total = paidForMonth(payments, now.getFullYear(), now.getMonth() + 1)
   return total > 0 ? total : null
+}
+
+// La grupele cu pachet fix: a plătit elevul pachetul curent?
+function PackagePaidBadge({ payments, number }) {
+  const paid = packagePayment(payments, number)
+  if (!paid) {
+    return (
+      <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 text-[10px] xs:text-xs font-medium whitespace-nowrap">
+        neachitat · pachetul {number}
+      </span>
+    )
+  }
+  return (
+    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] xs:text-xs font-medium whitespace-nowrap">
+      achitat {paid.amount.toLocaleString('ro-RO')} MDL · pachetul {number}
+      {paid.debt > 0 ? ` · datorie ${paid.debt.toLocaleString('ro-RO')}` : ''}
+    </span>
+  )
 }
 
 // Helper pentru formatarea programului
@@ -99,6 +118,15 @@ export default async function TeacherGroupDetailPage({ params }) {
   if (!group) {
     notFound()
   }
+
+  // Pachetul curent, pentru insigna de plată a fiecărui elev
+  const currentPackage = group.billingType === 'PACKAGE'
+    ? packageCycles(
+        await prisma.lessonSession.findMany({ where: { groupId: id }, select: { id: true, date: true } }),
+        packageSize(group),
+        group.packageStartedAt
+      ).current
+    : null
 
   // Check if there's already a session today
   const todaySession = group.lessonSessions.find(s => {
@@ -330,6 +358,8 @@ export default async function TeacherGroupDetailPage({ params }) {
                         }`}>
                           {gs.lessonsRemaining ?? 0} lecții rămase
                         </span>
+                      ) : currentPackage ? (
+                        <PackagePaidBadge payments={gs.payments} number={currentPackage.number} />
                       ) : paidThisMonth(gs.payments) ? (
                         <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] xs:text-xs font-medium whitespace-nowrap">
                           achitat {paidThisMonth(gs.payments).toLocaleString('ro-RO')} MDL

@@ -179,10 +179,10 @@ export const COURSES = {
       goal: 'Să îți oferim nu doar un rezultat bun, ci și o bază solidă de engleză pentru viitor.',
     },
     {
-      tab: 'Pregătire Cambridge',
-      mobile: 'Pregătire Cambridge',
-      title: 'Pregătire pentru examene Cambridge',
-      intro: 'La Olla English Center îți oferim posibilitatea de a te pregăti pentru examenele Cambridge (A2 Key, B1 Preliminary, B2 First). Cursurile sunt structurate pe niveluri clare, cu accent pe:',
+      tab: 'Pregătire Cambridge & IELTS',
+      mobile: 'Pregătire Cambridge & IELTS',
+      title: 'Pregătire pentru examene Cambridge & IELTS',
+      intro: 'La Olla English Center îți oferim posibilitatea de a te pregăti pentru examenele Cambridge (A2 Key, B1 Preliminary, B2 First) și IELTS. Cursurile sunt structurate pe niveluri clare, cu accent pe:',
       skills: [
         ['speaking', 'Speaking', 'dezvoltarea fluenței și a încrederii în exprimare'],
         ['writing', 'Writing', 'redactarea corectă și creativă a textelor'],

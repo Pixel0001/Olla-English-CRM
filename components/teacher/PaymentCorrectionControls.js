@@ -38,8 +38,12 @@ export default function PaymentCorrectionControls({ payment, billingType }) {
   const [forPeriod, setForPeriod] = useState(
     payment.forYear && payment.forMonth ? `${payment.forYear}-${payment.forMonth}` : ''
   )
+  const [forPackage, setForPackage] = useState(payment.forPackage ? String(payment.forPackage) : '')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  // Doar plățile lunare au o lună de corectat; pe lecții și pe pachet nu
+  const hasPeriod = billingType !== 'INDIVIDUAL' && billingType !== 'PACKAGE'
 
   if (!canEdit && !canDelete) return null
 
@@ -53,7 +57,8 @@ export default function PaymentCorrectionControls({ payment, billingType }) {
           amount,
           debt: debt === '' ? null : debt,
           notes,
-          ...(billingType !== 'INDIVIDUAL'
+          ...(payment.forPackage ? { forPackage: parseInt(forPackage, 10) || null } : {}),
+          ...(hasPeriod
             ? {
                 forYear: forPeriod ? parseInt(forPeriod.split('-')[0], 10) : null,
                 forMonth: forPeriod ? parseInt(forPeriod.split('-')[1], 10) : null,
@@ -157,7 +162,19 @@ export default function PaymentCorrectionControls({ payment, billingType }) {
                 </div>
               </div>
 
-              {billingType !== 'INDIVIDUAL' && (
+              {payment.forPackage ? (
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Pentru pachetul nr.</label>
+                  <input
+                    type="number" min="1"
+                    value={forPackage}
+                    onChange={(e) => setForPackage(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+              ) : null}
+
+              {hasPeriod && (
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Pentru luna</label>
                   <select

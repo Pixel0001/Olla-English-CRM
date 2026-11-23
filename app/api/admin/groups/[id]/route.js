@@ -5,6 +5,8 @@ import { requireAdmin, getCurrentUser } from '@/lib/session'
 import { require2FAToken } from '@/lib/security/action-tokens'
 import { checkPermission } from '@/lib/permissions'
 import { parseGroupSalary, SALARY_PERMS } from '@/lib/salary'
+import { parseBillingType, parsePackageLessons } from '@/lib/package-cycles'
+import { startOfSchoolToday } from '@/lib/timezone'
 
 export async function GET(request, { params }) {
   try {
@@ -77,7 +79,7 @@ export async function PUT(request, { params }) {
     }
 
     const { name, level, teacherId, branchId, scheduleDays, scheduleTime,
-            locationType, locationDetails, startDate, active, monthlyLessons, isTrial, trialDate, billingType, notes,
+            locationType, locationDetails, startDate, active, monthlyLessons, isTrial, trialDate, billingType, notes, packageLessons,
             cooldownOverrideMin, dailyXpCapOverride,
             cooldownDisabled, xpCapDisabled } = body
 
@@ -87,6 +89,12 @@ export async function PUT(request, { params }) {
     // Plata profesorului o schimbă doar cine se ocupă de salarii.
     // Lecțiile deja ținute își păstrează suma de atunci.
     const canSetSalary = (await checkPermission(SALARY_PERMS.edit)).allowed
+
+    // O grupă care trece pe „Pachet" începe pachetele de azi: lecțiile ținute
+    // până acum n-au fost numărate pe pachete și n-ar avea cum să încapă în ele.
+    const previous = await prisma.group.findUnique({ where: { id }, select: { billingType: true } })
+    const nextBilling = billingType !== undefined ? parseBillingType(billingType) : undefined
+    const startsPackages = nextBilling === 'PACKAGE' && previous?.billingType !== 'PACKAGE'
 
     const group = await prisma.group.update({
       where: { id },
@@ -103,8 +111,10 @@ export async function PUT(request, { params }) {
         startDate: startDate ? new Date(startDate) : null,
         ...(monthlyLessons !== undefined ? { monthlyLessons: parseInt(monthlyLessons, 10) || 8 } : {}),
         ...(notes !== undefined ? { notes: notes?.trim() || null } : {}),
-        ...(billingType !== undefined
-          ? { billingType: billingType === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'MONTHLY' }
+        ...(nextBilling !== undefined ? { billingType: nextBilling } : {}),
+        ...(startsPackages ? { packageStartedAt: startOfSchoolToday() } : {}),
+        ...(packageLessons !== undefined && parsePackageLessons(packageLessons)
+          ? { packageLessons: parsePackageLessons(packageLessons) }
           : {}),
         ...(isTrial !== undefined ? { isTrial: !!isTrial } : {}),
         ...(isTrial !== undefined

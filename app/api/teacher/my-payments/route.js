@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { notifyTeacherActivity } from '@/lib/telegram'
 import { periodLabel } from '@/lib/payments'
+import { resolveForPackage } from '@/lib/package-payments'
 
 // GET - Fetch payments created by this teacher
 export async function GET(request) {
@@ -47,7 +48,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json()
-    const { groupStudentId, amount, paymentMethod, notes, forYear, forMonth, lessonsAdded, debt } = body
+    const { groupStudentId, amount, paymentMethod, notes, forYear, forMonth, forPackage, lessonsAdded, debt } = body
 
     if (!groupStudentId) {
       return NextResponse.json({ error: 'Selectează o grupă' }, { status: 400 })
@@ -78,6 +79,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Nu ai acces la acest elev' }, { status: 403 })
     }
 
+    // La grupele cu pachet fix plata se leagă de un pachet, nu de o lună
+    const packageNumber = await resolveForPackage(groupStudentId, forPackage)
+
     // Create payment and update lessons in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create payment
@@ -85,8 +89,9 @@ export async function POST(request) {
         data: {
           groupStudentId,
           amount: parseFloat(amount),
-          forYear: forYear ? parseInt(forYear, 10) : null,
-          forMonth: forMonth ? parseInt(forMonth, 10) : null,
+          forYear: packageNumber ? null : forYear ? parseInt(forYear, 10) : null,
+          forMonth: packageNumber ? null : forMonth ? parseInt(forMonth, 10) : null,
+          forPackage: packageNumber,
           paymentMethod: paymentMethod || null,
           notes: notes || null,
           lessonsAdded: lessonsAdded ? parseInt(lessonsAdded, 10) : null,
@@ -122,7 +127,7 @@ export async function POST(request) {
 📘 Nivel: ${result.groupStudent.group.level || 'N/A'}
 💵 Sumă: <b>${amount} MDL</b>${debt && parseFloat(debt) > 0 ? `
 🔴 Datorie rămasă: <b>${debt} MDL</b>` : ''}
-🗓 Pentru luna: <b>${periodLabel({ forYear, forMonth, paymentDate: new Date() })}</b>
+🗓 ${packageNumber ? 'Pentru' : 'Pentru luna:'} <b>${periodLabel({ forYear, forMonth, forPackage: packageNumber, paymentDate: new Date() })}</b>
 💳 Metodă: ${paymentMethod || 'Nespecificată'}`
 
     notifyTeacherActivity('payment', session.user.name || session.user.email, details)
